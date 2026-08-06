@@ -1,0 +1,47 @@
+{
+  "EasyStream/Assets.xcassets/AccentColor.colorset/Contents.json": {
+    "mtime": 1786037871.7169218,
+    "ast_hash": "55019f7265dde0a78318b0807f98e847",
+    "semantic_hash": "55019f7265dde0a78318b0807f98e847"
+  },
+  "EasyStream/Assets.xcassets/AppIcon.appiconset/Contents.json": {
+    "mtime": 1786037873.321917,
+    "ast_hash": "1be20321a31ab908ee42f8b207220802",
+    "semantic_hash": "1be20321a31ab908ee42f8b207220802"
+  },
+  "EasyStream/Assets.xcassets/Contents.json": {
+    "mtime": 1786037871.7177567,
+    "ast_hash": "9deb2ada1cc834bbebf8bbad9c8978a1",
+    "semantic_hash": "9deb2ada1cc834bbebf8bbad9c8978a1"
+  },
+  "EasyStream/ContentView.swift": {
+    "mtime": 1786037871.7130656,
+    "ast_hash": "82acc14152d370cceed21da7e1bef4b0",
+    "semantic_hash": "82acc14152d370cceed21da7e1bef4b0"
+  },
+  "EasyStream/EasyStreamApp.swift": {
+    "mtime": 1786037871.7105958,
+    "ast_hash": "f1b2c388f792caab9ea62ee2901d04d9",
+    "semantic_hash": "f1b2c388f792caab9ea62ee2901d04d9"
+  },
+  "EasyStream/Item.swift": {
+    "mtime": 1786037871.7144482,
+    "ast_hash": "9156d95a18e424acd8e590f42d2b3f26",
+    "semantic_hash": "9156d95a18e424acd8e590f42d2b3f26"
+  },
+  "EasyStreamTests/EasyStreamTests.swift": {
+    "mtime": 1786037873.5101514,
+    "ast_hash": "e252777f89c1b70766b933f9c3e741d5",
+    "semantic_hash": "e252777f89c1b70766b933f9c3e741d5"
+  },
+  "EasyStreamUITests/EasyStreamUITests.swift": {
+    "mtime": 1786037873.5247314,
+    "ast_hash": "5fa90324a3a331d8099ef97e5dc7059e",
+    "semantic_hash": "5fa90324a3a331d8099ef97e5dc7059e"
+  },
+  "EasyStreamUITests/EasyStreamUITestsLaunchTests.swift": {
+    "mtime": 1786037873.5259478,
+    "ast_hash": "af8ce15eb8c4f24b0a33dbe737aa149a",
+    "semantic_hash": "af8ce15eb8c4f24b0a33dbe737aa149a"
+  }
+}

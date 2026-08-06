@@ -1,0 +1,29 @@
+# graphify uses .gitignore-style syntax, including ! negation.
+# Keep the corpus focused on Swift source, not build artifacts or agent config.
+
+graphify-out/
+
+# Version control and agent/runtime metadata
+.git/
+.agents/
+.cursor/
+
+# Xcode build artifacts
+DerivedData/
+build/
+.swiftpm/
+
+# Dependencies
+Pods/
+Carthage/
+
+# Xcode user-specific files
+*.xcuserstate
+xcuserdata/
+
+# Asset catalogs (JSON metadata, no analyzable code)
+*.xcassets/
+
+# Local/system noise
+.DS_Store
+*.log
