@@ -1,0 +1,211 @@
+import Foundation
+import WebRTC
+import EasyStreamCore
+
+/// Sends camera media to a Director over WebRTC after LAN signaling.
+public actor CameraStreamClient {
+    public enum Event: Sendable {
+        case connectionState(StreamConnectionState)
+        case localVideoTrackReady
+        case failed(String)
+    }
+
+    private let sessionID = UUID()
+    private let factory = WebRTCConfiguration.cameraFactory()
+    private var peerConnection: RTCPeerConnection?
+    private let delegateBridge = PeerConnectionDelegateBridge()
+    private var signaling: SignalingChannel?
+    private var videoSource: RTCVideoSource?
+    private var videoTrack: RTCVideoTrack?
+    private var audioTrack: RTCAudioTrack?
+    private var eventContinuation: AsyncStream<Event>.Continuation?
+    private var hasCreatedOffer = false
+
+    public init() {}
+
+    public func events() -> AsyncStream<Event> {
+        AsyncStream { continuation in
+            eventContinuation = continuation
+        }
+    }
+
+    public func attachSignaling(_ channel: SignalingChannel) {
+        signaling = channel
+    }
+
+    public func setAudioMuted(_ muted: Bool) {
+        audioTrack?.isEnabled = !muted
+    }
+
+    public var isAudioMuted: Bool {
+        audioTrack?.isEnabled == false
+    }
+
+    public func prepareMediaTracks() {
+        let videoSource = factory.videoSource()
+        self.videoSource = videoSource
+        videoTrack = factory.videoTrack(with: videoSource, trackId: "easystream-video")
+
+        let audioSource = factory.audioSource(with: WebRTCConfiguration.peerConstraints())
+        audioTrack = factory.audioTrack(with: audioSource, trackId: "easystream-audio")
+
+        emit(.localVideoTrackReady)
+    }
+
+    public var localVideoTrack: RTCVideoTrack? { videoTrack }
+
+    public func publish(pixelBuffer: CVPixelBuffer, timestampNs: Int64, rotation: RTCVideoRotation = ._0) {
+        guard let videoSource else { return }
+        let rtcBuffer = RTCCVPixelBuffer(pixelBuffer: pixelBuffer)
+        let frame = RTCVideoFrame(buffer: rtcBuffer, rotation: rotation, timeStampNs: timestampNs)
+        videoSource.capturer(RTCVideoCapturer(), didCapture: frame)
+    }
+
+    public func handleSignalingMessage(_ message: SignalingMessage) async throws {
+        switch message {
+        case .answer(let id, let sdp) where id == sessionID:
+            try await setRemoteAnswer(sdp: sdp)
+        case .ice(let id, let candidate, let sdpMid, let sdpMLineIndex) where id == sessionID:
+            try await addIceCandidate(candidate: candidate, sdpMid: sdpMid, sdpMLineIndex: sdpMLineIndex)
+        default:
+            break
+        }
+    }
+
+    public func startOffer() async throws {
+        guard !hasCreatedOffer else { return }
+        hasCreatedOffer = true
+        emit(.connectionState(.signaling))
+
+        let config = WebRTCConfiguration.pcConfiguration()
+        let pc = factory.peerConnection(with: config, constraints: WebRTCConfiguration.peerConstraints(), delegate: delegateBridge)
+        peerConnection = pc
+
+        delegateBridge.onIceCandidate = { [weak self] candidate in
+            Task { await self?.sendIceCandidate(candidate) }
+        }
+
+        delegateBridge.onConnectionChange = { [weak self] state in
+            Task { await self?.handleConnectionState(state) }
+        }
+
+        guard let pc = peerConnection else { return }
+
+        if let videoTrack {
+            pc.add(videoTrack, streamIds: ["easystream"])
+        }
+        if let audioTrack {
+            pc.add(audioTrack, streamIds: ["easystream"])
+        }
+
+        let offer = try await pc.offer(for: WebRTCConfiguration.offerConstraints())
+        try await pc.setLocalDescription(offer)
+
+        guard let signaling else { return }
+        try await signaling.send(.offer(sessionID: sessionID, sdp: offer.sdp))
+    }
+
+    public func stop() {
+        peerConnection?.close()
+        peerConnection = nil
+        videoTrack = nil
+        audioTrack = nil
+        videoSource = nil
+        eventContinuation?.finish()
+        eventContinuation = nil
+    }
+
+    private func setRemoteAnswer(sdp: String) async throws {
+        guard let peerConnection else { return }
+        let description = RTCSessionDescription(type: .answer, sdp: sdp)
+        try await peerConnection.setRemoteDescription(description)
+    }
+
+    private func addIceCandidate(candidate: String, sdpMid: String?, sdpMLineIndex: Int32?) async throws {
+        guard let peerConnection else { return }
+        let ice = RTCIceCandidate(sdp: candidate, sdpMLineIndex: sdpMLineIndex ?? 0, sdpMid: sdpMid)
+        try await peerConnection.add(ice)
+    }
+
+    private func sendIceCandidate(_ candidate: RTCIceCandidate) async {
+        guard let signaling else { return }
+        try? await signaling.send(.ice(
+            sessionID: sessionID,
+            candidate: candidate.sdp,
+            sdpMid: candidate.sdpMid,
+            sdpMLineIndex: candidate.sdpMLineIndex
+        ))
+    }
+
+    private func handleConnectionState(_ state: RTCPeerConnectionState) {
+        switch state {
+        case .connected:
+            emit(.connectionState(.connected))
+        case .failed:
+            emit(.failed("WebRTC connection failed"))
+            emit(.connectionState(.failed))
+        case .disconnected, .closed:
+            emit(.connectionState(.disconnected))
+        default:
+            break
+        }
+    }
+
+    private func emit(_ event: Event) {
+        eventContinuation?.yield(event)
+    }
+}
+
+import CoreVideo
+
+extension RTCPeerConnection {
+    fileprivate func offer(for constraints: RTCMediaConstraints) async throws -> RTCSessionDescription {
+        try await withCheckedThrowingContinuation { continuation in
+            offer(for: constraints) { sdp, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let sdp {
+                    continuation.resume(returning: sdp)
+                } else {
+                    continuation.resume(throwing: NSError(domain: "EasyStreamTransport", code: -1))
+                }
+            }
+        }
+    }
+
+    fileprivate func setLocalDescription(_ sdp: RTCSessionDescription) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            setLocalDescription(sdp) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+
+    fileprivate func setRemoteDescription(_ sdp: RTCSessionDescription) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            setRemoteDescription(sdp) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+
+    fileprivate func add(_ candidate: RTCIceCandidate) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            add(candidate) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+}

@@ -6,6 +6,21 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B9D0EA613025017A00E5464D /* EasyStreamCore in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG001 /* EasyStreamCore */; };
+		B9D0EA623025017A00E5464D /* EasyStreamDiscovery in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG002 /* EasyStreamDiscovery */; };
+		B9D0EA633025017A00E5464D /* EasyStreamUIComponents in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG003 /* EasyStreamUIComponents */; };
+		B9D0EA643025017A00E5464D /* EasyStreamTransport in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG004 /* EasyStreamTransport */; };
+		B9D0EA653025017A00E5464D /* EasyStreamCameraCapture in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG005 /* EasyStreamCameraCapture */; };
+		B9D0EA663025017A00E5464D /* EasyStreamSwitcher in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG006 /* EasyStreamSwitcher */; };
+		B9D0EA673025017A00E5464D /* EasyStreamVideoPipeline in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG007 /* EasyStreamVideoPipeline */; };
+		B9D0EA683025017A00E5464D /* EasyStreamAudioPipeline in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG008 /* EasyStreamAudioPipeline */; };
+		B9D0EA693025017A00E5464D /* EasyStreamStreaming in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG009 /* EasyStreamStreaming */; };
+		B9D0EA6A3025017A00E5464D /* EasyStreamFacebook in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG010 /* EasyStreamFacebook */; };
+		B9D0EA6B3025017A00E5464D /* EasyStreamFacebookLogin in Frameworks */ = {isa = PBXBuildFile; platformFilter = ios; productRef = ESPKG011 /* EasyStreamFacebookLogin */; };
+		B9D547CB3045EC440068C138 /* LyrioraStreamIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = B9D547CA3045EC440068C138 /* LyrioraStreamIcon.icon */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		B9D0EA123024FDF100E5464D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +42,7 @@
 		B9D0EA023024FDEF00E5464D /* EasyStream.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EasyStream.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9D0EA113024FDF100E5464D /* EasyStreamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EasyStreamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9D0EA1B3024FDF100E5464D /* EasyStreamUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EasyStreamUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B9D547CA3045EC440068C138 /* LyrioraStreamIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = LyrioraStreamIcon.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +68,17 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B9D0EA633025017A00E5464D /* EasyStreamUIComponents in Frameworks */,
+				B9D0EA623025017A00E5464D /* EasyStreamDiscovery in Frameworks */,
+				B9D0EA613025017A00E5464D /* EasyStreamCore in Frameworks */,
+				B9D0EA643025017A00E5464D /* EasyStreamTransport in Frameworks */,
+				B9D0EA653025017A00E5464D /* EasyStreamCameraCapture in Frameworks */,
+				B9D0EA663025017A00E5464D /* EasyStreamSwitcher in Frameworks */,
+				B9D0EA673025017A00E5464D /* EasyStreamVideoPipeline in Frameworks */,
+				B9D0EA683025017A00E5464D /* EasyStreamAudioPipeline in Frameworks */,
+				B9D0EA693025017A00E5464D /* EasyStreamStreaming in Frameworks */,
+				B9D0EA6A3025017A00E5464D /* EasyStreamFacebook in Frameworks */,
+				B9D0EA6B3025017A00E5464D /* EasyStreamFacebookLogin in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,6 +106,7 @@
 				B9D0EA143024FDF100E5464D /* EasyStreamTests */,
 				B9D0EA1E3024FDF100E5464D /* EasyStreamUITests */,
 				B9D0EA033024FDEF00E5464D /* Products */,
+				B9D547CA3045EC440068C138 /* LyrioraStreamIcon.icon */,
 			);
 			sourceTree = "<group>";
 		};
@@ -112,6 +140,17 @@
 			);
 			name = EasyStream;
 			packageProductDependencies = (
+				ESPKG001 /* EasyStreamCore */,
+				ESPKG002 /* EasyStreamDiscovery */,
+				ESPKG003 /* EasyStreamUIComponents */,
+				ESPKG004 /* EasyStreamTransport */,
+				ESPKG005 /* EasyStreamCameraCapture */,
+				ESPKG006 /* EasyStreamSwitcher */,
+				ESPKG007 /* EasyStreamVideoPipeline */,
+				ESPKG008 /* EasyStreamAudioPipeline */,
+				ESPKG009 /* EasyStreamStreaming */,
+				ESPKG010 /* EasyStreamFacebook */,
+				ESPKG011 /* EasyStreamFacebookLogin */,
 			);
 			productName = EasyStream;
 			productReference = B9D0EA023024FDEF00E5464D /* EasyStream.app */;
@@ -195,6 +234,19 @@
 			);
 			mainGroup = B9D0E9F93024FDEF00E5464D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				ESPKGREF001 /* XCLocalSwiftPackageReference "Packages/EasyStreamCore" */,
+				ESPKGREF002 /* XCLocalSwiftPackageReference "Packages/EasyStreamDiscovery" */,
+				ESPKGREF003 /* XCLocalSwiftPackageReference "Packages/EasyStreamUIComponents" */,
+				ESPKGREF004 /* XCLocalSwiftPackageReference "Packages/EasyStreamTransport" */,
+				ESPKGREF005 /* XCLocalSwiftPackageReference "Packages/EasyStreamCameraCapture" */,
+				ESPKGREF006 /* XCLocalSwiftPackageReference "Packages/EasyStreamSwitcher" */,
+				ESPKGREF007 /* XCLocalSwiftPackageReference "Packages/EasyStreamVideoPipeline" */,
+				ESPKGREF008 /* XCLocalSwiftPackageReference "Packages/EasyStreamAudioPipeline" */,
+				ESPKGREF009 /* XCLocalSwiftPackageReference "Packages/EasyStreamStreaming" */,
+				ESPKGREF010 /* XCLocalSwiftPackageReference "Packages/EasyStreamFacebook" */,
+				ESPKGREF011 /* XCLocalSwiftPackageReference "Packages/EasyStreamFacebookLogin" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B9D0EA033024FDEF00E5464D /* Products */;
 			projectDirPath = "";
@@ -212,6 +264,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B9D547CB3045EC440068C138 /* LyrioraStreamIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -388,16 +441,22 @@
 		B9D0EA263024FDF100E5464D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = LyrioraStreamIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = EasyStream/EasyStream.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = T2XTLTVNH4;
+				DEVELOPMENT_TEAM = KB3H8VKXAX;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "EasyStream necesita acceso a la cámara para enviar video al Director.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "EasyStream usa la red local para descubrir cámaras y directores en tu Wi‑Fi y transmitir video con baja latencia.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "EasyStream necesita acceso al micrófono para enviar audio al Director.";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "EasyStream usa esto para iniciar sesión con Facebook y acceder a tus Páginas para transmitir en vivo.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -406,14 +465,13 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pabel.EasyStream;
+				PRODUCT_BUNDLE_IDENTIFIER = pabel.EasyStream.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -425,23 +483,29 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.5;
+				XROS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
 		};
 		B9D0EA273024FDF100E5464D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = LyrioraStreamIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = EasyStream/EasyStream.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = T2XTLTVNH4;
+				DEVELOPMENT_TEAM = KB3H8VKXAX;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "EasyStream necesita acceso a la cámara para enviar video al Director.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "EasyStream usa la red local para descubrir cámaras y directores en tu Wi‑Fi y transmitir video con baja latencia.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "EasyStream necesita acceso al micrófono para enviar audio al Director.";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "EasyStream usa esto para iniciar sesión con Facebook y acceder a tus Páginas para transmitir en vivo.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -450,14 +514,13 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pabel.EasyStream;
+				PRODUCT_BUNDLE_IDENTIFIER = pabel.EasyStream.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -469,7 +532,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.5;
+				XROS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;
 		};
@@ -615,6 +678,111 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		ESPKGREF001 /* XCLocalSwiftPackageReference "Packages/EasyStreamCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EasyStreamCore;
+		};
+		ESPKGREF002 /* XCLocalSwiftPackageReference "Packages/EasyStreamDiscovery" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EasyStreamDiscovery;
+		};
+		ESPKGREF003 /* XCLocalSwiftPackageReference "Packages/EasyStreamUIComponents" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EasyStreamUIComponents;
+		};
+		ESPKGREF004 /* XCLocalSwiftPackageReference "Packages/EasyStreamTransport" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EasyStreamTransport;
+		};
+		ESPKGREF005 /* XCLocalSwiftPackageReference "Packages/EasyStreamCameraCapture" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EasyStreamCameraCapture;
+		};
+		ESPKGREF006 /* XCLocalSwiftPackageReference "Packages/EasyStreamSwitcher" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EasyStreamSwitcher;
+		};
+		ESPKGREF007 /* XCLocalSwiftPackageReference "Packages/EasyStreamVideoPipeline" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EasyStreamVideoPipeline;
+		};
+		ESPKGREF008 /* XCLocalSwiftPackageReference "Packages/EasyStreamAudioPipeline" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EasyStreamAudioPipeline;
+		};
+		ESPKGREF009 /* XCLocalSwiftPackageReference "Packages/EasyStreamStreaming" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EasyStreamStreaming;
+		};
+		ESPKGREF010 /* XCLocalSwiftPackageReference "Packages/EasyStreamFacebook" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EasyStreamFacebook;
+		};
+		ESPKGREF011 /* XCLocalSwiftPackageReference "Packages/EasyStreamFacebookLogin" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EasyStreamFacebookLogin;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		ESPKG001 /* EasyStreamCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ESPKGREF001 /* XCLocalSwiftPackageReference "Packages/EasyStreamCore" */;
+			productName = EasyStreamCore;
+		};
+		ESPKG002 /* EasyStreamDiscovery */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ESPKGREF002 /* XCLocalSwiftPackageReference "Packages/EasyStreamDiscovery" */;
+			productName = EasyStreamDiscovery;
+		};
+		ESPKG003 /* EasyStreamUIComponents */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ESPKGREF003 /* XCLocalSwiftPackageReference "Packages/EasyStreamUIComponents" */;
+			productName = EasyStreamUIComponents;
+		};
+		ESPKG004 /* EasyStreamTransport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ESPKGREF004 /* XCLocalSwiftPackageReference "Packages/EasyStreamTransport" */;
+			productName = EasyStreamTransport;
+		};
+		ESPKG005 /* EasyStreamCameraCapture */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ESPKGREF005 /* XCLocalSwiftPackageReference "Packages/EasyStreamCameraCapture" */;
+			productName = EasyStreamCameraCapture;
+		};
+		ESPKG006 /* EasyStreamSwitcher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ESPKGREF006 /* XCLocalSwiftPackageReference "Packages/EasyStreamSwitcher" */;
+			productName = EasyStreamSwitcher;
+		};
+		ESPKG007 /* EasyStreamVideoPipeline */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ESPKGREF007 /* XCLocalSwiftPackageReference "Packages/EasyStreamVideoPipeline" */;
+			productName = EasyStreamVideoPipeline;
+		};
+		ESPKG008 /* EasyStreamAudioPipeline */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ESPKGREF008 /* XCLocalSwiftPackageReference "Packages/EasyStreamAudioPipeline" */;
+			productName = EasyStreamAudioPipeline;
+		};
+		ESPKG009 /* EasyStreamStreaming */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ESPKGREF009 /* XCLocalSwiftPackageReference "Packages/EasyStreamStreaming" */;
+			productName = EasyStreamStreaming;
+		};
+		ESPKG010 /* EasyStreamFacebook */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ESPKGREF010 /* XCLocalSwiftPackageReference "Packages/EasyStreamFacebook" */;
+			productName = EasyStreamFacebook;
+		};
+		ESPKG011 /* EasyStreamFacebookLogin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ESPKGREF011 /* XCLocalSwiftPackageReference "Packages/EasyStreamFacebookLogin" */;
+			productName = EasyStreamFacebookLogin;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B9D0E9FA3024FDEF00E5464D /* Project object */;
 }

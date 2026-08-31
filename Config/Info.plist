@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIconFile</key>
+	<string>LyrioraStreamIcon</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb1412535777467336</string>
+			</array>
+		</dict>
+	</array>
+	<key>FacebookAppID</key>
+	<string>1412535777467336</string>
+	<key>FacebookClientToken</key>
+	<string>50e0fe714e0b9d20a8e407ea2ab8f136</string>
+	<key>FacebookDisplayName</key>
+	<string>EasyStream</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fbauth2</string>
+		<string>fb-messenger-share-api</string>
+	</array>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_easystream-camera._tcp</string>
+		<string>_easystream-director._tcp</string>
+	</array>
+</dict>
+</plist>

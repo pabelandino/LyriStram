@@ -2,31 +2,40 @@
 //  EasyStreamApp.swift
 //  EasyStream
 //
-//  Created by Pabel Andino on 8/6/26.
-//
 
 import SwiftUI
-import SwiftData
+import EasyStreamFacebook
+#if os(iOS)
+import EasyStreamFacebookLogin
+#endif
 
 @main
 struct EasyStreamApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+#if os(iOS)
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+#endif
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    init() {
+#if os(iOS)
+        EasyStreamFacebookLoginSetup.install()
+#endif
+    }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+#if os(iOS)
+                .onOpenURL { url in
+                    _ = FacebookSDKBootstrap.handleOpenURL(url)
+                }
+#endif
         }
-        .modelContainer(sharedModelContainer)
+
+#if os(macOS)
+        Window("Monitor multiview", id: "preview-monitor") {
+            DirectorPreviewMonitorWindowView()
+        }
+        .defaultSize(width: 1280, height: 720)
+#endif
     }
 }
