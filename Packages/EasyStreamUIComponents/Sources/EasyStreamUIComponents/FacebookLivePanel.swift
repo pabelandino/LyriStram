@@ -107,7 +107,7 @@ public struct FacebookLivePanel: View {
                 Label("Autorizar Páginas", systemImage: "rectangle.stack.badge.person.crop")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: true))
             .disabled(isLoading)
 
             Text(FacebookConfiguration.pagePermissionsMetaSetupHint)
@@ -126,7 +126,7 @@ public struct FacebookLivePanel: View {
                 Label("Preparar transmisión", systemImage: "video.badge.plus")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(BroadcastGlassBorderedButtonStyle())
             .disabled(isLoading || selectedPageID == nil)
         }
 

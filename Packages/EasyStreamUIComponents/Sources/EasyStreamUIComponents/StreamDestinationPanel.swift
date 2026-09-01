@@ -32,15 +32,13 @@ public struct StreamDestinationPanel: View {
                     Label("Detener emisión", systemImage: "stop.circle.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
+                .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.programRed, isProminent: true))
             } else {
                 Button(action: onStart) {
                     Label("Iniciar emisión RTMPS", systemImage: "dot.radiowaves.up.forward")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
+                .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.liveAmber, isProminent: true))
                 .disabled(!destination.isConfigured)
             }
 

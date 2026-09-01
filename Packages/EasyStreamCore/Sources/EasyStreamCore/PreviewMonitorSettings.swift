@@ -37,7 +37,8 @@ public struct PreviewMonitorRGBColor: Codable, Sendable, Equatable {
 
     public static let previewGreen = PreviewMonitorRGBColor(red: 0.12, green: 0.78, blue: 0.36)
     public static let programRed = PreviewMonitorRGBColor(red: 0.92, green: 0.18, blue: 0.18)
-    public static let audioBlue = PreviewMonitorRGBColor(red: 0.22, green: 0.52, blue: 0.98)
+    public static let audioGold = PreviewMonitorRGBColor(red: 0.96, green: 0.74, blue: 0.26)
+    public static let audioBlue = audioGold
     public static let black = PreviewMonitorRGBColor(red: 0, green: 0, blue: 0)
 }
 

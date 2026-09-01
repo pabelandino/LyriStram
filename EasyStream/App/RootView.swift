@@ -1,5 +1,6 @@
 import SwiftUI
 import EasyStreamCore
+import EasyStreamUIComponents
 
 enum AppRoute: Hashable {
     case roleSelection
@@ -52,8 +53,11 @@ struct RootView: View {
                 RoleSelectionScreen(selectedRole: $coordinator.selectedRole)
             }
         }
+        .background(BroadcastTheme.panelBackground)
 #if os(macOS)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .broadcastHiddenWindowToolbar()
+        .broadcastTitlebarSafeArea()
 #endif
     }
 

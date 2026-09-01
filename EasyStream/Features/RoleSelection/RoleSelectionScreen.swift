@@ -21,7 +21,7 @@ struct RoleSelectionScreen: View {
                     Button("Continuar") {
                         selectedRole = draftRole
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: true))
                     .controlSize(.large)
                     .frame(maxWidth: 640)
                 }

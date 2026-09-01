@@ -1,6 +1,21 @@
 import Foundation
 import CoreMedia
 
+/// Shared LAN camera / WebRTC transport defaults.
+public enum CameraTransportDefaults {
+#if os(iOS)
+    public static let width: Int32 = 640
+    public static let height: Int32 = 480
+    public static let frameRate: Int32 = 20
+    public static let maxBitrateBps: Int = 900_000
+#else
+    public static let width: Int32 = 1280
+    public static let height: Int32 = 720
+    public static let frameRate: Int32 = 24
+    public static let maxBitrateBps: Int = 2_500_000
+#endif
+}
+
 public struct VideoEncoderConfiguration: Sendable, Equatable, Codable {
     public var width: Int32
     public var height: Int32

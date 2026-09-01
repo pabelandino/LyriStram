@@ -27,7 +27,7 @@ public struct DirectorStatusBar: View {
         HStack(spacing: 16) {
             Label(isLive ? "EN VIVO" : "PREVIEW", systemImage: "circle.fill")
                 .font(.caption.weight(.bold))
-                .foregroundStyle(isLive ? BroadcastTheme.programRed : Color.orange)
+                .foregroundStyle(isLive ? BroadcastTheme.programRed : BroadcastTheme.liveAmber)
 
             Text("\(connectedCameras) cámara(s)")
                 .font(.caption)
@@ -121,13 +121,13 @@ public struct CameraSourceTile: View {
                             .font(.caption2.weight(.bold))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(.red, in: Capsule())
+                            .background(BroadcastTheme.programRed, in: Capsule())
                     } else if isPreview {
                         Text(BroadcastTerminology.previewShort)
                             .font(.caption2.weight(.bold))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(.green, in: Capsule())
+                            .background(BroadcastTheme.previewGreen, in: Capsule())
                     }
                 }
                 .padding(8)
@@ -157,9 +157,9 @@ public struct CameraSourceTile: View {
     }
 
     private var borderColor: Color {
-        if isProgram { .red }
-        else if isPreview { .green }
-        else { .white.opacity(0.15) }
+        if isProgram { BroadcastTheme.programRed }
+        else if isPreview { BroadcastTheme.previewGreen }
+        else { BroadcastTheme.panelBorder }
     }
 }
 
@@ -183,10 +183,8 @@ public struct TakeToProgramButton: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
         }
-        .buttonStyle(.borderedProminent)
-        .tint(.red)
+        .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.programRed, isProminent: true))
         .disabled(!isEnabled)
-        .keyboardShortcut(.space, modifiers: [])
     }
 }
 
@@ -210,7 +208,7 @@ public struct SwitchTransitionControls: View {
                     Text(kind.displayName).tag(kind)
                 }
             }
-            .pickerStyle(.segmented)
+            .broadcastNativeSegmentedControl()
             .onChange(of: transition.kind) { _, kind in
                 if kind == .cut {
                     transition.duration = 0
@@ -298,28 +296,34 @@ public struct TransitionProgramView: View {
 public struct DirectorRemoteControlsView: View {
     let cameraName: String
     let settings: RemoteCameraSettings
+    let connectionState: StreamConnectionState
     let onMutedChange: (Bool) -> Void
     let onZoomChange: (Double) -> Void
     let onExposureChange: (Float) -> Void
     let onWhiteBalanceChange: (String) -> Void
     let onLensChange: (String) -> Void
+    let onReconnect: () -> Void
 
     public init(
         cameraName: String,
         settings: RemoteCameraSettings,
+        connectionState: StreamConnectionState = .connected,
         onMutedChange: @escaping (Bool) -> Void,
         onZoomChange: @escaping (Double) -> Void,
         onExposureChange: @escaping (Float) -> Void,
         onWhiteBalanceChange: @escaping (String) -> Void,
-        onLensChange: @escaping (String) -> Void
+        onLensChange: @escaping (String) -> Void,
+        onReconnect: @escaping () -> Void = {}
     ) {
         self.cameraName = cameraName
         self.settings = settings
+        self.connectionState = connectionState
         self.onMutedChange = onMutedChange
         self.onZoomChange = onZoomChange
         self.onExposureChange = onExposureChange
         self.onWhiteBalanceChange = onWhiteBalanceChange
         self.onLensChange = onLensChange
+        self.onReconnect = onReconnect
     }
 
     public var body: some View {
@@ -334,6 +338,21 @@ public struct DirectorRemoteControlsView: View {
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
+
+            if connectionState != .connected {
+                Text(connectionStateLabel)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+
+            Button(action: onReconnect) {
+                Label(reconnectButtonTitle, systemImage: "arrow.clockwise.circle.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(BroadcastGlowButtonStyle(
+                tint: connectionState == .connected ? BroadcastTheme.subtleText : BroadcastTheme.studioAccent,
+                isProminent: connectionState != .connected
+            ))
 
             Toggle(isOn: Binding(
                 get: { settings.isMuted },
@@ -366,7 +385,7 @@ public struct DirectorRemoteControlsView: View {
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
                                 .background(
-                                    activeLens == lens ? Color.accentColor : Color.secondary.opacity(0.15),
+                                    activeLens == lens ? BroadcastTheme.studioAccent : Color.secondary.opacity(0.15),
                                     in: Capsule()
                                 )
                                 .foregroundStyle(activeLens == lens ? Color.white : Color.primary)
@@ -437,5 +456,18 @@ public struct DirectorRemoteControlsView: View {
 
     private var activeLens: RemoteLensOption {
         RemoteLensOption(rawValue: settings.activeLens) ?? .wide
+    }
+
+    private var reconnectButtonTitle: String {
+        connectionState == .connected ? "Forzar reconexión" : "Reconectar cámara"
+    }
+
+    private var connectionStateLabel: String {
+        switch connectionState {
+        case .connecting, .signaling: "Conectando…"
+        case .failed: "Conexión fallida"
+        case .disconnected: "Desconectada"
+        default: "Sin señal de video"
+        }
     }
 }

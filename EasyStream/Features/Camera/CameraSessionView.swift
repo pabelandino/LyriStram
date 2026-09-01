@@ -2,16 +2,21 @@ import SwiftUI
 import EasyStreamCore
 import EasyStreamCameraCapture
 import EasyStreamUIComponents
+import EasyStreamTransport
 
 struct CameraSessionView: View {
     @State private var viewModel = CameraSessionViewModel()
+    @State private var intercomService = TeamIntercomService()
     @State private var showsControls = true
     private let identity = DeviceIdentity.current()
 
     var body: some View {
         Group {
             if viewModel.needsLocalNetworkPermission {
-                LocalNetworkPermissionView(openSettings: PlatformSettings.openAppSettings)
+                LocalNetworkPermissionView(
+                    openSettings: PlatformSettings.openAppSettings,
+                    onRetry: { viewModel.retryLocalNetworkAccess(identity: identity) }
+                )
             } else if viewModel.permissionStatus == .denied || viewModel.permissionStatus == .restricted {
                 cameraPermissionView
             } else {
@@ -35,8 +40,23 @@ struct CameraSessionView: View {
                 )
             }
         }
-        .onAppear { viewModel.start(identity: identity) }
-        .onDisappear { viewModel.stop() }
+        .onAppear {
+            viewModel.start(identity: identity)
+        }
+        .onChange(of: viewModel.streamState) { _, state in
+            switch state {
+            case .connected:
+                intercomService.start(identity: identity, role: .camera)
+            case .failed, .disconnected, .idle:
+                intercomService.stop()
+            default:
+                break
+            }
+        }
+        .onDisappear {
+            viewModel.stop()
+            intercomService.stop()
+        }
     }
 
     private var streamBadgeLabel: String {
@@ -54,7 +74,7 @@ struct CameraSessionView: View {
             Text("EasyStream necesita acceso a la cámara para enviar video al Director.")
         } actions: {
             Button("Abrir Ajustes", action: PlatformSettings.openAppSettings)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: true))
         }
     }
 
@@ -72,6 +92,7 @@ struct CameraSessionView: View {
                 ZStack {
                     if let session = viewModel.localPreviewSession {
                         CameraPreviewView(session: session)
+                            .frame(maxWidth: CameraStreamConfiguration.previewMaxWidth)
                             .aspectRatio(16 / 9, contentMode: .fit)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     } else {
@@ -94,8 +115,11 @@ struct CameraSessionView: View {
                 .padding(.horizontal, 12)
 
                 if showsControls {
-                    controlsSheet
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    ScrollView(.vertical, showsIndicators: true) {
+                        controlsSheet
+                    }
+                    .frame(maxHeight: 360)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
                 Spacer(minLength: 0)
@@ -151,6 +175,21 @@ struct CameraSessionView: View {
             )
 
             connectionSummary
+
+            TeamIntercomPanel(
+                peers: intercomService.peers,
+                statusMessage: intercomService.statusMessage,
+                isEnabled: intercomService.isEnabled,
+                isTalking: intercomService.isTalking,
+                isActivating: intercomService.isActivating,
+                targetPeerID: intercomService.targetPeerID,
+                needsLocalNetworkPermission: intercomService.needsLocalNetworkPermission,
+                onOpenSettings: PlatformSettings.openAppSettings,
+                onTargetPeerChange: { intercomService.setTargetPeer($0) },
+                onEnabledChange: { intercomService.isEnabled = $0 },
+                onTalkBegin: { intercomService.toggleTalking() },
+                onTalkEnd: { intercomService.toggleTalking() }
+            )
         }
         .padding(16)
         .broadcastPanel(elevated: true)
@@ -160,15 +199,29 @@ struct CameraSessionView: View {
 
     private var connectionSummary: some View {
         VStack(alignment: .leading, spacing: 8) {
-            BroadcastSectionHeader("Conexión", systemImage: "wifi")
-            if viewModel.devices.isEmpty {
-                Text("Esperando un Director en la red local…")
-                    .font(.caption)
-                    .foregroundStyle(BroadcastTheme.subtleText)
-            } else {
-                ForEach(viewModel.devices) { device in
-                    DiscoveredDeviceRow(device: device)
+            BroadcastSectionHeader("Director", systemImage: "wifi")
+
+            DirectorConnectionPanel(
+                directors: viewModel.availableDirectors,
+                selectedDirectorID: viewModel.selectedDirectorID,
+                connectedDirectorID: viewModel.connectedDirectorID,
+                streamState: viewModel.streamState,
+                statusMessage: viewModel.statusMessage,
+                onSelect: { viewModel.selectDirector($0) }
+            )
+
+            if viewModel.canReconnect {
+                Button {
+                    viewModel.reconnect()
+                } label: {
+                    Label(
+                        viewModel.isReconnecting ? "Reconectando…" : "Reconectar al Director",
+                        systemImage: "arrow.clockwise.circle.fill"
+                    )
+                    .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: true))
+                .disabled(viewModel.isReconnecting)
             }
         }
     }
@@ -215,11 +268,43 @@ struct CameraSessionView: View {
                 )
             }
 
-            Section("Conexión") {
-                Label(viewModel.statusMessage, systemImage: "wifi")
-                    .foregroundStyle(.secondary)
-                ForEach(viewModel.devices) { device in
-                    DiscoveredDeviceRow(device: device)
+            Section("Intercom") {
+                TeamIntercomPanel(
+                    peers: intercomService.peers,
+                    statusMessage: intercomService.statusMessage,
+                    isEnabled: intercomService.isEnabled,
+                    isTalking: intercomService.isTalking,
+                    isActivating: intercomService.isActivating,
+                    targetPeerID: intercomService.targetPeerID,
+                    needsLocalNetworkPermission: intercomService.needsLocalNetworkPermission,
+                    onOpenSettings: PlatformSettings.openAppSettings,
+                    onTargetPeerChange: { intercomService.setTargetPeer($0) },
+                    onEnabledChange: { intercomService.isEnabled = $0 },
+                    onTalkBegin: { intercomService.toggleTalking() },
+                    onTalkEnd: { intercomService.toggleTalking() }
+                )
+            }
+
+            Section("Director") {
+                DirectorConnectionPanel(
+                    directors: viewModel.availableDirectors,
+                    selectedDirectorID: viewModel.selectedDirectorID,
+                    connectedDirectorID: viewModel.connectedDirectorID,
+                    streamState: viewModel.streamState,
+                    statusMessage: viewModel.statusMessage,
+                    onSelect: { viewModel.selectDirector($0) }
+                )
+
+                if viewModel.canReconnect {
+                    Button {
+                        viewModel.reconnect()
+                    } label: {
+                        Label(
+                            viewModel.isReconnecting ? "Reconectando…" : "Reconectar al Director",
+                            systemImage: "arrow.clockwise.circle.fill"
+                        )
+                    }
+                    .disabled(viewModel.isReconnecting)
                 }
             }
         }

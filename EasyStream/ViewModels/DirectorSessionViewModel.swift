@@ -85,6 +85,11 @@ final class DirectorSessionViewModel {
     private var encoderTask: Task<Void, Never>?
     private var audioEncoderTask: Task<Void, Never>?
     private var publisherTask: Task<Void, Never>?
+    private var lastEncoderStatsRefresh = Date.distantPast
+    private var lastAudioStatsRefresh = Date.distantPast
+    private let statsRefreshInterval: TimeInterval = 2.0
+    /// H.264 program encoder runs only while RTMP/network publish is active — not during normal monitoring.
+    private var isStreamEncodingEnabled = false
 
     var programVideoTrack: RTCVideoTrack? {
         track(for: programSourceID)
@@ -158,6 +163,21 @@ final class DirectorSessionViewModel {
         }
     }
 
+    func retryLocalNetworkAccess(identity: DeviceIdentity) {
+        needsLocalNetworkPermission = false
+        Task {
+            do {
+                try await discovery.start(role: .director, identity: identity)
+                isRunning = true
+                statusMessage = "Esperando cámaras…"
+                await refreshDevices()
+            } catch {
+                lastError = error.localizedDescription
+                statusMessage = "Error al reconectar"
+            }
+        }
+    }
+
     func stop() {
         discoveryTask?.cancel()
         streamTask?.cancel()
@@ -173,6 +193,7 @@ final class DirectorSessionViewModel {
         encoderStats = VideoEncoderStats()
         audioEncoderStats = AudioEncoderStats()
         publisherStats = StreamPublisherStats()
+        isStreamEncodingEnabled = false
         Task {
             await broadcastPublisher.stop()
             await programAudioEncoder.stop()
@@ -200,14 +221,20 @@ final class DirectorSessionViewModel {
 
     func startPublishing() {
         guard !isPublishing else { return }
+        isStreamEncodingEnabled = true
         StreamDestinationStore.save(streamDestination)
-        Task { await broadcastPublisher.start(destination: streamDestination) }
+        Task {
+            await broadcastPublisher.start(destination: streamDestination)
+            syncProgramEncoder()
+        }
     }
 
     func stopPublishing() {
+        isStreamEncodingEnabled = false
         Task {
             await broadcastPublisher.stop()
             await endFacebookLiveIfNeeded()
+            syncProgramEncoder()
         }
     }
 
@@ -324,6 +351,14 @@ final class DirectorSessionViewModel {
         outgoingProgramSourceID = nil
     }
 
+    func setProgramAudioSource(_ sourceID: CameraSourceID) {
+        Task {
+            if let event = await switcher.setProgramAudioSource(sourceID) {
+                applySwitcherEvent(event)
+            }
+        }
+    }
+
     func setMuted(_ muted: Bool, for sourceID: CameraSourceID) {
         persistAndSend(sourceID, command: .setMuted(muted)) { $0.isMuted = muted }
     }
@@ -342,6 +377,31 @@ final class DirectorSessionViewModel {
 
     func setLens(_ lens: String, for sourceID: CameraSourceID) {
         persistAndSend(sourceID, command: .setLens(lens)) { $0.activeLens = lens }
+    }
+
+    func reconnectCamera(_ sourceID: CameraSourceID) {
+        Task {
+            markSourceReconnecting(sourceID)
+            statusMessage = "Reconectando \(inspectorSourceName(for: sourceID))…"
+            do {
+                try await streamReceiver.prepareReconnect(for: sourceID)
+            } catch {
+                upsertSource(sourceID, connectionState: .disconnected)
+                lastError = "No se pudo contactar la cámara. Usa Reconectar en el iPhone."
+                statusMessage = "Reconexión fallida"
+            }
+        }
+    }
+
+    func connectionState(for sourceID: CameraSourceID) -> StreamConnectionState {
+        sources.first { $0.id == sourceID }?.connectionState ?? .disconnected
+    }
+
+    private func markSourceReconnecting(_ sourceID: CameraSourceID) {
+        guard let index = sources.firstIndex(where: { $0.id == sourceID }) else { return }
+        sources[index].videoTrack = nil
+        sources[index].connectionState = .connecting
+        syncPreviewMonitor()
     }
 
     func source(at index: Int) -> CameraSourceID? {
@@ -543,12 +603,13 @@ final class DirectorSessionViewModel {
                 guard !Task.isCancelled else { break }
                 switch event {
                 case .started:
-                    encoderStats = await programEncoder.stats()
+                    await refreshEncoderStatsIfNeeded(force: true)
                 case .sample(let sample):
-                    encoderStats = await programEncoder.stats()
                     await broadcastPublisher.sendVideo(sample)
+                    await refreshEncoderStatsIfNeeded(force: false)
                 case .stopped:
                     encoderStats = VideoEncoderStats()
+                    lastEncoderStatsRefresh = .distantPast
                 case .failed(let message):
                     lastError = message
                 }
@@ -556,8 +617,21 @@ final class DirectorSessionViewModel {
         }
     }
 
+    private func refreshEncoderStatsIfNeeded(force: Bool) async {
+        let now = Date()
+        guard force || now.timeIntervalSince(lastEncoderStatsRefresh) >= statsRefreshInterval else { return }
+        lastEncoderStatsRefresh = now
+        encoderStats = await programEncoder.stats()
+    }
+
     private func syncProgramEncoder() {
         Task {
+            guard isStreamEncodingEnabled, programVideoTrack != nil else {
+                await programEncoder.stop()
+                encoderStats = VideoEncoderStats()
+                lastEncoderStatsRefresh = .distantPast
+                return
+            }
             await programEncoder.start(programTrack: programVideoTrack)
             encoderStats = await programEncoder.stats()
         }
@@ -570,17 +644,25 @@ final class DirectorSessionViewModel {
                 guard !Task.isCancelled else { break }
                 switch event {
                 case .started:
-                    audioEncoderStats = await programAudioEncoder.stats()
+                    await refreshAudioStatsIfNeeded(force: true)
                 case .sample(let sample):
-                    audioEncoderStats = await programAudioEncoder.stats()
                     await broadcastPublisher.sendAudio(sample)
+                    await refreshAudioStatsIfNeeded(force: false)
                 case .stopped:
                     audioEncoderStats = AudioEncoderStats()
+                    lastAudioStatsRefresh = .distantPast
                 case .failed(let message):
                     lastError = message
                 }
             }
         }
+    }
+
+    private func refreshAudioStatsIfNeeded(force: Bool) async {
+        let now = Date()
+        guard force || now.timeIntervalSince(lastAudioStatsRefresh) >= statsRefreshInterval else { return }
+        lastAudioStatsRefresh = now
+        audioEncoderStats = await programAudioEncoder.stats()
     }
 
     private func syncProgramAudioEncoder() {

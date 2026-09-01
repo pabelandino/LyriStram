@@ -12,6 +12,7 @@ public struct BoundedWebRTCVideoView: View {
     public var body: some View {
         GeometryReader { proxy in
             WebRTCVideoView(track: track)
+                .equatable()
                 .frame(width: proxy.size.width, height: proxy.size.height)
         }
         .clipped()

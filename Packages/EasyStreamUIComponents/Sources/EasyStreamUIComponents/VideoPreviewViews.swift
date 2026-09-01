@@ -14,23 +14,27 @@ public final class LayoutNeutralRTCMTLVideoView: RTCMTLVideoView {
     public override func invalidateIntrinsicContentSize() {}
 }
 
-public struct WebRTCVideoView: UIViewRepresentable {
+public struct WebRTCVideoView: UIViewRepresentable, Equatable {
     let track: RTCVideoTrack?
 
     public init(track: RTCVideoTrack?) {
         self.track = track
     }
 
+    nonisolated public static func == (lhs: WebRTCVideoView, rhs: WebRTCVideoView) -> Bool {
+        lhs.track === rhs.track
+    }
+
     public func makeUIView(context: Context) -> ClippingRTCVideoContainerView {
         let container = ClippingRTCVideoContainerView()
         container.metalView.videoContentMode = .scaleAspectFit
         container.metalView.delegate = context.coordinator
-        context.coordinator.render(track: track, in: container.metalView)
+        context.coordinator.attach(track: track, to: container.metalView)
         return container
     }
 
     public func updateUIView(_ uiView: ClippingRTCVideoContainerView, context: Context) {
-        context.coordinator.render(track: track, in: uiView.metalView)
+        context.coordinator.attach(track: track, to: uiView.metalView)
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -43,11 +47,14 @@ public struct WebRTCVideoView: UIViewRepresentable {
 
     public final class Coordinator: NSObject, RTCVideoViewDelegate {
         private weak var currentTrack: RTCVideoTrack?
+        private weak var currentView: RTCMTLVideoView?
 
-        func render(track: RTCVideoTrack?, in view: RTCMTLVideoView) {
-            if currentTrack === track { return }
+        func attach(track: RTCVideoTrack?, to view: RTCMTLVideoView) {
+            guard currentTrack !== track || currentView !== view else { return }
+            currentView?.renderFrame(nil)
             currentTrack?.remove(view)
             currentTrack = track
+            currentView = view
             track?.add(view)
         }
 
@@ -193,21 +200,25 @@ public final class ClippingRTCVideoContainer: NSView {
     }
 }
 
-public struct WebRTCVideoView: NSViewRepresentable {
+public struct WebRTCVideoView: NSViewRepresentable, Equatable {
     let track: RTCVideoTrack?
 
     public init(track: RTCVideoTrack?) {
         self.track = track
     }
 
+    nonisolated public static func == (lhs: WebRTCVideoView, rhs: WebRTCVideoView) -> Bool {
+        lhs.track === rhs.track
+    }
+
     public func makeNSView(context: Context) -> ClippingRTCVideoContainer {
         let container = ClippingRTCVideoContainer()
-        context.coordinator.render(track: track, in: container.metalView)
+        context.coordinator.attach(track: track, to: container.metalView)
         return container
     }
 
     public func updateNSView(_ nsView: ClippingRTCVideoContainer, context: Context) {
-        context.coordinator.render(track: track, in: nsView.metalView)
+        context.coordinator.attach(track: track, to: nsView.metalView)
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -220,11 +231,14 @@ public struct WebRTCVideoView: NSViewRepresentable {
 
     public final class Coordinator {
         private weak var currentTrack: RTCVideoTrack?
+        private weak var currentView: RTCMTLNSVideoView?
 
-        func render(track: RTCVideoTrack?, in view: RTCMTLNSVideoView) {
-            if currentTrack === track { return }
+        func attach(track: RTCVideoTrack?, to view: RTCMTLNSVideoView) {
+            guard currentTrack !== track || currentView !== view else { return }
+            currentView?.renderFrame(nil)
             currentTrack?.remove(view)
             currentTrack = track
+            currentView = view
             track?.add(view)
         }
     }

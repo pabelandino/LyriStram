@@ -65,6 +65,19 @@ public actor DirectorStreamReceiver {
         try await context.signaling.send(.control(command))
     }
 
+    /// Tears down WebRTC for a source and asks the camera to negotiate a new stream.
+    public func prepareReconnect(for sourceID: CameraSourceID) async throws {
+        guard let sessionID = sessionIDBySource[sourceID],
+              let context = sessions[sessionID] else {
+            throw DirectorStreamError.sourceNotConnected
+        }
+        context.peerConnection.close()
+        sessions.removeValue(forKey: sessionID)
+        sessionIDBySource.removeValue(forKey: sourceID)
+        emit(.sourceConnectionState(sourceID, .connecting))
+        try await context.signaling.send(.control(.reconnectStream))
+    }
+
     private func observeSignaling(_ channel: SignalingChannel) {
         Task {
             for await event in await channel.events() {
@@ -86,6 +99,17 @@ public actor DirectorStreamReceiver {
         switch message {
         case .hello(let deviceID, let displayName, _):
             EasyStreamLog.transport.info("Signaling hello from \(displayName, privacy: .public)")
+            let sourceID = CameraSourceID(deviceID)
+            if let existingSessionID = sessionIDBySource[sourceID],
+               let existing = sessions[existingSessionID],
+               existing.signaling.id != channel.id {
+                existing.peerConnection.close()
+                sessions.removeValue(forKey: existingSessionID)
+                sessionIDBySource.removeValue(forKey: sourceID)
+                pendingHello.removeValue(forKey: existing.signaling.id)
+                Task { await existing.signaling.stop() }
+                emit(.sourceConnectionState(sourceID, .connecting))
+            }
             pendingHello[channel.id] = (deviceID, displayName)
         case .offer(let sessionID, let sdp):
             let hello = pendingHello[channel.id]
@@ -115,6 +139,14 @@ public actor DirectorStreamReceiver {
         channel: SignalingChannel,
         remoteName: String
     ) async {
+        if let existingSessionID = sessionIDBySource[sourceID] {
+            if let existing = sessions[existingSessionID] {
+                existing.peerConnection.close()
+            }
+            sessions.removeValue(forKey: existingSessionID)
+            sessionIDBySource.removeValue(forKey: sourceID)
+        }
+
         emit(.sourceConnectionState(sourceID, .signaling))
 
         let delegateBridge = PeerConnectionDelegateBridge()

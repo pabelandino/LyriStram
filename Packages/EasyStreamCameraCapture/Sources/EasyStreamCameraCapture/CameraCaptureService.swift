@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import CoreMedia
 import EasyStreamCore
 #if canImport(UIKit)
 import UIKit
@@ -23,6 +24,7 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
     private var videoInput: AVCaptureDeviceInput?
     private var activeLens: CameraLensKind = .wide
     private var isConfigured = false
+    private var isStreamingDeliveryEnabled = false
 #if os(iOS)
     private var orientationObserver: NSObjectProtocol?
 #endif
@@ -89,6 +91,19 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
 
     public func makePreviewSession() -> AVCaptureSession {
         session
+    }
+
+    /// When false, `AVCaptureVideoDataOutput` delegate is detached — preview layer only (saves CPU while idle).
+    public func setStreamingDeliveryEnabled(_ enabled: Bool) {
+        sessionQueue.async {
+            guard self.isStreamingDeliveryEnabled != enabled else { return }
+            self.isStreamingDeliveryEnabled = enabled
+            if enabled {
+                self.videoOutput.setSampleBufferDelegate(self, queue: self.sessionQueue)
+            } else {
+                self.videoOutput.setSampleBufferDelegate(nil, queue: nil)
+            }
+        }
     }
 
     public func discoverAvailableLenses() -> [AvailableCameraLens] {
@@ -182,7 +197,11 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
 
     private func configureSession(lens: CameraLensKind) throws {
         session.beginConfiguration()
-        session.sessionPreset = .hd1920x1080
+        if session.canSetSessionPreset(CameraStreamConfiguration.capturePreset) {
+            session.sessionPreset = CameraStreamConfiguration.capturePreset
+        } else {
+            session.sessionPreset = .high
+        }
 
         guard let device = captureDevice(for: lens) else {
             session.commitConfiguration()
@@ -198,12 +217,19 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         videoInput = input
         activeLens = lens
 
+#if os(iOS)
+        try device.lockForConfiguration()
+        let fps = CameraStreamConfiguration.targetFrameRate
+        device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: fps)
+        device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: fps)
+        device.unlockForConfiguration()
+#endif
+
         if session.outputs.isEmpty {
             videoOutput.videoSettings = [
-                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
             ]
             videoOutput.alwaysDiscardsLateVideoFrames = true
-            videoOutput.setSampleBufferDelegate(self, queue: sessionQueue)
             guard session.canAddOutput(videoOutput) else {
                 session.commitConfiguration()
                 throw CameraCaptureError.configurationFailed
@@ -243,6 +269,11 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         videoInput = newInput
         activeLens = lens
 #if os(iOS)
+        try device.lockForConfiguration()
+        let fps = CameraStreamConfiguration.targetFrameRate
+        device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: fps)
+        device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: fps)
+        device.unlockForConfiguration()
         videoOutput.connection(with: .video)?
             .applyVideoOrientation(CaptureVideoOrientation.currentFromDevice())
 #endif
@@ -385,6 +416,7 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
 
 extension CameraCaptureService: AVCaptureVideoDataOutputSampleBufferDelegate {
     public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        guard isStreamingDeliveryEnabled else { return }
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         onVideoFrame?(pixelBuffer, timestamp)

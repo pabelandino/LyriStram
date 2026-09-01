@@ -19,6 +19,21 @@ final class CameraSessionViewModel {
     private(set) var imagingState = CameraImagingState()
     private(set) var lastError: String?
     private(set) var switcherAssignment: CameraSwitcherAssignment = .idle
+    private(set) var isReconnecting = false
+    private(set) var selectedDirectorID: UUID?
+
+    var availableDirectors: [DiscoveredDevice] {
+        devices.filter { $0.role == .director && $0.serviceType == .director }
+    }
+
+    /// True once the operator explicitly picks a Director (vs. auto-selected when only one exists).
+    private var userChoseDirector = false
+    private var directorConnectionTask: Task<Void, Never>?
+    private var connectionGeneration: UInt = 0
+
+    var canReconnect: Bool {
+        isRunning && !isReconnecting && streamState != .connecting && streamState != .signaling
+    }
 
     private let deviceID = DeviceIdentity.current().deviceID
     private let settingsStore = CameraSettingsStore.shared
@@ -39,7 +54,8 @@ final class CameraSessionViewModel {
 
     private var discoveryTask: Task<Void, Never>?
     private var streamTask: Task<Void, Never>?
-    private var connectedDirectorID: UUID?
+    private(set) var connectedDirectorID: UUID?
+    private var pendingDirectorID: UUID?
 
     func start(identity: DeviceIdentity) {
         guard !isRunning else { return }
@@ -89,21 +105,76 @@ final class CameraSessionViewModel {
         }
     }
 
+    func retryLocalNetworkAccess(identity: DeviceIdentity) {
+        needsLocalNetworkPermission = false
+        Task {
+            do {
+                try await discovery.start(role: .camera, identity: identity)
+                isRunning = true
+                statusMessage = "Buscando Director…"
+                await refreshDevices()
+            } catch {
+                lastError = error.localizedDescription
+                statusMessage = "Error al reconectar"
+            }
+        }
+    }
+
     func stop() {
         discoveryTask?.cancel()
+        directorConnectionTask?.cancel()
+        directorConnectionTask = nil
         streamTask?.cancel()
+        streamTask = nil
         connectedDirectorID = nil
+        pendingDirectorID = nil
+        selectedDirectorID = nil
         signalingChannel = nil
+        capture.setStreamingDeliveryEnabled(false)
         capture.stop()
         Task {
             await streamClient.stop()
             await discovery.stop()
         }
         isRunning = false
+        isReconnecting = false
+        userChoseDirector = false
+        selectedDirectorID = nil
         streamState = .idle
         switcherAssignment = .idle
         localPreviewSession = nil
         devices = []
+    }
+
+    /// Connects the camera stream to a chosen Director (disconnects from the current one if needed).
+    func selectDirector(_ director: DiscoveredDevice) {
+        guard director.role == .director, director.serviceType == .director else { return }
+        selectedDirectorID = director.id
+        pendingDirectorID = director.id
+        userChoseDirector = true
+        streamState = .connecting
+        statusMessage = "Conectando a \(director.displayName)…"
+        scheduleDirectorConnection(force: true)
+    }
+
+    /// Reconnects to the Director without leaving camera mode.
+    func reconnect() {
+        guard isRunning, !isReconnecting else { return }
+        Task {
+            isReconnecting = true
+            defer { isReconnecting = false }
+            statusMessage = "Reconectando…"
+            await disconnectStreamSession()
+            streamState = .idle
+            await refreshDevices()
+            if preferredDirector() != nil {
+                scheduleDirectorConnection(force: true)
+            } else {
+                statusMessage = availableDirectors.count > 1
+                    ? "Elige un Director para transmitir"
+                    : "Buscando Director…"
+            }
+        }
     }
 
     func selectLens(_ kind: CameraLensKind) {
@@ -164,6 +235,8 @@ final class CameraSessionViewModel {
                 await streamClient.setAudioMuted(muted)
             case .setSwitcherAssignment(let assignment):
                 switcherAssignment = assignment
+            case .reconnectStream:
+                await reconnectStreamToDirector()
             default:
                 RemoteCameraCommandExecutor.apply(command, capture: capture)
                 imagingState = capture.imagingState
@@ -203,11 +276,21 @@ final class CameraSessionViewModel {
             Task {
                 await refreshDevices()
                 if device.role == .director {
-                    await connectIfNeeded(to: device, identity: DeviceIdentity.current())
+                    await reconcileDirectorConnection()
                 }
             }
-        case .deviceRemoved:
-            Task { await refreshDevices() }
+        case .deviceRemoved(let deviceID):
+            Task {
+                await refreshDevices()
+                if selectedDirectorID == deviceID {
+                    selectedDirectorID = nil
+                    await disconnectStreamSession()
+                    streamState = .idle
+                    statusMessage = availableDirectors.count > 1
+                        ? "Elige un Director para transmitir"
+                        : "Buscando Director…"
+                }
+            }
         case .browsingFailed(let message), .advertisingFailed(let message):
             lastError = message
             statusMessage = message
@@ -217,38 +300,159 @@ final class CameraSessionViewModel {
         }
     }
 
-    private func refreshDevices() async {
-        devices = await discovery.discoveredDevices
+    private func preferredDirector() -> DiscoveredDevice? {
+        if let selectedDirectorID,
+           let selected = availableDirectors.first(where: { $0.id == selectedDirectorID }) {
+            return selected
+        }
+        if availableDirectors.count == 1 {
+            return availableDirectors.first
+        }
+        return nil
     }
 
-    private func connectIfNeeded(to director: DiscoveredDevice, identity: DeviceIdentity) async {
-        guard connectedDirectorID == nil else { return }
-        connectedDirectorID = director.id
-        streamState = .connecting
-        statusMessage = "Conectando a \(director.displayName)…"
+    private func reconcileDirectorConnection() async {
+        let directors = availableDirectors
+        guard !directors.isEmpty else {
+            statusMessage = "Buscando Director…"
+            return
+        }
 
-        let connection = NWConnection(to: director.endpoint, using: .tcp)
+        if directors.count == 1 {
+            if selectedDirectorID == nil {
+                selectedDirectorID = directors[0].id
+            }
+            scheduleDirectorConnection(force: false)
+            return
+        }
+
+        guard userChoseDirector, selectedDirectorID != nil else {
+            if streamState == .connecting || streamState == .signaling {
+                await disconnectStreamSession()
+                streamState = .idle
+            }
+            selectedDirectorID = nil
+            pendingDirectorID = nil
+            statusMessage = "Elige un Director para transmitir"
+            return
+        }
+
+        if isConnectionInProgress(for: selectedDirectorID) {
+            return
+        }
+
+        scheduleDirectorConnection(force: false)
+    }
+
+    private func isConnectionInProgress(for directorID: UUID?) -> Bool {
+        guard let directorID else { return false }
+        let isTarget = pendingDirectorID == directorID || connectedDirectorID == directorID
+        guard isTarget else { return false }
+        switch streamState {
+        case .connecting, .signaling, .connected:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func makeSignalingParameters(for director: DiscoveredDevice) -> NWParameters {
+        let parameters = NWParameters.tcp
+        parameters.allowLocalEndpointReuse = true
+        switch director.platform {
+        case .mac:
+            // Mac directors on the same Wi‑Fi are more reliable over infrastructure LAN than AWDL.
+            parameters.includePeerToPeer = false
+        default:
+            parameters.includePeerToPeer = true
+        }
+        return parameters
+    }
+
+    private func scheduleDirectorConnection(force: Bool) {
+        directorConnectionTask?.cancel()
+        directorConnectionTask = Task {
+            guard !Task.isCancelled else { return }
+            guard let director = preferredDirector() else { return }
+            await performDirectorConnection(to: director, force: force)
+        }
+    }
+
+    private func performDirectorConnection(to director: DiscoveredDevice, force: Bool) async {
+        guard let freshDirector = availableDirectors.first(where: { $0.id == director.id }),
+              freshDirector.serviceType == .director else {
+            statusMessage = "Director no disponible"
+            return
+        }
+
+        if !force {
+            let isSameDirector = connectedDirectorID == freshDirector.id || pendingDirectorID == freshDirector.id
+            if isSameDirector {
+                switch streamState {
+                case .connected, .signaling, .connecting:
+                    return
+                default:
+                    break
+                }
+            } else if streamState == .connected {
+                return
+            }
+        }
+
+        await disconnectStreamSession()
+        streamState = .idle
+
+        connectionGeneration &+= 1
+        let generation = connectionGeneration
+
+        pendingDirectorID = freshDirector.id
+        selectedDirectorID = freshDirector.id
+        streamState = .connecting
+        statusMessage = "Conectando a \(freshDirector.displayName)…"
+
+        let identity = DeviceIdentity.current()
+        let parameters = makeSignalingParameters(for: freshDirector)
+        let connection = NWConnection(to: freshDirector.endpoint, using: parameters)
         let channel = SignalingChannel(connection: connection)
         signalingChannel = channel
+
+        let eventStream = await channel.events()
         await streamClient.attachSignaling(channel)
         await streamClient.prepareMediaTracks()
         await streamClient.setAudioMuted(isMuted)
 
+        streamTask?.cancel()
         streamTask = Task {
-            for await event in await channel.events() {
-                guard !Task.isCancelled else { break }
+            for await event in eventStream {
+                guard !Task.isCancelled, generation == connectionGeneration else { break }
                 switch event {
                 case .connected:
+                    guard generation == connectionGeneration else { break }
+                    connectedDirectorID = freshDirector.id
+                    pendingDirectorID = nil
                     streamState = .signaling
                     statusMessage = "Negociando WebRTC…"
-                    try? await channel.send(.hello(
-                        deviceID: identity.deviceID,
-                        displayName: identity.displayName,
-                        role: AppRole.camera.rawValue
-                    ))
-                    try? await streamClient.startOffer()
-                    await reportSettingsState()
+                    do {
+                        try await channel.send(.hello(
+                            deviceID: identity.deviceID,
+                            displayName: identity.displayName,
+                            role: AppRole.camera.rawValue
+                        ))
+                        try await streamClient.startOffer()
+                        await reportSettingsState()
+                    } catch {
+                        guard generation == connectionGeneration else { break }
+                        capture.setStreamingDeliveryEnabled(false)
+                        lastError = error.localizedDescription
+                        streamState = .failed
+                        statusMessage = "Error al negociar con \(freshDirector.displayName)"
+                        connectedDirectorID = nil
+                        pendingDirectorID = nil
+                        await channel.stop()
+                        signalingChannel = nil
+                    }
                 case .message(let message):
+                    guard generation == connectionGeneration else { break }
                     switch message {
                     case .control(let command):
                         handleRemoteCommand(command)
@@ -256,27 +460,77 @@ final class CameraSessionViewModel {
                         try? await streamClient.handleSignalingMessage(message)
                     }
                 case .disconnected:
+                    guard generation == connectionGeneration else { break }
+                    capture.setStreamingDeliveryEnabled(false)
                     streamState = .disconnected
                     statusMessage = "Desconectado del Director"
                     connectedDirectorID = nil
+                    pendingDirectorID = nil
                     signalingChannel = nil
                 case .failed(let error):
+                    guard generation == connectionGeneration else { break }
+                    capture.setStreamingDeliveryEnabled(false)
                     lastError = error
                     streamState = .failed
                     statusMessage = "Error de conexión"
                     connectedDirectorID = nil
+                    pendingDirectorID = nil
                     signalingChannel = nil
                 }
             }
         }
     }
 
+    private func refreshDevices() async {
+        devices = await discovery.discoveredDevices
+    }
+
+    private func disconnectStreamSession() async {
+        connectionGeneration &+= 1
+        directorConnectionTask?.cancel()
+        directorConnectionTask = nil
+        streamTask?.cancel()
+        streamTask = nil
+        capture.setStreamingDeliveryEnabled(false)
+        await streamClient.resetPeerConnection()
+        if let channel = signalingChannel {
+            await channel.stop()
+        }
+        signalingChannel = nil
+        connectedDirectorID = nil
+        pendingDirectorID = nil
+    }
+
+    private func reconnectStreamToDirector() async {
+        guard signalingChannel != nil else {
+            reconnect()
+            return
+        }
+        isReconnecting = true
+        defer { isReconnecting = false }
+        capture.setStreamingDeliveryEnabled(false)
+        await streamClient.resetPeerConnection()
+        streamState = .signaling
+        statusMessage = "Reconectando con el Director…"
+        do {
+            try await streamClient.startOffer()
+            await reportSettingsState()
+        } catch {
+            lastError = error.localizedDescription
+            streamState = .failed
+            statusMessage = "Error al reconectar"
+        }
+    }
+
     private func wireCaptureToWebRTC() {
-        capture.onVideoFrame = { [streamClient] pixelBuffer, time in
-            let timestampNs = Int64(CMTimeGetSeconds(time) * 1_000_000_000)
-            Task {
-                await streamClient.publish(pixelBuffer: pixelBuffer, timestampNs: timestampNs)
-            }
+        let publisher = streamClient.videoFramePublisher
+        capture.onVideoFrame = { pixelBuffer, time in
+            let timestampNs = CMTimeConvertScale(
+                time,
+                timescale: 1_000_000_000,
+                method: .roundTowardZero
+            ).value
+            publisher.publish(pixelBuffer: pixelBuffer, timestampNs: timestampNs)
         }
     }
 
@@ -286,8 +540,14 @@ final class CameraSessionViewModel {
                 switch event {
                 case .connectionState(let state):
                     streamState = state
-                    if state == .connected {
+                    switch state {
+                    case .connected:
+                        capture.setStreamingDeliveryEnabled(true)
                         statusMessage = "Transmitiendo al Director"
+                    case .disconnected, .failed, .idle:
+                        capture.setStreamingDeliveryEnabled(false)
+                    default:
+                        break
                     }
                 case .failed(let error):
                     lastError = error

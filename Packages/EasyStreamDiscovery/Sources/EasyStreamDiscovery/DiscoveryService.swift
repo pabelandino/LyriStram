@@ -45,6 +45,8 @@ public actor DiscoveryService {
         self.identity = identity
         self.ownDeviceID = identity.deviceID
 
+        await LocalNetworkPermissionTrigger.shared.primeForPermissionPrompt()
+
         try await startAdvertising(role: role, identity: identity)
         startBrowsing(for: role)
     }
@@ -57,6 +59,7 @@ public actor DiscoveryService {
         listener?.cancel()
         listener = nil
         pendingEndpoints.removeAll()
+        await LocalNetworkPermissionTrigger.shared.stop()
 
         let removedIDs = devices.keys
         devices.removeAll()
@@ -79,7 +82,7 @@ public actor DiscoveryService {
         let service = NWListener.Service(
             name: bonjourName,
             type: serviceType,
-            domain: nil,
+            domain: NetworkConstants.serviceDomain,
             txtRecord: txtRecord
         )
 
@@ -137,7 +140,7 @@ public actor DiscoveryService {
             // Explicitly request TXT record resolution — required for metadata on iOS.
             let descriptor = NWBrowser.Descriptor.bonjourWithTXTRecord(
                 type: serviceType.networkType,
-                domain: nil
+                domain: NetworkConstants.serviceDomain
             )
             let browser = NWBrowser(for: descriptor, using: parameters)
 
@@ -211,6 +214,15 @@ public actor DiscoveryService {
             return
         }
 
+        if let existing = devices[parsed.deviceID],
+           existing.serviceType.isSignalingService,
+           serviceType == .intercom {
+            EasyStreamLog.discovery.debug(
+                "Ignoring intercom browse update for signaling device \(parsed.displayName, privacy: .public)"
+            )
+            return
+        }
+
         let device = DiscoveredDevice(
             id: parsed.deviceID,
             endpoint: result.endpoint,
@@ -239,6 +251,9 @@ public actor DiscoveryService {
         pendingEndpoints.removeValue(forKey: endpointKey)
 
         if let parsed = BonjourTXTCodec.decode(txtRecord(from: result)) {
+            if let existing = devices[parsed.deviceID], existing.serviceType != serviceType {
+                return
+            }
             devices.removeValue(forKey: parsed.deviceID)
             emit(.deviceRemoved(parsed.deviceID))
             return
@@ -262,10 +277,7 @@ public actor DiscoveryService {
     }
 
     private func isLocalNetworkPermissionError(_ error: NWError) -> Bool {
-        if case .posix(let code) = error, code == .EHOSTUNREACH || code == .EPERM {
-            return true
-        }
-        return false
+        error.isEasyStreamLocalNetworkPermissionIssue
     }
 
     private func handleIncomingConnection(_ connection: NWConnection) {

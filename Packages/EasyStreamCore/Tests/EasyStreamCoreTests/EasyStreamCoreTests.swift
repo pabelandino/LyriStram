@@ -8,6 +8,11 @@ import Testing
     #expect(AppRole.camera.browsedServiceTypes == [.director])
 }
 
+@Test func bonjourServiceTypeSignaling() {
+    #expect(BonjourServiceType.director.isSignalingService)
+    #expect(BonjourServiceType.camera.isSignalingService)
+    #expect(!BonjourServiceType.intercom.isSignalingService)
+}
 @Test func deviceIdentityPersistsID() {
     let first = DeviceIdentity.current(displayName: "Test Device")
     let second = DeviceIdentity.current(displayName: "Other Name")

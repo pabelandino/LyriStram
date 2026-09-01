@@ -55,7 +55,7 @@ public struct DirectorInspectorPanel<Content: View>: View {
         VStack(spacing: 0) {
             HStack {
                 Image(systemName: "slider.horizontal.3")
-                    .foregroundStyle(BroadcastTheme.audioBlue)
+                    .foregroundStyle(BroadcastTheme.studioAccent)
                 Text("Inspector")
                     .font(.headline)
                 Spacer()
@@ -74,9 +74,15 @@ public struct DirectorInspectorPanel<Content: View>: View {
                 .padding(.vertical, 14)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+#if os(macOS)
+            .clipped()
+#endif
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(BroadcastTheme.panelBackground)
+#if os(macOS)
+        .compositingGroup()
+#endif
         .overlay(alignment: .leading) {
             Rectangle()
                 .fill(BroadcastTheme.workspaceDivider)
@@ -93,6 +99,7 @@ public struct DirectorSourceListRow: View {
     let isConnected: Bool
     let isSelected: Bool
     let onSelect: () -> Void
+    let onReconnect: (() -> Void)?
 
     public init(
         name: String,
@@ -101,7 +108,8 @@ public struct DirectorSourceListRow: View {
         isAudio: Bool,
         isConnected: Bool,
         isSelected: Bool,
-        onSelect: @escaping () -> Void
+        onSelect: @escaping () -> Void,
+        onReconnect: (() -> Void)? = nil
     ) {
         self.name = name
         self.isPreview = isPreview
@@ -110,6 +118,7 @@ public struct DirectorSourceListRow: View {
         self.isConnected = isConnected
         self.isSelected = isSelected
         self.onSelect = onSelect
+        self.onReconnect = onReconnect
     }
 
     public var body: some View {
@@ -134,12 +143,22 @@ public struct DirectorSourceListRow: View {
                             BroadcastTallyPill(BroadcastTerminology.programShort, color: BroadcastTheme.programRed)
                         }
                         if isAudio {
-                            BroadcastTallyPill(BroadcastTerminology.audioShort, color: BroadcastTheme.audioBlue)
+                            BroadcastTallyPill(BroadcastTerminology.audioShort, color: BroadcastTheme.audioGold)
                         }
                     }
                 }
 
                 Spacer(minLength: 0)
+
+                if !isConnected, let onReconnect {
+                    Button(action: onReconnect) {
+                        Image(systemName: "arrow.clockwise.circle.fill")
+                            .font(.body)
+                            .foregroundStyle(BroadcastTheme.studioAccent)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Reconectar cámara")
+                }
 
                 Circle()
                     .fill(isConnected ? BroadcastTheme.previewGreen : Color.orange)

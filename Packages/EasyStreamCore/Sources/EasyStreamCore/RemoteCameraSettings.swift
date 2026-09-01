@@ -69,6 +69,7 @@ public enum RemoteCameraCommand: Codable, Sendable, Equatable {
     case setLens(String)
     case applySavedSettings(RemoteCameraSettings)
     case setSwitcherAssignment(CameraSwitcherAssignment)
+    case reconnectStream
 }
 
 /// Automatic per-camera settings persistence (keyed by device UUID).

@@ -5,6 +5,7 @@
 
 import SwiftUI
 import EasyStreamFacebook
+import EasyStreamUIComponents
 #if os(iOS)
 import EasyStreamFacebookLogin
 #endif
@@ -24,18 +25,31 @@ struct EasyStreamApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .broadcastStudioChrome()
+                .broadcastBarlessWindow()
 #if os(iOS)
                 .onOpenURL { url in
                     _ = FacebookSDKBootstrap.handleOpenURL(url)
                 }
 #endif
         }
+#if os(macOS)
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 1440, height: 900)
+#endif
 
 #if os(macOS)
         Window("Monitor multiview", id: "preview-monitor") {
             DirectorPreviewMonitorWindowView()
         }
         .defaultSize(width: 1280, height: 720)
+
+        Window("", id: "program-output") {
+            DirectorProgramOutputWindowView()
+        }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
 #endif
     }
 }

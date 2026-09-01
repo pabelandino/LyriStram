@@ -4,12 +4,18 @@ import Foundation
 public enum BonjourServiceType: String, Sendable, CaseIterable, Hashable {
     case camera = "_easystream-camera._tcp"
     case director = "_easystream-director._tcp"
+    case intercom = "_easystream-intercom._udp"
 
     /// Value for `NSBonjourServices` in Info.plist.
     public var plistEntry: String { rawValue }
 
     /// Network.framework descriptor type (without leading underscore domain suffix handling).
     public var networkType: String { rawValue }
+
+    /// TCP services used for WebRTC signaling (camera ↔ director).
+    public var isSignalingService: Bool {
+        self == .director || self == .camera
+    }
 }
 
 public enum NetworkConstants {

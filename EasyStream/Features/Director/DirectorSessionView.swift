@@ -1,44 +1,79 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import EasyStreamCore
 import EasyStreamUIComponents
+import EasyStreamTransport
 
 struct DirectorSessionView: View {
     @State private var viewModel = DirectorSessionViewModel()
+    @State private var mediaViewModel = BroadcastMediaViewModel()
+    @State private var intercomService = TeamIntercomService()
+    @State private var sidebarTab: DirectorSidebarTab = .cameras
     @Bindable private var previewMonitor = DirectorPreviewMonitorStore.shared
+    @Bindable private var programOutputStore = DirectorProgramOutputStore.shared
+    @Bindable private var liveProgramAir = LiveProgramAirStore.shared
     private let identity = DeviceIdentity.current()
 #if os(macOS)
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
 #endif
+
+    @State private var isPreviewMonitorSettingsPresented = false
+    @State private var isStreamSettingsPresented = false
 
     private enum WorkspaceMetrics {
         static let sidebarWidth: CGFloat = 260
         static let inspectorWidth: CGFloat = 380
     }
 
-    @State private var isPreviewMonitorSettingsPresented = false
-
     var body: some View {
         @Bindable var viewModel = viewModel
 
         Group {
             if viewModel.needsLocalNetworkPermission {
-                LocalNetworkPermissionView(openSettings: PlatformSettings.openAppSettings)
+                LocalNetworkPermissionView(
+                    openSettings: PlatformSettings.openAppSettings,
+                    onRetry: { viewModel.retryLocalNetworkAccess(identity: identity) }
+                )
             } else {
                 switcherLayout
             }
         }
-        .navigationTitle("Director")
+        .navigationTitle("")
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+#if os(macOS)
+        .broadcastHiddenWindowToolbar()
+#endif
+        .onAppear {
+            mediaViewModel.refreshLiveAirBus()
+        }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+#if os(macOS)
+            ToolbarItemGroup(placement: .primaryAction) {
+                BroadcastTransmissionMenu(
+                    programOutputSettings: $programOutputStore.settings,
+                    availableScreens: ProgramOutputDisplayDiscovery.availableScreens(),
+                    isExternalOutputLive: programOutputStore.isWindowOpen,
+                    isNetworkPublishing: viewModel.isPublishing,
+                    isFacebookConfigured: viewModel.isFacebookConfigured,
+                    isFacebookLoading: viewModel.isFacebookLoading,
+                    facebookStatusMessage: viewModel.facebookStatusMessage,
+                    streamDestination: viewModel.streamDestination,
+                    onStartExternalOutput: startExternalBroadcast,
+                    onStopExternalOutput: stopExternalBroadcast,
+                    onPrepareFacebookLive: { viewModel.prepareFacebookLive() },
+                    onStartNetworkPublish: { viewModel.startPublishing() },
+                    onStopNetworkPublish: { viewModel.stopPublishing() },
+                    onOpenStreamSettings: { isStreamSettingsPresented = true }
+                )
+
                 Button {
                     openPreviewMonitor()
                 } label: {
                     Label("Monitor", systemImage: "display.2")
                 }
                 .help("Abrir monitor multiview en segunda pantalla")
-            }
-            ToolbarItem(placement: .automatic) {
+
                 Button {
                     isPreviewMonitorSettingsPresented = true
                 } label: {
@@ -46,20 +81,62 @@ struct DirectorSessionView: View {
                 }
                 .help("Configurar monitor multiview")
             }
+#else
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    openPreviewMonitor()
+                } label: {
+                    Label("Monitor", systemImage: "display.2")
+                }
+            }
+#endif
+        }
+        .sheet(isPresented: $isStreamSettingsPresented) {
+            NavigationStack {
+                StreamDestinationPanel(
+                    destination: $viewModel.streamDestination,
+                    publisherStats: viewModel.publisherStats,
+                    isPublishing: viewModel.isPublishing,
+                    onStart: {
+                        viewModel.startPublishing()
+                        isStreamSettingsPresented = false
+                    },
+                    onStop: { viewModel.stopPublishing() }
+                )
+                .padding()
+                .navigationTitle("Destino RTMPS")
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Listo") { isStreamSettingsPresented = false }
+                    }
+                }
+            }
+#if os(macOS)
+            .frame(minWidth: 420, minHeight: 280)
+#endif
         }
         .onAppear {
             viewModel.start(identity: identity)
             previewMonitor.bind { viewModel.selectPreview($0) }
+            mediaViewModel.reload()
+            mediaViewModel.refreshLiveAirBus()
+            intercomService.start(identity: identity, role: .director)
+            liveProgramAir.widgetAutoDismissHandler = { [mediaViewModel] id in
+                mediaViewModel.removeWidgetFromLive(id, closeStudioIfEditing: false)
+            }
+#if os(macOS)
+            programOutputStore.resetExternalOutputForLaunch()
+#endif
         }
         .onDisappear {
             previewMonitor.unbind()
             viewModel.stop()
+            intercomService.stop()
+        }
+        .background {
+            ProgramOutputSyncBridge(viewModel: viewModel)
         }
 #if os(macOS)
-        .onKeyPress(.space) {
-            viewModel.takeToProgram()
-            return .handled
-        }
         .background(keyboardShortcuts)
 #endif
         .sheet(isPresented: $isPreviewMonitorSettingsPresented) {
@@ -68,6 +145,44 @@ struct DirectorSessionView: View {
                 onOpenMonitor: openPreviewMonitor
             )
         }
+        .sheet(isPresented: $mediaViewModel.isPlaylistEditorPresented) {
+            if let playlist = mediaViewModel.editingPlaylist {
+                BroadcastPlaylistEditorSheet(
+                    name: playlist.name,
+                    kind: playlist.kind,
+                    itemIDs: playlist.itemIDs,
+                    allResources: mediaViewModel.allResources,
+                    onSave: { name, kind, itemIDs in
+                        var updated = playlist
+                        updated.name = name
+                        updated.kind = kind
+                        updated.itemIDs = itemIDs
+                        mediaViewModel.savePlaylist(updated)
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: $mediaViewModel.isWidgetTemplatePickerPresented) {
+            BroadcastWidgetTemplatePickerSheet { template in
+                mediaViewModel.openNewWidgetStudio(template: template)
+            }
+        }
+#if os(iOS)
+        .fileImporter(
+            isPresented: $mediaViewModel.isWidgetLogoImporterPresented,
+            allowedContentTypes: [.png],
+            allowsMultipleSelection: false
+        ) { result in
+            guard case .success(let urls) = result, let url = urls.first else { return }
+            mediaViewModel.importWidgetLogo(from: url)
+        }
+        .broadcastMediaPhotoImporter(
+            isPresented: $mediaViewModel.isPhotoPickerPresented,
+            kind: mediaViewModel.pendingImportKind
+        ) { data, ext in
+            mediaViewModel.importData(data, kind: mediaViewModel.pendingImportKind, preferredExtension: ext)
+        }
+#endif
     }
 
     @ViewBuilder
@@ -93,13 +208,21 @@ struct DirectorSessionView: View {
             )
 
             HStack(spacing: 0) {
-                sourceSidebar
-                    .frame(width: WorkspaceMetrics.sidebarWidth)
+                DirectorSourceSidebarView(
+                    sidebarTab: $sidebarTab,
+                    viewModel: viewModel,
+                    mediaViewModel: mediaViewModel
+                )
+                .frame(width: WorkspaceMetrics.sidebarWidth)
 
-                switcherDetailColumn
-                    .frame(width: switcherWidth)
-                    .layoutPriority(0)
-                    .clipped()
+                DirectorSwitcherColumnView(
+                    viewModel: viewModel,
+                    mediaViewModel: mediaViewModel,
+                    liveProgramAir: liveProgramAir
+                )
+                .frame(width: switcherWidth)
+                .layoutPriority(0)
+                .clipped()
 
                 inspectorPanel
                     .frame(width: WorkspaceMetrics.inspectorWidth)
@@ -110,24 +233,9 @@ struct DirectorSessionView: View {
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .leading)
             .clipped()
         }
-    }
-
-    private var switcherDetailColumn: some View {
-        VStack(spacing: 0) {
-            DirectorStatusBar(
-                connectedCameras: viewModel.connectedSourceCount,
-                programName: programDisplayName,
-                isLive: viewModel.connectedSourceCount > 0,
-                encoderStats: viewModel.encoderStats,
-                audioEncoderStats: viewModel.audioEncoderStats
-            )
-            mainSwitcherArea
-                .layoutPriority(1)
-            takeBar
-        }
-        .frame(maxHeight: .infinity)
-        .clipped()
+#if os(macOS)
         .background(BroadcastTheme.panelBackground)
+#endif
     }
 
 #if os(macOS)
@@ -136,10 +244,43 @@ struct DirectorSessionView: View {
         PreviewMonitorWindowPlacement.applyExternalDisplayPreference(previewMonitor.settings.openOnExternalDisplay)
         previewMonitor.restartPaginationIfNeeded()
     }
+
+    private func openProgramOutput() {
+        startExternalBroadcast()
+    }
+
+    private func startExternalBroadcast() {
+#if os(macOS)
+        guard ProgramOutputDisplayDiscovery.hasExternalDisplay else { return }
+        programOutputStore.sanitizeScreenSelection()
+        guard let screenIndex = ProgramOutputDisplayDiscovery.validatedExternalScreenIndex(
+            programOutputStore.settings.selectedScreenIndex
+        ) else { return }
+        programOutputStore.settings.isEnabled = true
+        programOutputStore.settings.fillScreen = true
+        openWindow(id: "program-output")
+        programOutputStore.markWindowOpen()
+        ProgramOutputWindowPlacement.presentFullscreen(on: screenIndex)
+#else
+        programOutputStore.settings.isEnabled = true
+        programOutputStore.settings.fillScreen = true
+        openWindow(id: "program-output")
+        programOutputStore.markWindowOpen()
+#endif
+    }
+
+    private func stopExternalBroadcast() {
+        dismissWindow(id: "program-output")
+        programOutputStore.markWindowClosed()
+        programOutputStore.settings.isEnabled = false
+        ProgramOutputWindowPlacement.restorePresentationOptionsIfNeeded()
+    }
 #else
     private func openPreviewMonitor() {
         previewMonitor.restartPaginationIfNeeded()
     }
+
+    private func openProgramOutput() {}
 #endif
 
     private var compactLayout: some View {
@@ -159,7 +300,22 @@ struct DirectorSessionView: View {
     }
 
     private var sourceSidebar: some View {
-        DirectorSourcesPanel {
+        DirectorSourcesPanel(title: sidebarTab.title) {
+            DirectorSidebarTabPicker(selection: $sidebarTab)
+
+            switch sidebarTab {
+            case .cameras:
+                camerasSidebarContent
+            case .library:
+                librarySidebarContent
+            case .playlists:
+                playlistsSidebarContent
+            }
+        }
+    }
+
+    private var camerasSidebarContent: some View {
+        Group {
             BroadcastSectionHeader("Cámaras", systemImage: "video")
 
             if viewModel.sources.isEmpty {
@@ -176,7 +332,10 @@ struct DirectorSessionView: View {
                         isAudio: source.id == viewModel.programAudioSourceID,
                         isConnected: source.connectionState == .connected,
                         isSelected: source.id == viewModel.previewSourceID,
-                        onSelect: { viewModel.selectPreview(source.id) }
+                        onSelect: { viewModel.selectPreview(source.id) },
+                        onReconnect: source.connectionState != .connected
+                            ? { viewModel.reconnectCamera(source.id) }
+                            : nil
                     )
                 }
             }
@@ -192,8 +351,184 @@ struct DirectorSessionView: View {
         }
     }
 
+    @ViewBuilder
+    private var librarySidebarContent: some View {
+        DeferredBroadcastLibraryPanel(
+            selectedKind: $mediaViewModel.selectedLibraryKind,
+            resources: mediaViewModel.filteredResources(for: mediaViewModel.selectedLibraryKind),
+            playlists: mediaViewModel.playlists,
+            selectedPlaylistID: mediaViewModel.selectedPlaylistID(for: mediaViewModel.selectedLibraryKind),
+            activeResourceIDs: mediaViewModel.liveWidgetIDs.union(
+                mediaViewModel.liveFullScreenGraphicID.map { [$0] } ?? []
+            ),
+            editingResourceID: mediaViewModel.editingWidgetResource?.id,
+            searchText: mediaViewModel.librarySearchText,
+            onSearchChange: { mediaViewModel.librarySearchText = $0 },
+            onSelectPlaylist: { mediaViewModel.setSelectedPlaylistID($0, for: mediaViewModel.selectedLibraryKind) },
+            onImport: { mediaViewModel.beginImport(kind: $0) },
+            onCreateWidget: { mediaViewModel.isWidgetTemplatePickerPresented = true },
+            onEditWidget: { mediaViewModel.openWidgetStudio(for: $0) },
+            onSelectResource: { mediaViewModel.selectResource($0) },
+            onTakeToProgram: { mediaViewModel.takeResourceToProgram($0) },
+            onRemoveFromProgram: { resource in
+                if resource.kind == .widget {
+                    mediaViewModel.removeWidgetFromLive(resource.id)
+                } else if mediaViewModel.liveFullScreenGraphicID == resource.id {
+                    mediaViewModel.removeFullScreenFromLive()
+                }
+            },
+            onDeleteResource: { mediaViewModel.deleteResource($0) },
+            onRenameResource: { mediaViewModel.renameResource($0, to: $1) },
+            fileURL: { mediaViewModel.fileURL(for: $0) }
+        )
+    }
+
+    @ViewBuilder
+    private var playlistsSidebarContent: some View {
+        BroadcastPlaylistPanel(
+            playlists: mediaViewModel.playlists,
+            allResources: mediaViewModel.allResources,
+            activePlaylistID: mediaViewModel.activePlaylistID,
+            isPlaying: mediaViewModel.isPlaylistPlaying,
+            queueLabel: mediaViewModel.playlistQueueLabel,
+            onCreatePlaylist: {
+                mediaViewModel.editingPlaylist = BroadcastPlaylist(name: "Nueva playlist", kind: .mixed)
+                mediaViewModel.isPlaylistEditorPresented = true
+            },
+            onEditPlaylist: { playlist in
+                mediaViewModel.editingPlaylist = playlist
+                mediaViewModel.isPlaylistEditorPresented = true
+            },
+            onDeletePlaylist: { mediaViewModel.deletePlaylist($0) },
+            onPlayPlaylist: { mediaViewModel.playPlaylist($0) },
+            onStopPlayback: { mediaViewModel.stopPlaylistPlayback() },
+            onPlayNext: { mediaViewModel.playNextInQueue() }
+        )
+    }
+
     private var inspectorPanel: some View {
         DirectorInspectorPanel {
+            DirectorInspectorSection("Audio de programa", systemImage: "waveform") {
+                ProgramAudioSourcePanel(
+                    sources: viewModel.sources.map {
+                        ProgramAudioSourcePanel.SourceOption(
+                            id: $0.id,
+                            name: $0.displayName,
+                            isConnected: $0.connectionState == .connected
+                        )
+                    },
+                    programAudioSourceID: viewModel.programAudioSourceID,
+                    onSelect: { viewModel.setProgramAudioSource($0) }
+                )
+            }
+
+            DirectorInspectorSection("Intercom", systemImage: "mic.fill") {
+                TeamIntercomPanel(
+                    peers: intercomService.peers,
+                    statusMessage: intercomService.statusMessage,
+                    isEnabled: intercomService.isEnabled,
+                    isTalking: intercomService.isTalking,
+                    isActivating: intercomService.isActivating,
+                    targetPeerID: intercomService.targetPeerID,
+                    needsLocalNetworkPermission: intercomService.needsLocalNetworkPermission,
+                    onOpenSettings: PlatformSettings.openAppSettings,
+                    onTargetPeerChange: { intercomService.setTargetPeer($0) },
+                    onEnabledChange: { intercomService.isEnabled = $0 },
+                    onTalkBegin: { intercomService.toggleTalking() },
+                    onTalkEnd: { intercomService.toggleTalking() }
+                )
+            }
+
+            if mediaViewModel.isWidgetStudioOpen {
+                DirectorInspectorSection("Widget Studio", systemImage: "wand.and.stars") {
+                    BroadcastWidgetStudioPanel(
+                        configuration: $mediaViewModel.draftWidgetConfiguration,
+                        displayName: $mediaViewModel.draftWidgetDisplayName,
+                        templateTitle: mediaViewModel.draftWidgetConfiguration.resolvedTemplate.title,
+                        logoURL: mediaViewModel.editingWidgetResource.flatMap { mediaViewModel.logoURL(for: $0) },
+                        isEditingExisting: mediaViewModel.isEditingExistingWidget,
+                        isLiveOnAir: mediaViewModel.editingWidgetResource.map {
+                            mediaViewModel.liveWidgetIDs.contains($0.id)
+                        } ?? false,
+                        isEditingPlacement: mediaViewModel.isWidgetPlacementEditing,
+                        onEnterPlayMode: { mediaViewModel.enterWidgetPlayPreview() },
+                        onEnterLayoutMode: { mediaViewModel.enterWidgetLayoutEditing() },
+                        onImportLogo: { mediaViewModel.requestWidgetLogoImport() },
+                        onSave: { mediaViewModel.saveDraftWidget() },
+                        onPreview: { mediaViewModel.previewDraftWidget() },
+                        onGoLive: { mediaViewModel.takeDraftWidgetLive() },
+                        onApplyToLive: { mediaViewModel.applyDraftToLiveAir() },
+                        onRemoveFromLive: {
+                            if let id = mediaViewModel.editingWidgetResource?.id {
+                                mediaViewModel.removeWidgetFromLive(id)
+                            }
+                        },
+                        onClose: { mediaViewModel.closeWidgetStudio() }
+                    )
+                }
+            }
+
+            if !mediaViewModel.liveWidgets.isEmpty || mediaViewModel.fullScreenGraphicResource != nil || mediaViewModel.isPlaylistPlaying {
+                DirectorInspectorSection("Gráficos al aire", systemImage: "photo.on.rectangle") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if mediaViewModel.isWidgetStudioOpen, !mediaViewModel.isEditingExistingWidget {
+                            Label("Preview del widget nuevo", systemImage: "eye")
+                                .font(.caption)
+                                .foregroundStyle(.yellow)
+                        }
+
+                        ForEach(mediaViewModel.liveWidgets) { widget in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(widget.listLabel)
+                                        .font(.subheadline.weight(.medium))
+                                    Text(widgetConfigurationLabel(for: widget))
+                                        .font(.caption2)
+                                        .foregroundStyle(BroadcastTheme.subtleText)
+                                }
+                                Spacer()
+                                Button("Editar") {
+                                    mediaViewModel.openWidgetStudio(for: widget)
+                                }
+                                .buttonStyle(.borderless)
+                                Button(role: .destructive) {
+                                    mediaViewModel.removeWidgetFromLive(widget.id)
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
+
+                        if let fullScreen = mediaViewModel.fullScreenGraphicResource,
+                           mediaViewModel.liveFullScreenGraphicID != nil {
+                            HStack {
+                                Text("Pantalla completa: \(fullScreen.listLabel)")
+                                    .font(.subheadline)
+                                Spacer()
+                                Button(role: .destructive) {
+                                    mediaViewModel.removeFullScreenFromLive()
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
+
+                        if mediaViewModel.isPlaylistPlaying {
+                            Button("Siguiente en playlist", action: mediaViewModel.playNextInQueue)
+                            Button("Detener playlist", role: .destructive, action: mediaViewModel.stopPlaylistPlayback)
+                        }
+
+                        if !mediaViewModel.liveWidgets.isEmpty || mediaViewModel.liveFullScreenGraphicID != nil {
+                            Button("Quitar todos", role: .destructive) {
+                                mediaViewModel.clearAllGraphicsFromProgram()
+                            }
+                        }
+                    }
+                }
+            }
+
             DirectorInspectorSection("Monitor multiview", systemImage: "display.2") {
                 PreviewMonitorInspectorSummary(
                     layoutName: previewMonitor.settings.layoutMode.displayName,
@@ -222,11 +557,13 @@ struct DirectorSessionView: View {
                     DirectorRemoteControlsView(
                         cameraName: viewModel.inspectorSourceName(for: sourceID),
                         settings: viewModel.settings(for: sourceID),
+                        connectionState: viewModel.connectionState(for: sourceID),
                         onMutedChange: { viewModel.setMuted($0, for: sourceID) },
                         onZoomChange: { viewModel.setZoom($0, for: sourceID) },
                         onExposureChange: { viewModel.setExposureBias($0, for: sourceID) },
                         onWhiteBalanceChange: { viewModel.setWhiteBalance($0, for: sourceID) },
-                        onLensChange: { viewModel.setLens($0, for: sourceID) }
+                        onLensChange: { viewModel.setLens($0, for: sourceID) },
+                        onReconnect: { viewModel.reconnectCamera(sourceID) }
                     )
                 }
             } else {
@@ -252,6 +589,14 @@ struct DirectorSessionView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.opacity(0.92))
         .clipped()
+#if os(macOS)
+        .focusable()
+        .onKeyPress(.space) {
+            guard canTake, !viewModel.isTransitioning else { return .ignored }
+            viewModel.takeToProgram()
+            return .handled
+        }
+#endif
     }
 
     private var previewGrid: some View {
@@ -319,28 +664,29 @@ struct DirectorSessionView: View {
                                 .padding(12)
                         }
                     }
+                    .overlay {
+                        DirectorProgramPreviewOverlayView(mediaViewModel: mediaViewModel)
+                    }
+                    .overlay {
+                        DirectorProgramStudioHintsOverlay(mediaViewModel: mediaViewModel)
+                    }
             }
         }
     }
 
     @ViewBuilder
     private var programVideoContent: some View {
-        if let displayTrack = viewModel.programDisplayTrack {
-            TransitionProgramView(
-                outgoingTrack: viewModel.isTransitioning ? viewModel.outgoingProgramVideoTrack : nil,
-                incomingTrack: displayTrack,
-                progress: viewModel.isTransitioning ? viewModel.transitionProgress : 1,
-                kind: viewModel.selectedTransition.kind
-            )
-        } else {
-            ContentUnavailableView {
-                Label("Sin programa", systemImage: "tv.slash")
-            } description: {
-                Text(viewModel.statusMessage)
-            }
-            .frame(maxWidth: .infinity)
-            .foregroundStyle(.white.opacity(0.7))
-        }
+        DirectorProgramLiveMonitorView(
+            viewModel: viewModel,
+            liveProgramAir: liveProgramAir,
+            studioPreviewWidgetID: mediaViewModel.isWidgetStudioOpen
+                ? mediaViewModel.editingWidgetResource?.id
+                : nil
+        )
+    }
+
+    private func widgetConfigurationLabel(for widget: BroadcastResource) -> String {
+        mediaViewModel.loadedConfiguration(for: widget)?.resolvedTemplate.title ?? "Widget"
     }
 
     private var takeBar: some View {
@@ -487,11 +833,13 @@ struct DirectorSessionView: View {
                 DirectorRemoteControlsView(
                     cameraName: viewModel.inspectorSourceName(for: sourceID),
                     settings: viewModel.settings(for: sourceID),
+                    connectionState: viewModel.connectionState(for: sourceID),
                     onMutedChange: { viewModel.setMuted($0, for: sourceID) },
                     onZoomChange: { viewModel.setZoom($0, for: sourceID) },
                     onExposureChange: { viewModel.setExposureBias($0, for: sourceID) },
                     onWhiteBalanceChange: { viewModel.setWhiteBalance($0, for: sourceID) },
-                    onLensChange: { viewModel.setLens($0, for: sourceID) }
+                    onLensChange: { viewModel.setLens($0, for: sourceID) },
+                    onReconnect: { viewModel.reconnectCamera(sourceID) }
                 )
             }
         }
@@ -546,7 +894,7 @@ struct DirectorSessionView: View {
                     if source.id == viewModel.programAudioSourceID {
                         Text(BroadcastTerminology.audioShort)
                             .font(.caption2.weight(.bold))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(BroadcastTheme.audioGold)
                     }
                 }
             }

@@ -371,7 +371,7 @@ public struct PreviewMonitorInspectorSummary: View {
                 Label("Abrir monitor", systemImage: "display.2")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: true))
             .controlSize(.regular)
 
             Button("Configurar ajustes…", action: onConfigure)
@@ -432,7 +432,7 @@ public struct PreviewMonitorSettingsForm: View {
                     Label("Abrir monitor ahora", systemImage: "display.2")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: true))
             }
 
             Picker("Layout", selection: $settings.layoutMode) {
@@ -440,9 +440,12 @@ public struct PreviewMonitorSettingsForm: View {
                     Text(mode.displayName).tag(mode)
                 }
             }
+            .broadcastNativeSegmentedControl()
 
             Toggle("Abrir en segunda pantalla", isOn: $settings.openOnExternalDisplay)
+                .toggleStyle(.switch)
             Toggle("Paginar automáticamente", isOn: $settings.autoPaginate)
+                .toggleStyle(.switch)
 
             if settings.autoPaginate {
                 HStack {
@@ -479,8 +482,8 @@ public struct PreviewMonitorSettingsForm: View {
                 colorPresetRow("Programa", color: .programRed) {
                     settings.appearance.programBorder = .programRed
                 }
-                colorPresetRow("Audio", color: .audioBlue) {
-                    settings.appearance.audioAccent = .audioBlue
+                colorPresetRow("Audio", color: .audioGold) {
+                    settings.appearance.audioAccent = .audioGold
                 }
             }
 
@@ -501,6 +504,7 @@ public struct PreviewMonitorSettingsForm: View {
             get: { settings.overlays[keyPath: keyPath] },
             set: { settings.overlays[keyPath: keyPath] = $0 }
         ))
+        .toggleStyle(.switch)
     }
 
     private func colorPresetRow(_ title: String, color: PreviewMonitorRGBColor, action: @escaping () -> Void) -> some View {

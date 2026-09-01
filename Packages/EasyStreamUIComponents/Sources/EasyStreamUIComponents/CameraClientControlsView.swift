@@ -68,12 +68,12 @@ public struct CameraClientControlsView: View {
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
                                 .background(
-                                    activeLens == lens.kind ? BroadcastTheme.audioBlue : BroadcastTheme.panelElevated,
+                                    activeLens == lens.kind ? BroadcastTheme.studioAccent : BroadcastTheme.panelElevated,
                                     in: Capsule()
                                 )
                                 .overlay(
                                     Capsule().strokeBorder(
-                                        activeLens == lens.kind ? BroadcastTheme.audioBlue.opacity(0.6) : BroadcastTheme.panelBorder,
+                                        activeLens == lens.kind ? BroadcastTheme.studioAccent.opacity(0.6) : BroadcastTheme.panelBorder,
                                         lineWidth: 1
                                     )
                                 )
@@ -132,7 +132,7 @@ public struct CameraClientControlsView: View {
 #if os(iOS)
             .pickerStyle(.menu)
 #else
-            .pickerStyle(.segmented)
+            .broadcastNativeSegmentedControl()
 #endif
         }
     }

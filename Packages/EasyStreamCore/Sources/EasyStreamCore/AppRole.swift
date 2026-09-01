@@ -39,10 +39,15 @@ public enum AppRole: String, Codable, Sendable, CaseIterable, Identifiable {
     }
 
     /// Bonjour service types this role browses for on the local network.
+    /// Intercom uses its own browser in `TeamIntercomService`; browsing it here would
+    /// overwrite signaling endpoints that share the same device ID in TXT records.
     public var browsedServiceTypes: [BonjourServiceType] {
         switch self {
         case .director: [.camera]
         case .camera: [.director]
         }
     }
+
+    /// Whether this role participates in team intercom on the local network.
+    public var participatesInIntercom: Bool { true }
 }

@@ -12,6 +12,8 @@ public actor CameraStreamClient {
 
     private let sessionID = UUID()
     private let factory = WebRTCConfiguration.cameraFactory()
+    /// Nonisolated so capture callbacks publish frames without awaiting this actor.
+    public nonisolated let videoFramePublisher = WebRTCVideoFramePublisher()
     private var peerConnection: RTCPeerConnection?
     private let delegateBridge = PeerConnectionDelegateBridge()
     private var signaling: SignalingChannel?
@@ -44,6 +46,12 @@ public actor CameraStreamClient {
     public func prepareMediaTracks() {
         let videoSource = factory.videoSource()
         self.videoSource = videoSource
+        videoSource.adaptOutputFormat(
+            toWidth: CameraTransportDefaults.width,
+            height: CameraTransportDefaults.height,
+            fps: Int32(CameraTransportDefaults.frameRate)
+        )
+        videoFramePublisher.attach(to: videoSource)
         videoTrack = factory.videoTrack(with: videoSource, trackId: "easystream-video")
 
         let audioSource = factory.audioSource(with: WebRTCConfiguration.peerConstraints())
@@ -55,10 +63,7 @@ public actor CameraStreamClient {
     public var localVideoTrack: RTCVideoTrack? { videoTrack }
 
     public func publish(pixelBuffer: CVPixelBuffer, timestampNs: Int64, rotation: RTCVideoRotation = ._0) {
-        guard let videoSource else { return }
-        let rtcBuffer = RTCCVPixelBuffer(pixelBuffer: pixelBuffer)
-        let frame = RTCVideoFrame(buffer: rtcBuffer, rotation: rotation, timeStampNs: timestampNs)
-        videoSource.capturer(RTCVideoCapturer(), didCapture: frame)
+        videoFramePublisher.publish(pixelBuffer: pixelBuffer, timestampNs: timestampNs, rotation: rotation)
     }
 
     public func handleSignalingMessage(_ message: SignalingMessage) async throws {
@@ -100,6 +105,7 @@ public actor CameraStreamClient {
 
         let offer = try await pc.offer(for: WebRTCConfiguration.offerConstraints())
         try await pc.setLocalDescription(offer)
+        applyOutboundVideoEncodingLimits(on: pc)
 
         guard let signaling else { return }
         try await signaling.send(.offer(sessionID: sessionID, sdp: offer.sdp))
@@ -108,11 +114,20 @@ public actor CameraStreamClient {
     public func stop() {
         peerConnection?.close()
         peerConnection = nil
+        hasCreatedOffer = false
         videoTrack = nil
         audioTrack = nil
         videoSource = nil
+        videoFramePublisher.attach(to: nil)
         eventContinuation?.finish()
         eventContinuation = nil
+    }
+
+    /// Closes WebRTC only — keeps media tracks and signaling for a fast reconnect.
+    public func resetPeerConnection() {
+        peerConnection?.close()
+        peerConnection = nil
+        hasCreatedOffer = false
     }
 
     private func setRemoteAnswer(sdp: String) async throws {
@@ -140,6 +155,7 @@ public actor CameraStreamClient {
     private func handleConnectionState(_ state: RTCPeerConnectionState) {
         switch state {
         case .connected:
+            applyOutboundVideoEncodingLimits(on: peerConnection)
             emit(.connectionState(.connected))
         case .failed:
             emit(.failed("WebRTC connection failed"))
@@ -149,6 +165,24 @@ public actor CameraStreamClient {
         default:
             break
         }
+    }
+
+    private func applyOutboundVideoEncodingLimits(on pc: RTCPeerConnection?) {
+        guard let pc else { return }
+        guard let sender = pc.senders.first(where: { $0.track is RTCVideoTrack }) else { return }
+
+        let params = sender.parameters
+        guard !params.encodings.isEmpty else { return }
+
+        var encoding = params.encodings[0]
+        encoding.isActive = true
+        encoding.maxFramerate = NSNumber(value: CameraTransportDefaults.frameRate)
+        encoding.maxBitrateBps = NSNumber(value: CameraTransportDefaults.maxBitrateBps)
+        encoding.minBitrateBps = NSNumber(value: 600_000)
+        encoding.scaleResolutionDownBy = NSNumber(value: 1.0)
+
+        params.encodings = [encoding]
+        sender.parameters = params
     }
 
     private func emit(_ event: Event) {

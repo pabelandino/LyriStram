@@ -29,6 +29,11 @@
 	<array>
 		<string>_easystream-camera._tcp</string>
 		<string>_easystream-director._tcp</string>
+		<string>_easystream-intercom._udp</string>
 	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>EasyStream usa la red local para descubrir cámaras y directores en tu Wi‑Fi, transmitir video con baja latencia y usar el intercom del equipo.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>EasyStream usa el micrófono para el intercom del equipo y el audio en vivo hacia el Director.</string>
 </dict>
 </plist>

@@ -4,6 +4,7 @@ import EasyStreamCore
 import CoreMedia
 
 /// Captures Program Output frames from WebRTC and encodes them to H.264.
+/// Only attached while network publishing — never during normal monitoring.
 public actor ProgramVideoEncoderPipeline {
     public enum Event: Sendable {
         case started
@@ -18,6 +19,8 @@ public actor ProgramVideoEncoderPipeline {
     private var sampleTask: Task<Void, Never>?
     private var eventContinuation: AsyncStream<Event>.Continuation?
     private var configuration = VideoEncoderConfiguration.broadcast1080p30
+    /// Drops frames when encode cannot keep up — prevents unbounded Task pileup.
+    private var isEncodingFrame = false
 
     public init() {}
 
@@ -74,6 +77,10 @@ public actor ProgramVideoEncoderPipeline {
     }
 
     private func handleFrame(_ pixelBuffer: CVPixelBuffer, presentationTime: CMTime) async {
+        guard !isEncodingFrame else { return }
+        isEncodingFrame = true
+        defer { isEncodingFrame = false }
+
         do {
             try await encoder.encode(pixelBuffer: pixelBuffer, presentationTime: presentationTime)
         } catch {
@@ -84,6 +91,7 @@ public actor ProgramVideoEncoderPipeline {
     private func stopInternal(emitStopped: Bool) async {
         sampleTask?.cancel()
         sampleTask = nil
+        isEncodingFrame = false
 
         if let attachedTrack, let frameSink {
             attachedTrack.remove(frameSink)

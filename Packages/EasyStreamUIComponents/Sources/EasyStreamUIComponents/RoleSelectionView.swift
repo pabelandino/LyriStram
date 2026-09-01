@@ -102,7 +102,20 @@ private struct RoleCard: View {
             .padding(20)
             .background {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.background.secondary))
+                    .fill(
+                        isSelected
+                            ? AnyShapeStyle(
+                                LinearGradient(
+                                    colors: [
+                                        BroadcastTheme.studioAccent.opacity(0.95),
+                                        BroadcastTheme.controlAccent.opacity(0.78)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            : AnyShapeStyle(.background.secondary)
+                    )
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
