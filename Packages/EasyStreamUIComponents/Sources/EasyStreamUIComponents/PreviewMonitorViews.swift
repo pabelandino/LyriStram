@@ -34,6 +34,7 @@ public struct PreviewMonitorMultiviewGrid: View {
     let programAudioSourceID: CameraSourceID?
     let settings: PreviewMonitorSettings
     let currentPage: Int
+    let suppressProgramHeroLiveVideo: Bool
     let onSelect: (CameraSourceID) -> Void
 
     public init(
@@ -43,6 +44,7 @@ public struct PreviewMonitorMultiviewGrid: View {
         programAudioSourceID: CameraSourceID?,
         settings: PreviewMonitorSettings,
         currentPage: Int,
+        suppressProgramHeroLiveVideo: Bool = true,
         onSelect: @escaping (CameraSourceID) -> Void
     ) {
         self.cameras = cameras
@@ -51,6 +53,7 @@ public struct PreviewMonitorMultiviewGrid: View {
         self.programAudioSourceID = programAudioSourceID
         self.settings = settings
         self.currentPage = currentPage
+        self.suppressProgramHeroLiveVideo = suppressProgramHeroLiveVideo
         self.onSelect = onSelect
     }
 
@@ -74,6 +77,12 @@ public struct PreviewMonitorMultiviewGrid: View {
                    let programCamera = cameras.first(where: { $0.id == programID }) {
                     PreviewMonitorCellView(
                         camera: programCamera,
+                        displayTrack: DirectorPreviewTileTrackPolicy.previewMonitorHeroTrack(
+                            for: programCamera.id,
+                            track: programCamera.track,
+                            programSourceID: programSourceID,
+                            suppressProgramHeroLiveVideo: suppressProgramHeroLiveVideo
+                        ),
                         settings: settings,
                         isPreview: programID == previewSourceID,
                         isProgram: true,
@@ -160,6 +169,12 @@ public struct PreviewMonitorMultiviewGrid: View {
     private func cell(for camera: PreviewMonitorCamera) -> some View {
         PreviewMonitorCellView(
             camera: camera,
+            displayTrack: DirectorPreviewTileTrackPolicy.previewMonitorGridTrack(
+                for: camera.id,
+                track: camera.track,
+                previewSourceID: previewSourceID,
+                programSourceID: programSourceID
+            ),
             settings: settings,
             isPreview: camera.id == previewSourceID,
             isProgram: camera.id == programSourceID,
@@ -190,11 +205,30 @@ public struct PreviewMonitorMultiviewGrid: View {
 
 public struct PreviewMonitorCellView: View {
     let camera: PreviewMonitorCamera
+    let displayTrack: RTCVideoTrack?
     let settings: PreviewMonitorSettings
     let isPreview: Bool
     let isProgram: Bool
     let isAudio: Bool
     let onSelect: (CameraSourceID) -> Void
+
+    public init(
+        camera: PreviewMonitorCamera,
+        displayTrack: RTCVideoTrack? = nil,
+        settings: PreviewMonitorSettings,
+        isPreview: Bool,
+        isProgram: Bool,
+        isAudio: Bool,
+        onSelect: @escaping (CameraSourceID) -> Void
+    ) {
+        self.camera = camera
+        self.displayTrack = displayTrack
+        self.settings = settings
+        self.isPreview = isPreview
+        self.isProgram = isProgram
+        self.isAudio = isAudio
+        self.onSelect = onSelect
+    }
 
     public var body: some View {
         Button {
@@ -218,8 +252,9 @@ public struct PreviewMonitorCellView: View {
 
     @ViewBuilder
     private var videoLayer: some View {
-        if let track = camera.track {
-            BoundedWebRTCVideoView(track: track)
+        let track = displayTrack ?? camera.track
+        if let track {
+            BoundedWebRTCVideoView(track: track, sinkCategory: .previewMonitor)
         } else {
             ZStack {
                 Color.black.opacity(0.9)

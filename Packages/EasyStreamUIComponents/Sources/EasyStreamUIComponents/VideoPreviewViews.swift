@@ -1,5 +1,6 @@
 import SwiftUI
 import WebRTC
+import EasyStreamCore
 
 #if canImport(UIKit)
 import UIKit
@@ -28,20 +29,25 @@ public final class LayoutNeutralRTCMTLVideoView: RTCMTLVideoView {
 
 public struct WebRTCVideoView: UIViewRepresentable, Equatable {
     let track: RTCVideoTrack?
+    let sinkCategory: VideoRendererSinkCategory
 
-    public init(track: RTCVideoTrack?) {
+    public init(
+        track: RTCVideoTrack?,
+        sinkCategory: VideoRendererSinkCategory = .tile
+    ) {
         self.track = track
+        self.sinkCategory = sinkCategory
     }
 
     nonisolated public static func == (lhs: WebRTCVideoView, rhs: WebRTCVideoView) -> Bool {
-        lhs.track === rhs.track
+        lhs.track === rhs.track && lhs.sinkCategory == rhs.sinkCategory
     }
 
     public func makeUIView(context: Context) -> ClippingRTCVideoContainerView {
         let container = ClippingRTCVideoContainerView()
         container.metalView.videoContentMode = .scaleAspectFit
         container.metalView.delegate = context.coordinator
-        context.coordinator.attach(track: track, to: container.metalView)
+        context.coordinator.attach(track: track, category: sinkCategory, to: container.metalView)
         context.coordinator.startOrientationRefresh { [weak coordinator = context.coordinator] in
             coordinator?.refreshRenderer()
         }
@@ -49,7 +55,7 @@ public struct WebRTCVideoView: UIViewRepresentable, Equatable {
     }
 
     public func updateUIView(_ uiView: ClippingRTCVideoContainerView, context: Context) {
-        context.coordinator.attach(track: track, to: uiView.metalView)
+        context.coordinator.attach(track: track, category: sinkCategory, to: uiView.metalView)
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -63,19 +69,32 @@ public struct WebRTCVideoView: UIViewRepresentable, Equatable {
     public final class Coordinator: NSObject, RTCVideoViewDelegate {
         private weak var currentTrack: RTCVideoTrack?
         private weak var currentView: RTCMTLVideoView?
+        private var registeredCategory: VideoRendererSinkCategory?
         private var orientationObserver: NSObjectProtocol?
         private var sceneActivationObserver: NSObjectProtocol?
         private var appActiveObserver: NSObjectProtocol?
         private var refreshWorkItem: DispatchWorkItem?
 
-        func attach(track: RTCVideoTrack?, to view: RTCMTLVideoView) {
+        func attach(
+            track: RTCVideoTrack?,
+            category: VideoRendererSinkCategory,
+            to view: RTCMTLVideoView
+        ) {
             guard currentTrack !== track || currentView !== view else { return }
             if let previousTrack = currentTrack, let previousView = currentView {
                 previousTrack.remove(previousView)
+                if let registeredCategory {
+                    VideoRendererSinkRegistry.unregister(registeredCategory)
+                    self.registeredCategory = nil
+                }
             }
             currentTrack = track
             currentView = view
-            track?.add(view)
+            if let track {
+                track.add(view)
+                VideoRendererSinkRegistry.register(category)
+                registeredCategory = category
+            }
         }
 
         func refreshRenderer() {
@@ -113,6 +132,9 @@ public struct WebRTCVideoView: UIViewRepresentable, Equatable {
 
         deinit {
             refreshWorkItem?.cancel()
+            if let registeredCategory {
+                VideoRendererSinkRegistry.unregister(registeredCategory)
+            }
             if let orientationObserver {
                 NotificationCenter.default.removeObserver(orientationObserver)
             }
@@ -285,23 +307,28 @@ public final class ClippingRTCVideoContainer: NSView {
 
 public struct WebRTCVideoView: NSViewRepresentable, Equatable {
     let track: RTCVideoTrack?
+    let sinkCategory: VideoRendererSinkCategory
 
-    public init(track: RTCVideoTrack?) {
+    public init(
+        track: RTCVideoTrack?,
+        sinkCategory: VideoRendererSinkCategory = .tile
+    ) {
         self.track = track
+        self.sinkCategory = sinkCategory
     }
 
     nonisolated public static func == (lhs: WebRTCVideoView, rhs: WebRTCVideoView) -> Bool {
-        lhs.track === rhs.track
+        lhs.track === rhs.track && lhs.sinkCategory == rhs.sinkCategory
     }
 
     public func makeNSView(context: Context) -> ClippingRTCVideoContainer {
         let container = ClippingRTCVideoContainer()
-        context.coordinator.attach(track: track, to: container.metalView)
+        context.coordinator.attach(track: track, category: sinkCategory, to: container.metalView)
         return container
     }
 
     public func updateNSView(_ nsView: ClippingRTCVideoContainer, context: Context) {
-        context.coordinator.attach(track: track, to: nsView.metalView)
+        context.coordinator.attach(track: track, category: sinkCategory, to: nsView.metalView)
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -315,15 +342,34 @@ public struct WebRTCVideoView: NSViewRepresentable, Equatable {
     public final class Coordinator {
         private weak var currentTrack: RTCVideoTrack?
         private weak var currentView: RTCMTLNSVideoView?
+        private var registeredCategory: VideoRendererSinkCategory?
 
-        func attach(track: RTCVideoTrack?, to view: RTCMTLNSVideoView) {
+        func attach(
+            track: RTCVideoTrack?,
+            category: VideoRendererSinkCategory,
+            to view: RTCMTLNSVideoView
+        ) {
             guard currentTrack !== track || currentView !== view else { return }
             if let previousTrack = currentTrack, let previousView = currentView {
                 previousTrack.remove(previousView)
+                if let registeredCategory {
+                    VideoRendererSinkRegistry.unregister(registeredCategory)
+                    self.registeredCategory = nil
+                }
             }
             currentTrack = track
             currentView = view
-            track?.add(view)
+            if let track {
+                track.add(view)
+                VideoRendererSinkRegistry.register(category)
+                registeredCategory = category
+            }
+        }
+
+        deinit {
+            if let registeredCategory {
+                VideoRendererSinkRegistry.unregister(registeredCategory)
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ import EasyStreamVideoPipeline
 import EasyStreamAudioPipeline
 import EasyStreamStreaming
 import EasyStreamFacebook
+import EasyStreamUIComponents
 import WebRTC
 
 struct ConnectedCameraSource: Identifiable, Equatable {
@@ -71,6 +72,10 @@ final class DirectorSessionViewModel {
     var outgoingProgramSourceID: CameraSourceID?
     var transitionProgress: Double = 1
     var isTransitioning = false
+    /// Live count of attached WebRTC Metal sinks — useful for CPU diagnostics in director mode.
+    var videoRendererSinkSnapshot: VideoRendererSinkSnapshot {
+        VideoRendererSinkRegistry.snapshot()
+    }
     /// Preview track pinned for the full animated take — survives `take()` assigning preview to program.
     private(set) var transitionIncomingVideoTrack: RTCVideoTrack?
 
@@ -342,13 +347,11 @@ final class DirectorSessionViewModel {
 #else
         let transitionFrameRate = 60
 #endif
-        // Match ProgramCrossfadeSession progress buckets (240) for smooth effect updates.
-        let steps = max(24, min(240, Int(transition.duration * Double(transitionFrameRate))))
-        let stepDuration = transition.duration / Double(steps)
-        for step in 1...steps {
-            transitionProgress = Double(step) / Double(steps)
-            await Task.yield()
-            try? await Task.sleep(for: .seconds(stepDuration))
+        await ProgramTransitionDisplayLink.animate(
+            duration: transition.duration,
+            preferredFramesPerSecond: transitionFrameRate
+        ) { [self] progress in
+            transitionProgress = progress
         }
 
         transitionProgress = 1
