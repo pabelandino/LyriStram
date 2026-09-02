@@ -9,10 +9,21 @@ public final class WebRTCVideoFramePublisher: @unchecked Sendable {
     private var videoSource: RTCVideoSource?
     private let capturer = RTCVideoCapturer()
     private var lastPublishedTimestampNs: Int64 = 0
-    private let minFrameIntervalNs: Int64
+    private var minFrameIntervalNs: Int64
 
     public init(targetFrameRate: Int32 = CameraTransportDefaults.frameRate) {
-        minFrameIntervalNs = 1_000_000_000 / Int64(max(1, targetFrameRate))
+        minFrameIntervalNs = Self.intervalNs(for: targetFrameRate)
+    }
+
+    public func updateTargetFrameRate(_ frameRate: Int32) {
+        lock.lock()
+        minFrameIntervalNs = Self.intervalNs(for: frameRate)
+        lastPublishedTimestampNs = 0
+        lock.unlock()
+    }
+
+    private static func intervalNs(for frameRate: Int32) -> Int64 {
+        1_000_000_000 / Int64(max(1, frameRate))
     }
 
     public func attach(to source: RTCVideoSource?) {
@@ -29,13 +40,14 @@ public final class WebRTCVideoFramePublisher: @unchecked Sendable {
     ) {
         lock.lock()
         let source = videoSource
+        let interval = minFrameIntervalNs
         guard source != nil else {
             lock.unlock()
             return
         }
 
         if lastPublishedTimestampNs > 0,
-           timestampNs &- lastPublishedTimestampNs < minFrameIntervalNs {
+           timestampNs &- lastPublishedTimestampNs < interval {
             lock.unlock()
             return
         }

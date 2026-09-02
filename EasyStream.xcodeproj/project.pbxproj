@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B9A305D630472F46001731BB /* LyrioraStreamIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = B9A305D530472F46001731BB /* LyrioraStreamIcon.icon */; };
 		B9D0EA613025017A00E5464D /* EasyStreamCore in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG001 /* EasyStreamCore */; };
 		B9D0EA623025017A00E5464D /* EasyStreamDiscovery in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG002 /* EasyStreamDiscovery */; };
 		B9D0EA633025017A00E5464D /* EasyStreamUIComponents in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG003 /* EasyStreamUIComponents */; };
@@ -18,7 +19,6 @@
 		B9D0EA693025017A00E5464D /* EasyStreamStreaming in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG009 /* EasyStreamStreaming */; };
 		B9D0EA6A3025017A00E5464D /* EasyStreamFacebook in Frameworks */ = {isa = PBXBuildFile; productRef = ESPKG010 /* EasyStreamFacebook */; };
 		B9D0EA6B3025017A00E5464D /* EasyStreamFacebookLogin in Frameworks */ = {isa = PBXBuildFile; platformFilter = ios; productRef = ESPKG011 /* EasyStreamFacebookLogin */; };
-		B9D547CB3045EC440068C138 /* LyrioraStreamIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = B9D547CA3045EC440068C138 /* LyrioraStreamIcon.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,10 +39,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B9A305D530472F46001731BB /* LyrioraStreamIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = LyrioraStreamIcon.icon; sourceTree = "<group>"; };
 		B9D0EA023024FDEF00E5464D /* EasyStream.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EasyStream.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9D0EA113024FDF100E5464D /* EasyStreamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EasyStreamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9D0EA1B3024FDF100E5464D /* EasyStreamUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EasyStreamUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		B9D547CA3045EC440068C138 /* LyrioraStreamIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = LyrioraStreamIcon.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -106,7 +106,7 @@
 				B9D0EA143024FDF100E5464D /* EasyStreamTests */,
 				B9D0EA1E3024FDF100E5464D /* EasyStreamUITests */,
 				B9D0EA033024FDEF00E5464D /* Products */,
-				B9D547CA3045EC440068C138 /* LyrioraStreamIcon.icon */,
+				B9A305D530472F46001731BB /* LyrioraStreamIcon.icon */,
 			);
 			sourceTree = "<group>";
 		};
@@ -264,7 +264,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B9D547CB3045EC440068C138 /* LyrioraStreamIcon.icon in Resources */,
+				B9A305D630472F46001731BB /* LyrioraStreamIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

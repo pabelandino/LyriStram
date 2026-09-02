@@ -27,8 +27,6 @@ public struct CameraTallyGlowOverlay: View {
     let assignment: CameraSwitcherAssignment
     var placement: CameraTallyGlowPlacement = .screenEdge
 
-    @State private var pulse = false
-
     public init(
         assignment: CameraSwitcherAssignment,
         placement: CameraTallyGlowPlacement = .screenEdge
@@ -52,70 +50,24 @@ public struct CameraTallyGlowOverlay: View {
                 let height = max(0, proxy.size.height - inset * 2)
 
                 ZStack {
-                    glowLayer(
-                        cornerRadius: cornerRadius,
-                        width: width,
-                        height: height,
-                        lineWidth: 18,
-                        blur: pulse ? 26 : 12,
-                        opacity: pulse ? 0.5 : 0.18
-                    )
-
-                    glowLayer(
-                        cornerRadius: cornerRadius,
-                        width: width,
-                        height: height,
-                        lineWidth: 10,
-                        blur: pulse ? 14 : 6,
-                        opacity: pulse ? 0.72 : 0.32
-                    )
-
-                    glowLayer(
-                        cornerRadius: cornerRadius,
-                        width: width,
-                        height: height,
-                        lineWidth: 4,
-                        blur: pulse ? 4 : 1,
-                        opacity: pulse ? 0.95 : 0.55
-                    )
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .stroke(glowColor.opacity(0.35), lineWidth: 14)
+                        .frame(width: width, height: height)
+                        .blur(radius: 10)
 
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(glowColor.opacity(pulse ? 1 : 0.75), lineWidth: 2)
+                        .strokeBorder(glowColor.opacity(0.85), lineWidth: 2.5)
                         .frame(width: width, height: height)
                 }
                 .frame(width: proxy.size.width, height: proxy.size.height)
-                .scaleEffect(pulse ? 1.003 : 0.997)
             }
             .ignoresSafeArea()
             .allowsHitTesting(false)
-            .onAppear { startPulse() }
-            .onChange(of: assignment) { _, _ in startPulse() }
         }
-    }
-
-    private func glowLayer(
-        cornerRadius: CGFloat,
-        width: CGFloat,
-        height: CGFloat,
-        lineWidth: CGFloat,
-        blur: CGFloat,
-        opacity: Double
-    ) -> some View {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .stroke(glowColor.opacity(opacity), lineWidth: lineWidth)
-            .frame(width: width, height: height)
-            .blur(radius: blur)
     }
 
     private var glowColor: Color {
         BroadcastTheme.assignmentGlowColor(assignment)
-    }
-
-    private func startPulse() {
-        pulse = false
-        withAnimation(.easeInOut(duration: 1.25).repeatForever(autoreverses: true)) {
-            pulse = true
-        }
     }
 }
 
@@ -132,7 +84,7 @@ public struct CameraAssignmentBadge: View {
                 Circle()
                     .fill(BroadcastTheme.assignmentColor(assignment))
                     .frame(width: 8, height: 8)
-                    .shadow(color: BroadcastTheme.assignmentGlowColor(assignment).opacity(pulseOpacity), radius: 8)
+                    .shadow(color: BroadcastTheme.assignmentGlowColor(assignment).opacity(0.85), radius: 8)
                 Text(assignment.displayName.uppercased())
                     .font(.caption.weight(.black))
             }
@@ -143,6 +95,4 @@ public struct CameraAssignmentBadge: View {
             .foregroundStyle(BroadcastTheme.assignmentColor(assignment))
         }
     }
-
-    private var pulseOpacity: Double { 0.85 }
 }

@@ -112,6 +112,9 @@ public enum SwitchTransitionKind: String, Sendable, Codable, CaseIterable, Ident
     case cut
     case dissolve
     case fade
+    case wipe
+    case slide
+    case zoom
 
     public var id: String { rawValue }
 
@@ -120,6 +123,9 @@ public enum SwitchTransitionKind: String, Sendable, Codable, CaseIterable, Ident
         case .cut: "Corte"
         case .dissolve: "Disolución"
         case .fade: "Fundido"
+        case .wipe: "Barrido"
+        case .slide: "Deslizamiento"
+        case .zoom: "Zoom"
         }
     }
 }
@@ -133,9 +139,21 @@ public struct SwitchTransition: Sendable, Equatable, Codable {
         self.duration = kind == .cut ? 0 : duration
     }
 
+    public static func defaultDuration(for kind: SwitchTransitionKind) -> TimeInterval {
+        switch kind {
+        case .cut: 0
+        case .fade: 0.8
+        case .dissolve: 0.5
+        case .wipe, .slide, .zoom: 0.7
+        }
+    }
+
     public static let cut = SwitchTransition(kind: .cut, duration: 0)
     public static let dissolve = SwitchTransition(kind: .dissolve, duration: 0.5)
-    public static let fade = SwitchTransition(kind: .fade, duration: 0.5)
+    public static let fade = SwitchTransition(kind: .fade, duration: 0.8)
+    public static let wipe = SwitchTransition(kind: .wipe, duration: 0.7)
+    public static let slide = SwitchTransition(kind: .slide, duration: 0.7)
+    public static let zoom = SwitchTransition(kind: .zoom, duration: 0.7)
 }
 
 public struct SwitcherSnapshot: Sendable, Equatable {

@@ -63,7 +63,6 @@ final class CameraSessionViewModel {
         capture.onImagingStateChanged = { [weak self] state in
             Task { @MainActor in
                 self?.imagingState = state
-                self?.reportSettingsState()
             }
         }
 
@@ -235,6 +234,7 @@ final class CameraSessionViewModel {
                 await streamClient.setAudioMuted(muted)
             case .setSwitcherAssignment(let assignment):
                 switcherAssignment = assignment
+                await applyTransportProfile(for: assignment)
             case .reconnectStream:
                 await reconnectStreamToDirector()
             default:
@@ -359,9 +359,10 @@ final class CameraSessionViewModel {
     private func makeSignalingParameters(for director: DiscoveredDevice) -> NWParameters {
         let parameters = NWParameters.tcp
         parameters.allowLocalEndpointReuse = true
+        parameters.multipathServiceType = .disabled
         switch director.platform {
-        case .mac:
-            // Mac directors on the same Wi‑Fi are more reliable over infrastructure LAN than AWDL.
+        case .mac, .iPad:
+            // Infrastructure LAN is more reliable than AWDL for Mac/iPad directors on the same Wi‑Fi.
             parameters.includePeerToPeer = false
         default:
             parameters.includePeerToPeer = true
@@ -534,6 +535,12 @@ final class CameraSessionViewModel {
         }
     }
 
+    private func applyTransportProfile(for assignment: CameraSwitcherAssignment) async {
+        let profile = CameraTransportProfile.forAssignment(assignment)
+        await streamClient.updateTransportProfile(profile)
+        await capture.setTargetFrameRate(profile.frameRate)
+    }
+
     private func observeStreamClient() {
         Task {
             for await event in await streamClient.events() {
@@ -543,6 +550,7 @@ final class CameraSessionViewModel {
                     switch state {
                     case .connected:
                         capture.setStreamingDeliveryEnabled(true)
+                        await applyTransportProfile(for: switcherAssignment)
                         statusMessage = "Transmitiendo al Director"
                     case .disconnected, .failed, .idle:
                         capture.setStreamingDeliveryEnabled(false)

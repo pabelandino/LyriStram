@@ -182,6 +182,10 @@ struct DirectorSessionView: View {
         ) { data, ext in
             mediaViewModel.importData(data, kind: mediaViewModel.pendingImportKind, preferredExtension: ext)
         }
+        .broadcastWidgetLogoPhotoImporter(
+            isPresented: $mediaViewModel.isWidgetLogoPhotoPickerPresented,
+            onImport: { mediaViewModel.importWidgetLogoData($0) }
+        )
 #endif
     }
 
@@ -454,6 +458,7 @@ struct DirectorSessionView: View {
                         onEnterPlayMode: { mediaViewModel.enterWidgetPlayPreview() },
                         onEnterLayoutMode: { mediaViewModel.enterWidgetLayoutEditing() },
                         onImportLogo: { mediaViewModel.requestWidgetLogoImport() },
+                        onImportLogoFromPhotoLibrary: { mediaViewModel.requestWidgetLogoImportFromPhotoLibrary() },
                         onSave: { mediaViewModel.saveDraftWidget() },
                         onPreview: { mediaViewModel.previewDraftWidget() },
                         onGoLive: { mediaViewModel.takeDraftWidgetLive() },
@@ -616,10 +621,15 @@ struct DirectorSessionView: View {
                         ForEach(viewModel.sources) { source in
                             CameraSourceTile(
                                 name: source.displayName,
-                                track: source.videoTrack,
+                                track: DirectorPreviewTileTrackPolicy.liveTileTrack(
+                                    for: source.id,
+                                    track: source.videoTrack,
+                                    previewSourceID: viewModel.previewSourceID,
+                                    programSourceID: viewModel.programSourceID
+                                ),
+                                connectionState: source.connectionState,
                                 isPreview: source.id == viewModel.previewSourceID,
                                 isProgram: source.id == viewModel.programSourceID,
-                                isConnected: source.connectionState == .connected,
                                 onSelect: { viewModel.selectPreview(source.id) }
                             )
                             .frame(width: 200, height: 112)
@@ -801,10 +811,15 @@ struct DirectorSessionView: View {
             ForEach(viewModel.sources) { source in
                 CameraSourceTile(
                     name: source.displayName,
-                    track: source.videoTrack,
+                    track: DirectorPreviewTileTrackPolicy.liveTileTrack(
+                        for: source.id,
+                        track: source.videoTrack,
+                        previewSourceID: viewModel.previewSourceID,
+                        programSourceID: viewModel.programSourceID
+                    ),
+                    connectionState: source.connectionState,
                     isPreview: source.id == viewModel.previewSourceID,
                     isProgram: source.id == viewModel.programSourceID,
-                    isConnected: source.connectionState == .connected,
                     onSelect: { viewModel.selectPreview(source.id) }
                 )
                 .listRowInsets(EdgeInsets())

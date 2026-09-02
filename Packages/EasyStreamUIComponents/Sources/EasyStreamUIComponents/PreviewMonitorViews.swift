@@ -395,20 +395,21 @@ public struct PreviewMonitorSettingsSheet: View {
 
     public var body: some View {
         NavigationStack {
-            ScrollView {
-                PreviewMonitorSettingsForm(settings: $settings, onOpenMonitor: onOpenMonitor)
-                    .padding(20)
-            }
-            .navigationTitle("Monitor multiview")
+            PreviewMonitorSettingsForm(settings: $settings, onOpenMonitor: onOpenMonitor)
+                .navigationTitle("Monitor multiview")
 #if os(macOS)
-            .frame(minWidth: 480, minHeight: 560)
+                .frame(minWidth: 480, minHeight: 560)
 #endif
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Listo") { dismiss() }
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Listo") { dismiss() }
+                    }
                 }
-            }
         }
+#if os(iOS)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+#endif
     }
 }
 
@@ -422,46 +423,50 @@ public struct PreviewMonitorSettingsForm: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 8) {
+        Form {
+            Section {
                 Text("Abre un grid profesional en otra pantalla para ver todas las cámaras.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .listRowBackground(Color.clear)
 
                 Button(action: onOpenMonitor) {
                     Label("Abrir monitor ahora", systemImage: "display.2")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: true))
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
             }
 
-            Picker("Layout", selection: $settings.layoutMode) {
-                ForEach(PreviewMonitorLayoutMode.allCases) { mode in
-                    Text(mode.displayName).tag(mode)
+            Section("Layout") {
+                Picker("Distribución", selection: $settings.layoutMode) {
+                    ForEach(PreviewMonitorLayoutMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+
+            Section("Pantalla") {
+                Toggle("Abrir en segunda pantalla", isOn: $settings.openOnExternalDisplay)
+                Toggle("Paginar automáticamente", isOn: $settings.autoPaginate)
+
+                if settings.autoPaginate {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Intervalo")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        HStack {
+                            Slider(value: $settings.pageIntervalSeconds, in: 3...15, step: 1)
+                            Text("\(Int(settings.pageIntervalSeconds))s")
+                                .font(.caption.monospacedDigit())
+                                .frame(width: 32, alignment: .trailing)
+                        }
+                    }
                 }
             }
-            .broadcastNativeSegmentedControl()
 
-            Toggle("Abrir en segunda pantalla", isOn: $settings.openOnExternalDisplay)
-                .toggleStyle(.switch)
-            Toggle("Paginar automáticamente", isOn: $settings.autoPaginate)
-                .toggleStyle(.switch)
-
-            if settings.autoPaginate {
-                HStack {
-                    Text("Intervalo")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Slider(value: $settings.pageIntervalSeconds, in: 3...15, step: 1)
-                    Text("\(Int(settings.pageIntervalSeconds))s")
-                        .font(.caption.monospacedDigit())
-                        .frame(width: 28, alignment: .trailing)
-                }
-            }
-
-            Group {
-                Text("Overlays")
-                    .font(.subheadline.weight(.semibold))
+            Section("Overlays") {
                 overlayToggle("Nombre de cámara", keyPath: \.showCameraName)
                 overlayToggle("Índice de fuente", keyPath: \.showSourceIndex)
                 overlayToggle("Tally PVW/PRG/AUDIO", keyPath: \.showTallyBadges)
@@ -473,9 +478,7 @@ public struct PreviewMonitorSettingsForm: View {
                 overlayToggle("Programa grande en grid", keyPath: \.showProgramInGrid)
             }
 
-            Group {
-                Text("Colores tally")
-                    .font(.subheadline.weight(.semibold))
+            Section("Colores tally") {
                 colorPresetRow("Preview", color: .previewGreen) {
                     settings.appearance.previewBorder = .previewGreen
                 }
@@ -485,18 +488,23 @@ public struct PreviewMonitorSettingsForm: View {
                 colorPresetRow("Audio", color: .audioGold) {
                     settings.appearance.audioAccent = .audioGold
                 }
-            }
 
-            HStack {
-                Text("Separación")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Slider(value: $settings.appearance.cellGap, in: 0...12, step: 1)
-                Text("\(Int(settings.appearance.cellGap))pt")
-                    .font(.caption.monospacedDigit())
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Separación")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack {
+                        Slider(value: $settings.appearance.cellGap, in: 0...12, step: 1)
+                        Text("\(Int(settings.appearance.cellGap))pt")
+                            .font(.caption.monospacedDigit())
+                            .frame(width: 36, alignment: .trailing)
+                    }
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+#if os(iOS)
+        .formStyle(.grouped)
+#endif
     }
 
     private func overlayToggle(_ title: String, keyPath: WritableKeyPath<PreviewMonitorOverlayOptions, Bool>) -> some View {
@@ -504,7 +512,6 @@ public struct PreviewMonitorSettingsForm: View {
             get: { settings.overlays[keyPath: keyPath] },
             set: { settings.overlays[keyPath: keyPath] = $0 }
         ))
-        .toggleStyle(.switch)
     }
 
     private func colorPresetRow(_ title: String, color: PreviewMonitorRGBColor, action: @escaping () -> Void) -> some View {

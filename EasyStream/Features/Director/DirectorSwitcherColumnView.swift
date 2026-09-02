@@ -96,6 +96,12 @@ private struct DirectorMainSwitcherAreaView: View {
 private struct DirectorPreviewGridView: View {
     let viewModel: DirectorSessionViewModel
 
+    private let compactTileSize = CGSize(width: 148, height: 84)
+    private let expandedTileSize = CGSize(width: 264, height: 149)
+    private let tileAnimation = Animation.spring(response: 0.42, dampingFraction: 0.78)
+
+    @State private var expandedSourceID: CameraSourceID?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(BroadcastTerminology.previewName.uppercased())
@@ -108,27 +114,63 @@ private struct DirectorPreviewGridView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 180)
             } else {
-                ScrollView(.horizontal, showsIndicators: true) {
-                    HStack(spacing: 12) {
-                        ForEach(viewModel.sources) { source in
-                            CameraSourceTile(
-                                name: source.displayName,
-                                track: source.videoTrack,
-                                isPreview: source.id == viewModel.previewSourceID,
-                                isProgram: source.id == viewModel.programSourceID,
-                                isConnected: source.connectionState == .connected,
-                                onSelect: { viewModel.selectPreview(source.id) }
-                            )
-                            .frame(width: 200, height: 112)
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: true) {
+                        HStack(alignment: .center, spacing: 12) {
+                            ForEach(viewModel.sources) { source in
+                                let isExpanded = expandedSourceID == source.id
+                                let tileSize = isExpanded ? expandedTileSize : compactTileSize
+
+                                CameraSourceTile(
+                                    name: source.displayName,
+                                    track: DirectorPreviewTileTrackPolicy.liveTileTrack(
+                                        for: source.id,
+                                        track: source.videoTrack,
+                                        previewSourceID: viewModel.previewSourceID,
+                                        programSourceID: viewModel.programSourceID
+                                    ),
+                                    connectionState: source.connectionState,
+                                    isPreview: source.id == viewModel.previewSourceID,
+                                    isProgram: source.id == viewModel.programSourceID,
+                                    onSelect: { selectSource(source.id, scrollProxy: proxy) }
+                                )
+                                .frame(width: tileSize.width, height: tileSize.height)
+                                .scaleEffect(isExpanded ? 1 : 0.98)
+                                .shadow(
+                                    color: isExpanded ? BroadcastTheme.previewGreen.opacity(0.35) : .clear,
+                                    radius: isExpanded ? 14 : 0,
+                                    y: isExpanded ? 4 : 0
+                                )
+                                .zIndex(isExpanded ? 1 : 0)
+                                .id(source.id)
+                            }
                         }
+                        .padding(.vertical, 6)
+                        .animation(tileAnimation, value: expandedSourceID)
                     }
-                    .padding(.vertical, 2)
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .clipped()
+    }
+
+    private func selectSource(_ sourceID: CameraSourceID, scrollProxy: ScrollViewProxy) {
+        withAnimation(tileAnimation) {
+            if expandedSourceID == sourceID {
+                expandedSourceID = nil
+            } else {
+                expandedSourceID = sourceID
+            }
+        }
+        viewModel.selectPreview(sourceID)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            withAnimation(tileAnimation) {
+                scrollProxy.scrollTo(sourceID, anchor: .center)
+            }
+        }
     }
 }
 

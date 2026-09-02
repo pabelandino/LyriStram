@@ -3,6 +3,9 @@ import Observation
 import UniformTypeIdentifiers
 import EasyStreamCore
 import EasyStreamUIComponents
+#if os(iOS)
+import UIKit
+#endif
 
 struct ProgramWidgetLayer: Identifiable, Equatable {
     let id: UUID
@@ -51,6 +54,7 @@ final class BroadcastMediaViewModel {
 
     var isPhotoPickerPresented = false
     var isWidgetLogoImporterPresented = false
+    var isWidgetLogoPhotoPickerPresented = false
     var pendingImportKind: BroadcastResourceKind = .image
 
     var lastError: String?
@@ -313,6 +317,32 @@ final class BroadcastMediaViewModel {
 #else
         isWidgetLogoImporterPresented = true
 #endif
+    }
+
+    func requestWidgetLogoImportFromPhotoLibrary() {
+#if os(iOS)
+        isWidgetLogoPhotoPickerPresented = true
+#else
+        requestWidgetLogoImport()
+#endif
+    }
+
+    func importWidgetLogoData(_ data: Data) {
+        do {
+#if os(iOS)
+            let normalized: Data
+            if let image = UIImage(data: data), let png = image.pngData() {
+                normalized = png
+            } else {
+                normalized = data
+            }
+            try applyLogoData(normalized)
+#else
+            try applyLogoData(data)
+#endif
+        } catch {
+            lastError = error.localizedDescription
+        }
     }
 
     private func allowedImportTypes(for kind: BroadcastResourceKind) -> [UTType] {

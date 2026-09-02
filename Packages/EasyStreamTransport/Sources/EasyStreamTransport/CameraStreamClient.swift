@@ -22,6 +22,7 @@ public actor CameraStreamClient {
     private var audioTrack: RTCAudioTrack?
     private var eventContinuation: AsyncStream<Event>.Continuation?
     private var hasCreatedOffer = false
+    private var transportProfile = CameraTransportProfile.preview
 
     public init() {}
 
@@ -44,14 +45,17 @@ public actor CameraStreamClient {
     }
 
     public func prepareMediaTracks() {
+        guard videoTrack == nil else { return }
+
         let videoSource = factory.videoSource()
         self.videoSource = videoSource
         videoSource.adaptOutputFormat(
-            toWidth: CameraTransportDefaults.width,
-            height: CameraTransportDefaults.height,
-            fps: Int32(CameraTransportDefaults.frameRate)
+            toWidth: transportProfile.width,
+            height: transportProfile.height,
+            fps: transportProfile.frameRate
         )
         videoFramePublisher.attach(to: videoSource)
+        videoFramePublisher.updateTargetFrameRate(transportProfile.frameRate)
         videoTrack = factory.videoTrack(with: videoSource, trackId: "easystream-video")
 
         let audioSource = factory.audioSource(with: WebRTCConfiguration.peerConstraints())
@@ -61,6 +65,19 @@ public actor CameraStreamClient {
     }
 
     public var localVideoTrack: RTCVideoTrack? { videoTrack }
+
+    public func updateTransportProfile(_ profile: CameraTransportProfile) {
+        guard transportProfile != profile else { return }
+        transportProfile = profile
+
+        videoSource?.adaptOutputFormat(
+            toWidth: profile.width,
+            height: profile.height,
+            fps: profile.frameRate
+        )
+        videoFramePublisher.updateTargetFrameRate(profile.frameRate)
+        applyOutboundVideoEncodingLimits(on: peerConnection)
+    }
 
     public func publish(pixelBuffer: CVPixelBuffer, timestampNs: Int64, rotation: RTCVideoRotation = ._0) {
         videoFramePublisher.publish(pixelBuffer: pixelBuffer, timestampNs: timestampNs, rotation: rotation)
@@ -176,9 +193,9 @@ public actor CameraStreamClient {
 
         var encoding = params.encodings[0]
         encoding.isActive = true
-        encoding.maxFramerate = NSNumber(value: CameraTransportDefaults.frameRate)
-        encoding.maxBitrateBps = NSNumber(value: CameraTransportDefaults.maxBitrateBps)
-        encoding.minBitrateBps = NSNumber(value: 600_000)
+        encoding.maxFramerate = NSNumber(value: transportProfile.frameRate)
+        encoding.maxBitrateBps = NSNumber(value: transportProfile.maxBitrateBps)
+        encoding.minBitrateBps = NSNumber(value: transportProfile.minBitrateBps)
         encoding.scaleResolutionDownBy = NSNumber(value: 1.0)
 
         params.encodings = [encoding]

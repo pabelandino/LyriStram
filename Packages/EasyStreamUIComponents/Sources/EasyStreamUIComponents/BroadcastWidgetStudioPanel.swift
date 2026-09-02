@@ -13,6 +13,7 @@ public struct BroadcastWidgetStudioPanel: View {
     let onEnterPlayMode: () -> Void
     let onEnterLayoutMode: () -> Void
     let onImportLogo: () -> Void
+    let onImportLogoFromPhotoLibrary: () -> Void
     let onSave: () -> Void
     let onPreview: () -> Void
     let onGoLive: () -> Void
@@ -31,6 +32,7 @@ public struct BroadcastWidgetStudioPanel: View {
         onEnterPlayMode: @escaping () -> Void,
         onEnterLayoutMode: @escaping () -> Void,
         onImportLogo: @escaping () -> Void,
+        onImportLogoFromPhotoLibrary: @escaping () -> Void = {},
         onSave: @escaping () -> Void,
         onPreview: @escaping () -> Void,
         onGoLive: @escaping () -> Void,
@@ -48,6 +50,7 @@ public struct BroadcastWidgetStudioPanel: View {
         self.onEnterPlayMode = onEnterPlayMode
         self.onEnterLayoutMode = onEnterLayoutMode
         self.onImportLogo = onImportLogo
+        self.onImportLogoFromPhotoLibrary = onImportLogoFromPhotoLibrary
         self.onSave = onSave
         self.onPreview = onPreview
         self.onGoLive = onGoLive
@@ -154,10 +157,7 @@ public struct BroadcastWidgetStudioPanel: View {
 
     private var logoFields: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button(action: onImportLogo) {
-                Label(logoURL == nil ? "Importar logo PNG" : "Cambiar logo PNG", systemImage: "photo.badge.plus")
-            }
-            .buttonStyle(.bordered)
+            logoImportControl
 
             Picker("Animación", selection: $configuration.logoAnimation) {
                 ForEach(BroadcastLogoAnimation.allCases, id: \.self) { animation in
@@ -306,10 +306,7 @@ public struct BroadcastWidgetStudioPanel: View {
                 colorWellRow("Color fondo", optionalHex: $configuration.accentColorHex, fallback: "007AFF")
             }
 
-            Button(action: onImportLogo) {
-                Label("Logo PNG (opcional)", systemImage: "photo")
-            }
-            .buttonStyle(.bordered)
+            optionalLogoImportControl
 
             Toggle("Secuencia automática", isOn: $configuration.autoPlaySequence)
             Stepper(
@@ -544,6 +541,50 @@ public struct BroadcastWidgetStudioPanel: View {
             },
             set: { configuration.lowerThirdGradient = $0 }
         )
+    }
+
+    @ViewBuilder
+    private var logoImportControl: some View {
+#if os(iOS)
+        Menu {
+            Button(action: onImportLogoFromPhotoLibrary) {
+                Label("Biblioteca de fotos", systemImage: "photo.on.rectangle")
+            }
+            Button(action: onImportLogo) {
+                Label("Archivos", systemImage: "folder")
+            }
+        } label: {
+            Label(logoURL == nil ? "Importar logo" : "Cambiar logo", systemImage: "photo.badge.plus")
+        }
+        .buttonStyle(.bordered)
+#else
+        Button(action: onImportLogo) {
+            Label(logoURL == nil ? "Importar logo PNG" : "Cambiar logo PNG", systemImage: "photo.badge.plus")
+        }
+        .buttonStyle(.bordered)
+#endif
+    }
+
+    @ViewBuilder
+    private var optionalLogoImportControl: some View {
+#if os(iOS)
+        Menu {
+            Button(action: onImportLogoFromPhotoLibrary) {
+                Label("Biblioteca de fotos", systemImage: "photo.on.rectangle")
+            }
+            Button(action: onImportLogo) {
+                Label("Archivos", systemImage: "folder")
+            }
+        } label: {
+            Label("Logo (opcional)", systemImage: "photo")
+        }
+        .buttonStyle(.bordered)
+#else
+        Button(action: onImportLogo) {
+            Label("Logo PNG (opcional)", systemImage: "photo")
+        }
+        .buttonStyle(.bordered)
+#endif
     }
 }
 

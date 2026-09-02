@@ -1,9 +1,25 @@
 {
-  "fill" : "automatic",
+  "fill-specializations" : [
+    {
+      "value" : "automatic"
+    },
+    {
+      "appearance" : "dark",
+      "value" : "system-dark"
+    }
+  ],
   "groups" : [
     {
       "layers" : [
         {
+          "blend-mode" : "normal",
+          "fill" : "automatic",
+          "hidden-specializations" : [
+            {
+              "idiom" : "square",
+              "value" : false
+            }
+          ],
           "image-name" : "LyrioraStream 2.svg",
           "name" : "LyrioraStream 2",
           "position-specializations" : [

@@ -7,6 +7,18 @@ import EasyStreamCameraCapture
 
 /// WebRTC Metal views report full video resolution as intrinsic size, which breaks SwiftUI HStack layouts.
 public final class LayoutNeutralRTCMTLVideoView: RTCMTLVideoView {
+    public override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .black
+        isOpaque = true
+        clipsToBounds = true
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     public override var intrinsicContentSize: CGSize {
         CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
     }
@@ -30,6 +42,9 @@ public struct WebRTCVideoView: UIViewRepresentable, Equatable {
         container.metalView.videoContentMode = .scaleAspectFit
         container.metalView.delegate = context.coordinator
         context.coordinator.attach(track: track, to: container.metalView)
+        context.coordinator.startOrientationRefresh { [weak coordinator = context.coordinator] in
+            coordinator?.refreshRenderer()
+        }
         return container
     }
 
@@ -48,14 +63,65 @@ public struct WebRTCVideoView: UIViewRepresentable, Equatable {
     public final class Coordinator: NSObject, RTCVideoViewDelegate {
         private weak var currentTrack: RTCVideoTrack?
         private weak var currentView: RTCMTLVideoView?
+        private var orientationObserver: NSObjectProtocol?
+        private var sceneActivationObserver: NSObjectProtocol?
+        private var appActiveObserver: NSObjectProtocol?
+        private var refreshWorkItem: DispatchWorkItem?
 
         func attach(track: RTCVideoTrack?, to view: RTCMTLVideoView) {
             guard currentTrack !== track || currentView !== view else { return }
-            currentView?.renderFrame(nil)
-            currentTrack?.remove(view)
+            if let previousTrack = currentTrack, let previousView = currentView {
+                previousTrack.remove(previousView)
+            }
             currentTrack = track
             currentView = view
             track?.add(view)
+        }
+
+        func refreshRenderer() {
+            refreshWorkItem?.cancel()
+            let work = DispatchWorkItem { [weak self] in
+                guard let view = self?.currentView else { return }
+                view.setNeedsLayout()
+                view.layoutIfNeeded()
+            }
+            refreshWorkItem = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: work)
+        }
+
+        func startOrientationRefresh(onRefresh: @escaping () -> Void) {
+            guard orientationObserver == nil else { return }
+
+            orientationObserver = NotificationCenter.default.addObserver(
+                forName: UIDevice.orientationDidChangeNotification,
+                object: nil,
+                queue: .main
+            ) { _ in onRefresh() }
+
+            sceneActivationObserver = NotificationCenter.default.addObserver(
+                forName: UIScene.didActivateNotification,
+                object: nil,
+                queue: .main
+            ) { _ in onRefresh() }
+
+            appActiveObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.didBecomeActiveNotification,
+                object: nil,
+                queue: .main
+            ) { _ in onRefresh() }
+        }
+
+        deinit {
+            refreshWorkItem?.cancel()
+            if let orientationObserver {
+                NotificationCenter.default.removeObserver(orientationObserver)
+            }
+            if let sceneActivationObserver {
+                NotificationCenter.default.removeObserver(sceneActivationObserver)
+            }
+            if let appActiveObserver {
+                NotificationCenter.default.removeObserver(appActiveObserver)
+            }
         }
 
         public func videoView(_ videoView: RTCVideoRenderer, didChangeVideoSize size: CGSize) {}
@@ -89,6 +155,12 @@ public final class ClippingRTCVideoContainerView: UIView {
 
     public override var intrinsicContentSize: CGSize {
         CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
+    }
+
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        metalView.setNeedsLayout()
+        metalView.layoutIfNeeded()
     }
 }
 
@@ -149,6 +221,17 @@ import AVFoundation
 
 /// WebRTC Metal views report full video resolution as intrinsic size, which breaks SwiftUI HStack layouts.
 public final class LayoutNeutralRTCMTLNSVideoView: RTCMTLNSVideoView {
+    public override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.black.cgColor
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     public override var intrinsicContentSize: NSSize {
         NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
     }
@@ -235,8 +318,9 @@ public struct WebRTCVideoView: NSViewRepresentable, Equatable {
 
         func attach(track: RTCVideoTrack?, to view: RTCMTLNSVideoView) {
             guard currentTrack !== track || currentView !== view else { return }
-            currentView?.renderFrame(nil)
-            currentTrack?.remove(view)
+            if let previousTrack = currentTrack, let previousView = currentView {
+                previousTrack.remove(previousView)
+            }
             currentTrack = track
             currentView = view
             track?.add(view)

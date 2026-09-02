@@ -17,6 +17,7 @@ final class DirectorProgramOutputStore {
 
     var programDisplayTrack: RTCVideoTrack?
     var outgoingProgramTrack: RTCVideoTrack?
+    var incomingProgramTrack: RTCVideoTrack?
     var isTransitioning = false
     var transitionProgress: Double = 1
     var transitionKind: SwitchTransitionKind = .cut
@@ -89,6 +90,7 @@ final class DirectorProgramOutputStore {
     func syncVideoBus(
         programDisplayTrack: RTCVideoTrack?,
         outgoingProgramTrack: RTCVideoTrack?,
+        incomingProgramTrack: RTCVideoTrack?,
         isTransitioning: Bool,
         transitionProgress: Double,
         transitionKind: SwitchTransitionKind,
@@ -97,6 +99,7 @@ final class DirectorProgramOutputStore {
     ) {
         let tracksChanged = programDisplayTrack !== self.programDisplayTrack
             || outgoingProgramTrack !== self.outgoingProgramTrack
+            || incomingProgramTrack !== self.incomingProgramTrack
         let transitionMetaChanged = isTransitioning != self.isTransitioning
             || transitionKind != self.transitionKind
         let progressChanged = abs(transitionProgress - self.transitionProgress) > (1.0 / 60.0)
@@ -107,6 +110,7 @@ final class DirectorProgramOutputStore {
 
         self.programDisplayTrack = programDisplayTrack
         self.outgoingProgramTrack = outgoingProgramTrack
+        self.incomingProgramTrack = incomingProgramTrack
         self.isTransitioning = isTransitioning
         self.transitionProgress = transitionProgress
         self.transitionKind = transitionKind
@@ -117,6 +121,7 @@ final class DirectorProgramOutputStore {
     func sync(
         programDisplayTrack: RTCVideoTrack?,
         outgoingProgramTrack: RTCVideoTrack?,
+        incomingProgramTrack: RTCVideoTrack?,
         isTransitioning: Bool,
         transitionProgress: Double,
         transitionKind: SwitchTransitionKind,
@@ -130,6 +135,7 @@ final class DirectorProgramOutputStore {
         syncVideoBus(
             programDisplayTrack: programDisplayTrack,
             outgoingProgramTrack: outgoingProgramTrack,
+            incomingProgramTrack: incomingProgramTrack,
             isTransitioning: isTransitioning,
             transitionProgress: transitionProgress,
             transitionKind: transitionKind,

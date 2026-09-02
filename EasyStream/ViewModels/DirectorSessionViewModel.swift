@@ -71,6 +71,8 @@ final class DirectorSessionViewModel {
     var outgoingProgramSourceID: CameraSourceID?
     var transitionProgress: Double = 1
     var isTransitioning = false
+    /// Preview track pinned for the full animated take — survives `take()` assigning preview to program.
+    private(set) var transitionIncomingVideoTrack: RTCVideoTrack?
 
     private let settingsStore = CameraSettingsStore.shared
     private let discovery = DiscoveryService()
@@ -103,12 +105,12 @@ final class DirectorSessionViewModel {
         track(for: previewSourceID)
     }
 
+    /// Stable program bus — during animated takes keep pointing at outgoing until handoff completes.
     var programDisplayTrack: RTCVideoTrack? {
         if isTransitioning {
-            previewVideoTrack ?? programVideoTrack
-        } else {
-            programVideoTrack
+            return outgoingProgramVideoTrack ?? programVideoTrack
         }
+        return programVideoTrack
     }
 
     var connectedSourceCount: Int {
@@ -321,34 +323,40 @@ final class DirectorSessionViewModel {
 
         if transition.kind == .cut || transition.duration <= 0 {
             outgoingProgramSourceID = nil
+            transitionIncomingVideoTrack = nil
             transitionProgress = 1
+            let events = await switcher.take(to: target, transition: transition)
+            applySwitcherEvents(events)
             isTransitioning = false
-            if let event = await switcher.take(to: target, transition: transition) {
-                applySwitcherEvent(event)
-            }
             return
         }
 
+        transitionIncomingVideoTrack = previewVideoTrack
         outgoingProgramSourceID = programSourceID
         isTransitioning = true
         transitionProgress = 0
+        await Task.yield()
 
-        let steps = max(1, Int(transition.duration * 60))
+#if os(iOS)
+        let transitionFrameRate = 30
+#else
+        let transitionFrameRate = 60
+#endif
+        // Match ProgramCrossfadeSession progress buckets (240) for smooth effect updates.
+        let steps = max(24, min(240, Int(transition.duration * Double(transitionFrameRate))))
         let stepDuration = transition.duration / Double(steps)
         for step in 1...steps {
             transitionProgress = Double(step) / Double(steps)
+            await Task.yield()
             try? await Task.sleep(for: .seconds(stepDuration))
         }
 
-        if let event = await switcher.take(to: target, transition: transition) {
-            applySwitcherEvent(event)
-        }
-
         transitionProgress = 1
-        try? await Task.sleep(for: .milliseconds(32))
-
-        isTransitioning = false
+        let events = await switcher.take(to: target, transition: transition)
+        applySwitcherEvents(events)
         outgoingProgramSourceID = nil
+        transitionIncomingVideoTrack = nil
+        isTransitioning = false
     }
 
     func setProgramAudioSource(_ sourceID: CameraSourceID) {
@@ -530,19 +538,25 @@ final class DirectorSessionViewModel {
     }
 
     private func applySwitcherEvent(_ event: SwitcherEvent) {
-        switch event {
-        case .previewChanged(let id):
-            previewSourceID = id
-            if inspectorSourceID == nil { inspectorSourceID = id }
-        case .programChanged(let id):
-            programSourceID = id
-            syncProgramEncoder()
-        case .programAudioChanged(let id):
-            programAudioSourceID = id
-            updateAudioRouting()
-            syncProgramAudioEncoder()
-        case .fallbackChanged, .transitionChanged:
-            break
+        applySwitcherEvents([event])
+    }
+
+    private func applySwitcherEvents(_ events: [SwitcherEvent]) {
+        for event in events {
+            switch event {
+            case .previewChanged(let id):
+                previewSourceID = id
+                if inspectorSourceID == nil { inspectorSourceID = id }
+            case .programChanged(let id):
+                programSourceID = id
+                syncProgramEncoder()
+            case .programAudioChanged(let id):
+                programAudioSourceID = id
+                updateAudioRouting()
+                syncProgramAudioEncoder()
+            case .fallbackChanged, .transitionChanged:
+                break
+            }
         }
         updateAudioRouting()
         syncPreviewMonitor()

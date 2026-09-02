@@ -9,6 +9,7 @@ struct DirectorProgramOutputWindowView: View {
         BroadcastCleanProgramFeedView(
             programDisplayTrack: store.programDisplayTrack,
             outgoingProgramTrack: store.outgoingProgramTrack,
+            incomingProgramTrack: store.incomingProgramTrack,
             isTransitioning: store.isTransitioning,
             transitionProgress: store.transitionProgress,
             transitionKind: store.transitionKind,

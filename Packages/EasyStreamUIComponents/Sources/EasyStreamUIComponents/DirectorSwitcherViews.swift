@@ -1,6 +1,9 @@
 import SwiftUI
 import EasyStreamCore
 import WebRTC
+#if os(iOS)
+import UIKit
+#endif
 
 public struct DirectorStatusBar: View {
     let connectedCameras: Int
@@ -81,11 +84,28 @@ public struct DirectorStatusBar: View {
 public struct CameraSourceTile: View {
     let name: String
     let track: RTCVideoTrack?
+    let connectionState: StreamConnectionState
     let isPreview: Bool
     let isProgram: Bool
-    let isConnected: Bool
     let onSelect: () -> Void
 
+    public init(
+        name: String,
+        track: RTCVideoTrack?,
+        connectionState: StreamConnectionState,
+        isPreview: Bool,
+        isProgram: Bool,
+        onSelect: @escaping () -> Void
+    ) {
+        self.name = name
+        self.track = track
+        self.connectionState = connectionState
+        self.isPreview = isPreview
+        self.isProgram = isProgram
+        self.onSelect = onSelect
+    }
+
+    /// Backward-compatible initializer when callers only know connected vs not.
     public init(
         name: String,
         track: RTCVideoTrack?,
@@ -94,12 +114,14 @@ public struct CameraSourceTile: View {
         isConnected: Bool,
         onSelect: @escaping () -> Void
     ) {
-        self.name = name
-        self.track = track
-        self.isPreview = isPreview
-        self.isProgram = isProgram
-        self.isConnected = isConnected
-        self.onSelect = onSelect
+        self.init(
+            name: name,
+            track: track,
+            connectionState: isConnected ? .connected : .disconnected,
+            isPreview: isPreview,
+            isProgram: isProgram,
+            onSelect: onSelect
+        )
     }
 
     public var body: some View {
@@ -147,12 +169,34 @@ public struct CameraSourceTile: View {
             ZStack {
                 Color.black.opacity(0.85)
                 VStack(spacing: 6) {
-                    Image(systemName: isConnected ? "video" : "video.slash")
-                    Text(isConnected ? "Conectando…" : "Sin señal")
+                    Image(systemName: placeholderSymbolName)
+                    Text(placeholderMessage)
                         .font(.caption2)
                 }
                 .foregroundStyle(.white.opacity(0.6))
             }
+        }
+    }
+
+    private var placeholderSymbolName: String {
+        switch connectionState {
+        case .connected:
+            return "pause.circle"
+        case .connecting, .signaling:
+            return "video"
+        default:
+            return "video.slash"
+        }
+    }
+
+    private var placeholderMessage: String {
+        switch connectionState {
+        case .connected:
+            return "En espera"
+        case .connecting, .signaling:
+            return "Conectando…"
+        default:
+            return "Sin señal"
         }
     }
 
@@ -167,13 +211,21 @@ public struct TakeToProgramButton: View {
     let isEnabled: Bool
     let action: () -> Void
 
+    @State private var isHovered = false
+    @State private var isPressing = false
+
     public init(isEnabled: Bool, action: @escaping () -> Void) {
         self.isEnabled = isEnabled
         self.action = action
     }
 
     public var body: some View {
-        Button(action: action) {
+        Button {
+#if os(iOS)
+            UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+#endif
+            action()
+        } label: {
             VStack(spacing: 4) {
                 Label(BroadcastTerminology.takeAction, systemImage: "arrow.up.right.square.fill")
                     .font(.headline.weight(.bold))
@@ -181,10 +233,24 @@ public struct TakeToProgramButton: View {
                     .font(.caption2)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+            .padding(.vertical, 14)
         }
-        .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.programRed, isProminent: true))
+        .buttonStyle(BroadcastTakeButtonStyle(isHovered: isHovered, isPressing: isPressing))
+        .onHover { isHovered = $0 }
+        .simultaneousGesture(pressGesture)
         .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.45)
+    }
+
+    private var pressGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { _ in
+                guard isEnabled else { return }
+                isPressing = true
+            }
+            .onEnded { _ in
+                isPressing = false
+            }
     }
 }
 
@@ -208,12 +274,12 @@ public struct SwitchTransitionControls: View {
                     Text(kind.displayName).tag(kind)
                 }
             }
-            .broadcastNativeSegmentedControl()
+            .pickerStyle(.menu)
             .onChange(of: transition.kind) { _, kind in
                 if kind == .cut {
                     transition.duration = 0
                 } else if transition.duration <= 0 {
-                    transition.duration = 0.5
+                    transition.duration = SwitchTransition.defaultDuration(for: kind)
                 }
             }
 
@@ -234,62 +300,57 @@ public struct SwitchTransitionControls: View {
 }
 
 public struct TransitionProgramView: View {
+    let programTrack: RTCVideoTrack?
     let outgoingTrack: RTCVideoTrack?
-    let incomingTrack: RTCVideoTrack?
+    let previewTrack: RTCVideoTrack?
+    let isTransitioning: Bool
     let progress: Double
     let kind: SwitchTransitionKind
 
+    public init(
+        programTrack: RTCVideoTrack?,
+        outgoingTrack: RTCVideoTrack?,
+        previewTrack: RTCVideoTrack?,
+        isTransitioning: Bool,
+        progress: Double,
+        kind: SwitchTransitionKind
+    ) {
+        self.programTrack = programTrack
+        self.outgoingTrack = outgoingTrack
+        self.previewTrack = previewTrack
+        self.isTransitioning = isTransitioning
+        self.progress = progress
+        self.kind = kind
+    }
+
+    /// Backward-compatible entry point for simple two-track wiring.
     public init(
         outgoingTrack: RTCVideoTrack?,
         incomingTrack: RTCVideoTrack?,
         progress: Double,
         kind: SwitchTransitionKind
     ) {
-        self.outgoingTrack = outgoingTrack
-        self.incomingTrack = incomingTrack
-        self.progress = progress
-        self.kind = kind
+        self.init(
+            programTrack: incomingTrack,
+            outgoingTrack: outgoingTrack,
+            previewTrack: outgoingTrack == nil ? nil : incomingTrack,
+            isTransitioning: outgoingTrack != nil,
+            progress: progress,
+            kind: kind
+        )
     }
 
     public var body: some View {
-        ZStack {
-            Color.black
-
-            if let incomingTrack {
-                programVideoLayer(incomingTrack)
-                    .opacity(incomingOpacity)
-            }
-
-            if let outgoingTrack {
-                programVideoLayer(outgoingTrack)
-                    .opacity(outgoingOpacity)
-                    .allowsHitTesting(false)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
+        ProgramCrossfadeVideoView(
+            programTrack: programTrack,
+            outgoingTrack: isTransitioning ? outgoingTrack : nil,
+            incomingTrack: isTransitioning ? previewTrack : nil,
+            isTransitioning: isTransitioning,
+            progress: progress,
+            kind: kind
+        )
+        .animation(nil, value: isTransitioning)
         .animation(nil, value: progress)
-    }
-
-    private var incomingOpacity: Double {
-        switch kind {
-        case .cut: 1
-        case .dissolve: progress
-        case .fade: progress >= 0.5 ? (progress - 0.5) * 2 : 0
-        }
-    }
-
-    private var outgoingOpacity: Double {
-        switch kind {
-        case .cut: 0
-        case .dissolve: 1 - progress
-        case .fade: progress < 0.5 ? 1 - (progress * 2) : 0
-        }
-    }
-
-    private func programVideoLayer(_ track: RTCVideoTrack) -> some View {
-        BoundedWebRTCVideoView(track: track)
-            .id(ObjectIdentifier(track))
     }
 }
 

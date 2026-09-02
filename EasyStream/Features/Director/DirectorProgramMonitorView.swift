@@ -20,17 +20,12 @@ struct DirectorProgramLiveMonitorView: View {
         return layers
     }
 
-    private var hasAirGraphics: Bool {
-        !liveProgramAir.widgetLayers.isEmpty || liveProgramAir.fullScreenResource != nil
-    }
-
     var body: some View {
         ZStack {
             DirectorProgramVideoBusView(
                 viewModel: viewModel,
-                hasAirGraphics: hasAirGraphics
+                hasAirGraphics: !directorCommittedAirLayers.isEmpty || liveProgramAir.fullScreenResource != nil
             )
-            .equatable()
 
             DirectorProgramAirGraphicsView(
                 widgetLayers: directorCommittedAirLayers,
@@ -39,8 +34,10 @@ struct DirectorProgramLiveMonitorView: View {
                 fullScreenIsLive: liveProgramAir.fullScreenIsLive,
                 onWidgetLiveAutoDismiss: { liveProgramAir.requestWidgetAutoDismiss($0) }
             )
-            .animation(nil, value: liveProgramAir.revision)
         }
+        .animation(nil, value: viewModel.isTransitioning)
+        .animation(nil, value: viewModel.transitionProgress)
+        .animation(nil, value: liveProgramAir.revision)
     }
 }
 
@@ -135,6 +132,7 @@ struct DirectorProgramStudioHintsOverlay: View {
 private struct DirectorProgramVideoBusView: View, Equatable {
     let programDisplayTrack: RTCVideoTrack?
     let outgoingProgramTrack: RTCVideoTrack?
+    let incomingProgramTrack: RTCVideoTrack?
     let isTransitioning: Bool
     let transitionProgress: Double
     let transitionKind: SwitchTransitionKind
@@ -144,6 +142,9 @@ private struct DirectorProgramVideoBusView: View, Equatable {
     init(viewModel: DirectorSessionViewModel, hasAirGraphics: Bool) {
         programDisplayTrack = viewModel.programDisplayTrack
         outgoingProgramTrack = viewModel.outgoingProgramVideoTrack
+        incomingProgramTrack = viewModel.isTransitioning
+            ? viewModel.transitionIncomingVideoTrack
+            : nil
         isTransitioning = viewModel.isTransitioning
         transitionProgress = viewModel.transitionProgress
         transitionKind = viewModel.selectedTransition.kind
@@ -152,19 +153,29 @@ private struct DirectorProgramVideoBusView: View, Equatable {
     }
 
     nonisolated static func == (lhs: DirectorProgramVideoBusView, rhs: DirectorProgramVideoBusView) -> Bool {
-        lhs.programDisplayTrack === rhs.programDisplayTrack
+        guard lhs.programDisplayTrack === rhs.programDisplayTrack
             && lhs.outgoingProgramTrack === rhs.outgoingProgramTrack
+            && lhs.incomingProgramTrack === rhs.incomingProgramTrack
             && lhs.isTransitioning == rhs.isTransitioning
-            && (!lhs.isTransitioning || abs(lhs.transitionProgress - rhs.transitionProgress) < 0.02)
             && lhs.transitionKind == rhs.transitionKind
             && lhs.emptyStatusMessage == rhs.emptyStatusMessage
             && lhs.hasAirGraphics == rhs.hasAirGraphics
+        else { return false }
+
+        if lhs.isTransitioning && rhs.isTransitioning {
+            if lhs.transitionProgress >= 0.95 || rhs.transitionProgress >= 0.95 {
+                return lhs.transitionProgress == rhs.transitionProgress
+            }
+            return abs(lhs.transitionProgress - rhs.transitionProgress) < 0.02
+        }
+        return true
     }
 
     var body: some View {
         StableProgramVideoView(
             programDisplayTrack: programDisplayTrack,
             outgoingProgramTrack: outgoingProgramTrack,
+            incomingProgramTrack: incomingProgramTrack,
             isTransitioning: isTransitioning,
             transitionProgress: transitionProgress,
             transitionKind: transitionKind,

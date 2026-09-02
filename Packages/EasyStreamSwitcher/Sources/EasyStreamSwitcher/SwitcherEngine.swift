@@ -80,21 +80,32 @@ public actor SwitcherEngine {
     }
 
     @discardableResult
-    public func takePreviewToProgram(transition: SwitchTransition? = nil) -> SwitcherEvent? {
-        guard let preview = snapshot.previewSourceID else { return nil }
+    public func takePreviewToProgram(transition: SwitchTransition? = nil) -> [SwitcherEvent] {
+        guard let preview = snapshot.previewSourceID else { return [] }
         return take(to: preview, transition: transition)
     }
 
     @discardableResult
-    public func take(to id: CameraSourceID, transition: SwitchTransition? = nil) -> SwitcherEvent? {
-        guard availableSources.contains(id) else { return nil }
-        guard snapshot.programSourceID != id else { return nil }
+    public func take(to id: CameraSourceID, transition: SwitchTransition? = nil) -> [SwitcherEvent] {
+        guard availableSources.contains(id) else { return [] }
+        guard snapshot.programSourceID != id else { return [] }
         if let transition {
             snapshot.preferredTransition = transition
         }
+
+        let outgoingProgram = snapshot.programSourceID
         snapshot.programSourceID = id
-        snapshot.previewSourceID = id
-        return .programChanged(id)
+
+        var events: [SwitcherEvent] = [.programChanged(id)]
+
+        if let outgoingProgram, outgoingProgram != id {
+            snapshot.previewSourceID = outgoingProgram
+            events.append(.previewChanged(outgoingProgram))
+        } else {
+            snapshot.previewSourceID = id
+        }
+
+        return events
     }
 
     @discardableResult
@@ -129,11 +140,11 @@ public actor SwitcherEngine {
 
 // Backward-compatible aliases
 public extension SwitcherEngine {
-    func cut(to id: CameraSourceID, transition: SwitchTransition = .cut) -> SwitcherEvent? {
+    func cut(to id: CameraSourceID, transition: SwitchTransition = .cut) -> [SwitcherEvent] {
         take(to: id, transition: transition)
     }
 
-    func cutPreviewToProgram(transition: SwitchTransition = .cut) -> SwitcherEvent? {
+    func cutPreviewToProgram(transition: SwitchTransition = .cut) -> [SwitcherEvent] {
         takePreviewToProgram(transition: transition)
     }
 }

@@ -35,6 +35,9 @@ struct ProgramOutputSyncBridge: View {
         DirectorProgramOutputStore.shared.syncVideoBus(
             programDisplayTrack: viewModel.programDisplayTrack,
             outgoingProgramTrack: viewModel.outgoingProgramVideoTrack,
+            incomingProgramTrack: viewModel.isTransitioning
+                ? viewModel.transitionIncomingVideoTrack
+                : nil,
             isTransitioning: viewModel.isTransitioning,
             transitionProgress: viewModel.transitionProgress,
             transitionKind: viewModel.selectedTransition.kind,

@@ -6,6 +6,7 @@ import WebRTC
 public struct StableProgramVideoView: View {
     let programDisplayTrack: RTCVideoTrack?
     let outgoingProgramTrack: RTCVideoTrack?
+    let incomingProgramTrack: RTCVideoTrack?
     let isTransitioning: Bool
     let transitionProgress: Double
     let transitionKind: SwitchTransitionKind
@@ -16,6 +17,7 @@ public struct StableProgramVideoView: View {
     public init(
         programDisplayTrack: RTCVideoTrack?,
         outgoingProgramTrack: RTCVideoTrack?,
+        incomingProgramTrack: RTCVideoTrack?,
         isTransitioning: Bool,
         transitionProgress: Double,
         transitionKind: SwitchTransitionKind,
@@ -25,6 +27,7 @@ public struct StableProgramVideoView: View {
     ) {
         self.programDisplayTrack = programDisplayTrack
         self.outgoingProgramTrack = outgoingProgramTrack
+        self.incomingProgramTrack = incomingProgramTrack
         self.isTransitioning = isTransitioning
         self.transitionProgress = transitionProgress
         self.transitionKind = transitionKind
@@ -37,9 +40,11 @@ public struct StableProgramVideoView: View {
         Group {
             if let displayTrack = programDisplayTrack {
                 TransitionProgramView(
+                    programTrack: displayTrack,
                     outgoingTrack: isTransitioning ? outgoingProgramTrack : nil,
-                    incomingTrack: displayTrack,
-                    progress: isTransitioning ? transitionProgress : 1,
+                    previewTrack: isTransitioning ? incomingProgramTrack : nil,
+                    isTransitioning: isTransitioning,
+                    progress: transitionProgress,
                     kind: transitionKind
                 )
             } else if showsEmptyWhenNoGraphics, !hasAirGraphics {
@@ -123,6 +128,7 @@ public struct PreviewWidgetOverlayView: View {
 public struct LiveProgramFeedView: View {
     let programDisplayTrack: RTCVideoTrack?
     let outgoingProgramTrack: RTCVideoTrack?
+    let incomingProgramTrack: RTCVideoTrack?
     let isTransitioning: Bool
     let transitionProgress: Double
     let transitionKind: SwitchTransitionKind
@@ -137,6 +143,7 @@ public struct LiveProgramFeedView: View {
     public init(
         programDisplayTrack: RTCVideoTrack?,
         outgoingProgramTrack: RTCVideoTrack?,
+        incomingProgramTrack: RTCVideoTrack?,
         isTransitioning: Bool,
         transitionProgress: Double,
         transitionKind: SwitchTransitionKind,
@@ -150,6 +157,7 @@ public struct LiveProgramFeedView: View {
     ) {
         self.programDisplayTrack = programDisplayTrack
         self.outgoingProgramTrack = outgoingProgramTrack
+        self.incomingProgramTrack = incomingProgramTrack
         self.isTransitioning = isTransitioning
         self.transitionProgress = transitionProgress
         self.transitionKind = transitionKind
@@ -169,6 +177,7 @@ public struct LiveProgramFeedView: View {
             StableProgramVideoView(
                 programDisplayTrack: programDisplayTrack,
                 outgoingProgramTrack: outgoingProgramTrack,
+                incomingProgramTrack: incomingProgramTrack,
                 isTransitioning: isTransitioning,
                 transitionProgress: transitionProgress,
                 transitionKind: transitionKind,
@@ -201,6 +210,7 @@ public struct LiveProgramFeedView: View {
 public struct BroadcastCleanProgramFeedView: View {
     let programDisplayTrack: RTCVideoTrack?
     let outgoingProgramTrack: RTCVideoTrack?
+    let incomingProgramTrack: RTCVideoTrack?
     let isTransitioning: Bool
     let transitionProgress: Double
     let transitionKind: SwitchTransitionKind
@@ -213,6 +223,7 @@ public struct BroadcastCleanProgramFeedView: View {
     public init(
         programDisplayTrack: RTCVideoTrack?,
         outgoingProgramTrack: RTCVideoTrack?,
+        incomingProgramTrack: RTCVideoTrack?,
         isTransitioning: Bool,
         transitionProgress: Double,
         transitionKind: SwitchTransitionKind,
@@ -224,6 +235,7 @@ public struct BroadcastCleanProgramFeedView: View {
     ) {
         self.programDisplayTrack = programDisplayTrack
         self.outgoingProgramTrack = outgoingProgramTrack
+        self.incomingProgramTrack = incomingProgramTrack
         self.isTransitioning = isTransitioning
         self.transitionProgress = transitionProgress
         self.transitionKind = transitionKind
@@ -239,6 +251,7 @@ public struct BroadcastCleanProgramFeedView: View {
             LiveProgramFeedView(
                 programDisplayTrack: programDisplayTrack,
                 outgoingProgramTrack: outgoingProgramTrack,
+                incomingProgramTrack: incomingProgramTrack,
                 isTransitioning: isTransitioning,
                 transitionProgress: transitionProgress,
                 transitionKind: transitionKind,

@@ -27,6 +27,7 @@ public struct ProgramFeedWidgetLayer: Identifiable, Equatable {
 public struct ProgramFeedView: View {
     let programDisplayTrack: RTCVideoTrack?
     let outgoingProgramTrack: RTCVideoTrack?
+    let incomingProgramTrack: RTCVideoTrack?
     let isTransitioning: Bool
     let transitionProgress: Double
     let transitionKind: SwitchTransitionKind
@@ -41,6 +42,7 @@ public struct ProgramFeedView: View {
     public init(
         programDisplayTrack: RTCVideoTrack?,
         outgoingProgramTrack: RTCVideoTrack?,
+        incomingProgramTrack: RTCVideoTrack?,
         isTransitioning: Bool,
         transitionProgress: Double,
         transitionKind: SwitchTransitionKind,
@@ -54,6 +56,7 @@ public struct ProgramFeedView: View {
     ) {
         self.programDisplayTrack = programDisplayTrack
         self.outgoingProgramTrack = outgoingProgramTrack
+        self.incomingProgramTrack = incomingProgramTrack
         self.isTransitioning = isTransitioning
         self.transitionProgress = transitionProgress
         self.transitionKind = transitionKind
@@ -70,9 +73,11 @@ public struct ProgramFeedView: View {
         ZStack {
             if let displayTrack = programDisplayTrack {
                 TransitionProgramView(
+                    programTrack: displayTrack,
                     outgoingTrack: isTransitioning ? outgoingProgramTrack : nil,
-                    incomingTrack: displayTrack,
-                    progress: isTransitioning ? transitionProgress : 1,
+                    previewTrack: isTransitioning ? incomingProgramTrack : nil,
+                    isTransitioning: isTransitioning,
+                    progress: transitionProgress,
                     kind: transitionKind
                 )
             } else if widgetLayers.isEmpty, fullScreenResource == nil {

@@ -27,6 +27,8 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
     private var isStreamingDeliveryEnabled = false
 #if os(iOS)
     private var orientationObserver: NSObjectProtocol?
+    private var sceneActivationObserver: NSObjectProtocol?
+    private var appActiveObserver: NSObjectProtocol?
 #endif
 
     public var onVideoFrame: (@Sendable (CVPixelBuffer, CMTime) -> Void)?
@@ -73,9 +75,6 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
                 session.startRunning()
             }
         }
-#if os(iOS)
-        beginOrientationUpdatesIfNeeded()
-#endif
     }
 
     public func stop() {
@@ -103,7 +102,41 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
             } else {
                 self.videoOutput.setSampleBufferDelegate(nil, queue: nil)
             }
+#if os(iOS)
+            DispatchQueue.main.async {
+                if enabled {
+                    self.beginOrientationUpdatesIfNeeded()
+                } else {
+                    self.endOrientationUpdatesIfNeeded()
+                }
+            }
+#endif
         }
+    }
+
+    /// Adjusts capture frame rate to match the active transport profile (saves CPU when on standby).
+    public func setTargetFrameRate(_ frameRate: Int32) async {
+        await withCheckedContinuation { continuation in
+            sessionQueue.async {
+                self.applyTargetFrameRate(frameRate)
+                continuation.resume()
+            }
+        }
+    }
+
+    private func applyTargetFrameRate(_ frameRate: Int32) {
+#if os(iOS)
+        guard let device = videoInput?.device else { return }
+        let fps = max(1, frameRate)
+        do {
+            try device.lockForConfiguration()
+            device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: fps)
+            device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: fps)
+            device.unlockForConfiguration()
+        } catch {
+            return
+        }
+#endif
     }
 
     public func discoverAvailableLenses() -> [AvailableCameraLens] {
@@ -242,7 +275,7 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
             if connection.isVideoStabilizationSupported {
                 connection.preferredVideoStabilizationMode = .off
             }
-            connection.applyVideoOrientation(CaptureVideoOrientation.currentFromDevice())
+            connection.applyVideoOrientation(CaptureVideoOrientation.resolvedOnMainThread())
         }
 #endif
 
@@ -275,7 +308,7 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: fps)
         device.unlockForConfiguration()
         videoOutput.connection(with: .video)?
-            .applyVideoOrientation(CaptureVideoOrientation.currentFromDevice())
+            .applyVideoOrientation(CaptureVideoOrientation.resolvedOnMainThread())
 #endif
         session.commitConfiguration()
         refreshImagingState(from: device)
@@ -292,13 +325,44 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         ) { [weak self] _ in
             self?.applyVideoOrientation()
         }
+        sceneActivationObserver = NotificationCenter.default.addObserver(
+            forName: UIScene.didActivateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.applyVideoOrientation()
+        }
+        appActiveObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.applyVideoOrientation()
+        }
         applyVideoOrientation()
+        scheduleOrientationRefreshBurst()
+    }
+
+    private func scheduleOrientationRefreshBurst() {
+        for delay in [0.05, 0.2, 0.5, 1.0] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.applyVideoOrientation()
+            }
+        }
     }
 
     private func endOrientationUpdatesIfNeeded() {
         if let orientationObserver {
             NotificationCenter.default.removeObserver(orientationObserver)
             self.orientationObserver = nil
+        }
+        if let sceneActivationObserver {
+            NotificationCenter.default.removeObserver(sceneActivationObserver)
+            self.sceneActivationObserver = nil
+        }
+        if let appActiveObserver {
+            NotificationCenter.default.removeObserver(appActiveObserver)
+            self.appActiveObserver = nil
         }
         UIDevice.current.endGeneratingDeviceOrientationNotifications()
     }

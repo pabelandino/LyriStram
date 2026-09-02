@@ -12,24 +12,38 @@ public enum CaptureVideoOrientation {
         return currentFromDevice()
     }
 
+    /// Safe to call from capture session queues — hops to the main thread when needed.
+    public static func resolvedOnMainThread() -> AVCaptureVideoOrientation {
+        if Thread.isMainThread {
+            return current()
+        }
+        return DispatchQueue.main.sync { current() }
+    }
+
     public static func currentFromDevice() -> AVCaptureVideoOrientation {
         switch UIDevice.current.orientation {
         case .portrait: return .portrait
         case .portraitUpsideDown: return .portraitUpsideDown
         case .landscapeLeft: return .landscapeLeft
         case .landscapeRight: return .landscapeRight
-        default: return .portrait
+        case .unknown, .faceUp, .faceDown:
+            if let interface = interfaceOrientation() {
+                return interface
+            }
+            return .portrait
+        @unknown default:
+            return interfaceOrientation() ?? .portrait
         }
     }
 
     private static func interfaceOrientation() -> AVCaptureVideoOrientation? {
-        guard let windowScene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive || $0.activationState == .foregroundInactive }) else {
-            return nil
-        }
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let scene = scenes.first(where: { $0.activationState == .foregroundActive })
+            ?? scenes.first(where: { $0.activationState == .foregroundInactive })
+            ?? scenes.first
+        guard let scene else { return nil }
 
-        switch windowScene.interfaceOrientation {
+        switch scene.interfaceOrientation {
         case .portrait: return .portrait
         case .portraitUpsideDown: return .portraitUpsideDown
         case .landscapeLeft: return .landscapeLeft

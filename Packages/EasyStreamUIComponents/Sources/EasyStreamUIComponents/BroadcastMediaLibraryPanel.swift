@@ -606,7 +606,45 @@ public struct BroadcastMediaPhotoImporter: ViewModifier {
 }
 #endif
 
+#if os(iOS)
+public struct BroadcastWidgetLogoPhotoImporter: ViewModifier {
+    @Binding var isPresented: Bool
+    let onImport: (Data) -> Void
+
+    @State private var selection: [PhotosPickerItem] = []
+
+    public func body(content: Content) -> some View {
+        content
+            .photosPicker(
+                isPresented: $isPresented,
+                selection: $selection,
+                maxSelectionCount: 1,
+                matching: .images
+            )
+            .onChange(of: selection) { _, newValue in
+                guard let item = newValue.first else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self) {
+                        onImport(data)
+                    }
+                    selection = []
+                    isPresented = false
+                }
+            }
+    }
+}
+#endif
+
 public extension View {
+#if os(iOS)
+    func broadcastWidgetLogoPhotoImporter(
+        isPresented: Binding<Bool>,
+        onImport: @escaping (Data) -> Void
+    ) -> some View {
+        modifier(BroadcastWidgetLogoPhotoImporter(isPresented: isPresented, onImport: onImport))
+    }
+#endif
+
 #if os(iOS)
     func broadcastMediaPhotoImporter(
         isPresented: Binding<Bool>,
