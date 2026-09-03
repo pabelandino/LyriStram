@@ -71,16 +71,21 @@ public struct ProgramFeedView: View {
 
     public var body: some View {
         ZStack {
-            if let displayTrack = programDisplayTrack {
-                TransitionProgramView(
-                    programTrack: displayTrack,
-                    outgoingTrack: isTransitioning ? outgoingProgramTrack : nil,
-                    previewTrack: isTransitioning ? incomingProgramTrack : nil,
-                    isTransitioning: isTransitioning,
-                    progress: transitionProgress,
-                    kind: transitionKind
-                )
-            } else if widgetLayers.isEmpty, fullScreenResource == nil {
+            Color.black
+
+            TransitionProgramView(
+                programTrack: programDisplayTrack,
+                outgoingTrack: isTransitioning ? outgoingProgramTrack : nil,
+                previewTrack: incomingProgramTrack,
+                isTransitioning: isTransitioning,
+                progress: transitionProgress,
+                kind: transitionKind
+            )
+
+            if programDisplayTrack == nil,
+               incomingProgramTrack == nil,
+               widgetLayers.isEmpty,
+               fullScreenResource == nil {
                 ContentUnavailableView {
                     Label("Sin programa", systemImage: "tv.slash")
                 } description: {

@@ -27,10 +27,6 @@ public actor SwitcherEngine {
             snapshot.previewSourceID = id
             events.append(.previewChanged(id))
         }
-        if snapshot.programSourceID == nil {
-            snapshot.programSourceID = id
-            events.append(.programChanged(id))
-        }
         if snapshot.programAudioSourceID == nil {
             snapshot.programAudioSourceID = id
             events.append(.programAudioChanged(id))
@@ -102,7 +98,13 @@ public actor SwitcherEngine {
             snapshot.previewSourceID = outgoingProgram
             events.append(.previewChanged(outgoingProgram))
         } else {
-            snapshot.previewSourceID = id
+            let nextPreview = availableSources
+                .sorted { $0.rawValue.uuidString < $1.rawValue.uuidString }
+                .first { $0 != id }
+            snapshot.previewSourceID = nextPreview ?? id
+            if let nextPreview, nextPreview != id {
+                events.append(.previewChanged(nextPreview))
+            }
         }
 
         return events

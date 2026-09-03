@@ -26,6 +26,7 @@ struct DirectorProgramLiveMonitorView: View {
                 viewModel: viewModel,
                 hasAirGraphics: !directorCommittedAirLayers.isEmpty || liveProgramAir.fullScreenResource != nil
             )
+            .equatable()
 
             DirectorProgramAirGraphicsView(
                 widgetLayers: directorCommittedAirLayers,
@@ -142,9 +143,7 @@ private struct DirectorProgramVideoBusView: View, Equatable {
     init(viewModel: DirectorSessionViewModel, hasAirGraphics: Bool) {
         programDisplayTrack = viewModel.programDisplayTrack
         outgoingProgramTrack = viewModel.outgoingProgramVideoTrack
-        incomingProgramTrack = viewModel.isTransitioning
-            ? viewModel.transitionIncomingVideoTrack
-            : nil
+        incomingProgramTrack = viewModel.programBusIncomingTrack
         isTransitioning = viewModel.isTransitioning
         transitionProgress = viewModel.transitionProgress
         transitionKind = viewModel.selectedTransition.kind

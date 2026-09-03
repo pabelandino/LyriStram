@@ -235,6 +235,9 @@ final class CameraSessionViewModel {
             case .setSwitcherAssignment(let assignment):
                 switcherAssignment = assignment
                 await applyTransportProfile(for: assignment)
+            case .setDirectorMonitorQuality(let quality):
+                CameraTransportProfile.directorQuality = quality
+                await applyTransportProfile(for: switcherAssignment)
             case .reconnectStream:
                 await reconnectStreamToDirector()
             default:

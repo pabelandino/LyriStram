@@ -1,10 +1,12 @@
 import WebRTC
 import EasyStreamCore
 
-/// Limits live WebRTC decoders on director clients to reduce CPU and thermal load.
+/// UI adapter for `ProgramPreviewVisibilityPolicy` — keeps WebRTC types out of the domain layer.
+@MainActor
 public enum DirectorPreviewTileTrackPolicy {
-    /// Switcher tiles: only the selected preview source receives a live track.
-    /// Program is always shown in the main program monitor, not duplicated in tiles.
+    public static var visibilityPolicy: ProgramPreviewVisibilityPolicy = .directorDefault
+
+    /// Switcher tiles: only the selected preview source receives a live track when policy limits decoders.
     public static func liveTileTrack(
         for sourceID: CameraSourceID,
         track: RTCVideoTrack?,
@@ -12,9 +14,10 @@ public enum DirectorPreviewTileTrackPolicy {
         programSourceID: CameraSourceID?
     ) -> RTCVideoTrack? {
         guard track != nil else { return nil }
-        guard shouldLimitLiveTiles else { return track }
-
-        guard sourceID == previewSourceID, previewSourceID != programSourceID else {
+        guard visibilityPolicy.allowsLiveTile(
+            sourceIsPreview: sourceID == previewSourceID,
+            previewEqualsProgram: previewSourceID == programSourceID
+        ) else {
             return nil
         }
         return track
@@ -28,13 +31,16 @@ public enum DirectorPreviewTileTrackPolicy {
         suppressProgramHeroLiveVideo: Bool
     ) -> RTCVideoTrack? {
         guard track != nil else { return nil }
-        guard suppressProgramHeroLiveVideo, sourceID == programSourceID else {
-            return track
+        if sourceID == programSourceID {
+            let shouldShowProgramHero = visibilityPolicy.allowsPreviewMonitorHero(
+                programHeroEnabled: !suppressProgramHeroLiveVideo
+            )
+            guard shouldShowProgramHero else { return nil }
         }
-        return nil
+        return track
     }
 
-    /// Preview-monitor grid cells: preview gets live video; other sources stay as placeholders until Phase 2 thumbnails.
+    /// Preview-monitor grid cells: preview gets live video; others wait for Phase 2 thumbnails.
     public static func previewMonitorGridTrack(
         for sourceID: CameraSourceID,
         track: RTCVideoTrack?,
@@ -42,16 +48,12 @@ public enum DirectorPreviewTileTrackPolicy {
         programSourceID: CameraSourceID?
     ) -> RTCVideoTrack? {
         guard track != nil else { return nil }
-        guard shouldLimitLiveTiles else { return track }
-
-        if sourceID == previewSourceID, previewSourceID != programSourceID {
-            return track
-        }
-        if sourceID != programSourceID {
+        guard visibilityPolicy.allowsPreviewMonitorGridCell(
+            sourceIsPreview: sourceID == previewSourceID,
+            previewEqualsProgram: previewSourceID == programSourceID
+        ) else {
             return nil
         }
-        return nil
+        return track
     }
-
-    private static var shouldLimitLiveTiles: Bool { true }
 }

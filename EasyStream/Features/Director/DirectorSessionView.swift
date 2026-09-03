@@ -20,10 +20,11 @@ struct DirectorSessionView: View {
 
     @State private var isPreviewMonitorSettingsPresented = false
     @State private var isStreamSettingsPresented = false
+    @State private var isDirectorSettingsPresented = false
 
     private enum WorkspaceMetrics {
         static let sidebarWidth: CGFloat = 260
-        static let inspectorWidth: CGFloat = 380
+        static let libraryRailWidth: CGFloat = 272
     }
 
     var body: some View {
@@ -68,6 +69,13 @@ struct DirectorSessionView: View {
                 )
 
                 Button {
+                    isDirectorSettingsPresented = true
+                } label: {
+                    Label("Ajustes", systemImage: "gearshape")
+                }
+                .help("Calidad, audio, intercom y emisión")
+
+                Button {
                     openPreviewMonitor()
                 } label: {
                     Label("Monitor", systemImage: "display.2")
@@ -83,10 +91,19 @@ struct DirectorSessionView: View {
             }
 #else
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    openPreviewMonitor()
+                Menu {
+                    Button {
+                        isDirectorSettingsPresented = true
+                    } label: {
+                        Label("Ajustes", systemImage: "gearshape")
+                    }
+                    Button {
+                        openPreviewMonitor()
+                    } label: {
+                        Label("Monitor", systemImage: "display.2")
+                    }
                 } label: {
-                    Label("Monitor", systemImage: "display.2")
+                    Image(systemName: "ellipsis.circle")
                 }
             }
 #endif
@@ -139,6 +156,21 @@ struct DirectorSessionView: View {
 #if os(macOS)
         .background(keyboardShortcuts)
 #endif
+        .sheet(isPresented: $isDirectorSettingsPresented) {
+            DirectorSettingsSheet(
+                viewModel: viewModel,
+                mediaViewModel: mediaViewModel,
+                previewMonitor: previewMonitor,
+                intercomService: intercomService,
+                onOpenPreviewMonitor: openPreviewMonitor,
+                onConfigurePreviewMonitor: { isPreviewMonitorSettingsPresented = true }
+            )
+        }
+        .onChange(of: mediaViewModel.isWidgetStudioOpen) { _, isOpen in
+            if isOpen {
+                isDirectorSettingsPresented = true
+            }
+        }
         .sheet(isPresented: $isPreviewMonitorSettingsPresented) {
             PreviewMonitorSettingsSheet(
                 settings: $previewMonitor.settings,
@@ -202,13 +234,13 @@ struct DirectorSessionView: View {
 #endif
     }
 
-    /// Three fixed columns: sources | switcher | inspector. The switcher width is computed
-    /// from the remaining space so WebRTC views cannot expand over the inspector.
+    /// Three fixed columns: sources | switcher | library rail. The switcher width is computed
+    /// from the remaining space so WebRTC views cannot expand over the library rail.
     private var directorWorkspaceLayout: some View {
         GeometryReader { geometry in
             let switcherWidth = max(
                 0,
-                geometry.size.width - WorkspaceMetrics.sidebarWidth - WorkspaceMetrics.inspectorWidth
+                geometry.size.width - WorkspaceMetrics.sidebarWidth - WorkspaceMetrics.libraryRailWidth
             )
 
             HStack(spacing: 0) {
@@ -228,8 +260,8 @@ struct DirectorSessionView: View {
                 .layoutPriority(0)
                 .clipped()
 
-                inspectorPanel
-                    .frame(width: WorkspaceMetrics.inspectorWidth)
+                DirectorLibraryRailView(mediaViewModel: mediaViewModel)
+                    .frame(width: WorkspaceMetrics.libraryRailWidth)
                     .fixedSize(horizontal: true, vertical: false)
                     .layoutPriority(2)
                     .zIndex(1)
@@ -295,7 +327,8 @@ struct DirectorSessionView: View {
             transitionSection
             takeSection
             destinationSection
-            inspectorSection
+            librarySection
+            settingsSection
             sourceSidebarSection
         }
 #if os(macOS)
@@ -305,15 +338,15 @@ struct DirectorSessionView: View {
 
     private var sourceSidebar: some View {
         DirectorSourcesPanel(title: sidebarTab.title) {
-            DirectorSidebarTabPicker(selection: $sidebarTab)
+            DirectorLeftSidebarTabPicker(selection: $sidebarTab)
 
             switch sidebarTab {
             case .cameras:
                 camerasSidebarContent
-            case .library:
-                librarySidebarContent
             case .playlists:
                 playlistsSidebarContent
+            case .library:
+                EmptyView()
             }
         }
     }
@@ -356,38 +389,6 @@ struct DirectorSessionView: View {
     }
 
     @ViewBuilder
-    private var librarySidebarContent: some View {
-        DeferredBroadcastLibraryPanel(
-            selectedKind: $mediaViewModel.selectedLibraryKind,
-            resources: mediaViewModel.filteredResources(for: mediaViewModel.selectedLibraryKind),
-            playlists: mediaViewModel.playlists,
-            selectedPlaylistID: mediaViewModel.selectedPlaylistID(for: mediaViewModel.selectedLibraryKind),
-            activeResourceIDs: mediaViewModel.liveWidgetIDs.union(
-                mediaViewModel.liveFullScreenGraphicID.map { [$0] } ?? []
-            ),
-            editingResourceID: mediaViewModel.editingWidgetResource?.id,
-            searchText: mediaViewModel.librarySearchText,
-            onSearchChange: { mediaViewModel.librarySearchText = $0 },
-            onSelectPlaylist: { mediaViewModel.setSelectedPlaylistID($0, for: mediaViewModel.selectedLibraryKind) },
-            onImport: { mediaViewModel.beginImport(kind: $0) },
-            onCreateWidget: { mediaViewModel.isWidgetTemplatePickerPresented = true },
-            onEditWidget: { mediaViewModel.openWidgetStudio(for: $0) },
-            onSelectResource: { mediaViewModel.selectResource($0) },
-            onTakeToProgram: { mediaViewModel.takeResourceToProgram($0) },
-            onRemoveFromProgram: { resource in
-                if resource.kind == .widget {
-                    mediaViewModel.removeWidgetFromLive(resource.id)
-                } else if mediaViewModel.liveFullScreenGraphicID == resource.id {
-                    mediaViewModel.removeFullScreenFromLive()
-                }
-            },
-            onDeleteResource: { mediaViewModel.deleteResource($0) },
-            onRenameResource: { mediaViewModel.renameResource($0, to: $1) },
-            fileURL: { mediaViewModel.fileURL(for: $0) }
-        )
-    }
-
-    @ViewBuilder
     private var playlistsSidebarContent: some View {
         BroadcastPlaylistPanel(
             playlists: mediaViewModel.playlists,
@@ -410,176 +411,21 @@ struct DirectorSessionView: View {
         )
     }
 
-    private var inspectorPanel: some View {
-        DirectorInspectorPanel {
-            DirectorInspectorSection("Audio de programa", systemImage: "waveform") {
-                ProgramAudioSourcePanel(
-                    sources: viewModel.sources.map {
-                        ProgramAudioSourcePanel.SourceOption(
-                            id: $0.id,
-                            name: $0.displayName,
-                            isConnected: $0.connectionState == .connected
-                        )
-                    },
-                    programAudioSourceID: viewModel.programAudioSourceID,
-                    onSelect: { viewModel.setProgramAudioSource($0) }
-                )
-            }
+    private var librarySection: some View {
+        Section("Biblioteca") {
+            DirectorLibraryRailView(mediaViewModel: mediaViewModel)
+                .listRowInsets(EdgeInsets())
+        }
+    }
 
-            DirectorInspectorSection("Intercom", systemImage: "mic.fill") {
-                TeamIntercomPanel(
-                    peers: intercomService.peers,
-                    statusMessage: intercomService.statusMessage,
-                    isEnabled: intercomService.isEnabled,
-                    isTalking: intercomService.isTalking,
-                    isActivating: intercomService.isActivating,
-                    targetPeerID: intercomService.targetPeerID,
-                    needsLocalNetworkPermission: intercomService.needsLocalNetworkPermission,
-                    onOpenSettings: PlatformSettings.openAppSettings,
-                    onTargetPeerChange: { intercomService.setTargetPeer($0) },
-                    onEnabledChange: { intercomService.isEnabled = $0 },
-                    onTalkBegin: { intercomService.toggleTalking() },
-                    onTalkEnd: { intercomService.toggleTalking() }
-                )
-            }
-
-            if mediaViewModel.isWidgetStudioOpen {
-                DirectorInspectorSection("Widget Studio", systemImage: "wand.and.stars") {
-                    BroadcastWidgetStudioPanel(
-                        configuration: $mediaViewModel.draftWidgetConfiguration,
-                        displayName: $mediaViewModel.draftWidgetDisplayName,
-                        templateTitle: mediaViewModel.draftWidgetConfiguration.resolvedTemplate.title,
-                        logoURL: mediaViewModel.editingWidgetResource.flatMap { mediaViewModel.logoURL(for: $0) },
-                        isEditingExisting: mediaViewModel.isEditingExistingWidget,
-                        isLiveOnAir: mediaViewModel.editingWidgetResource.map {
-                            mediaViewModel.liveWidgetIDs.contains($0.id)
-                        } ?? false,
-                        isEditingPlacement: mediaViewModel.isWidgetPlacementEditing,
-                        onEnterPlayMode: { mediaViewModel.enterWidgetPlayPreview() },
-                        onEnterLayoutMode: { mediaViewModel.enterWidgetLayoutEditing() },
-                        onImportLogo: { mediaViewModel.requestWidgetLogoImport() },
-                        onImportLogoFromPhotoLibrary: { mediaViewModel.requestWidgetLogoImportFromPhotoLibrary() },
-                        onSave: { mediaViewModel.saveDraftWidget() },
-                        onPreview: { mediaViewModel.previewDraftWidget() },
-                        onGoLive: { mediaViewModel.takeDraftWidgetLive() },
-                        onApplyToLive: { mediaViewModel.applyDraftToLiveAir() },
-                        onRemoveFromLive: {
-                            if let id = mediaViewModel.editingWidgetResource?.id {
-                                mediaViewModel.removeWidgetFromLive(id)
-                            }
-                        },
-                        onClose: { mediaViewModel.closeWidgetStudio() }
-                    )
-                }
-            }
-
-            if !mediaViewModel.liveWidgets.isEmpty || mediaViewModel.fullScreenGraphicResource != nil || mediaViewModel.isPlaylistPlaying {
-                DirectorInspectorSection("Gráficos al aire", systemImage: "photo.on.rectangle") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if mediaViewModel.isWidgetStudioOpen, !mediaViewModel.isEditingExistingWidget {
-                            Label("Preview del widget nuevo", systemImage: "eye")
-                                .font(.caption)
-                                .foregroundStyle(.yellow)
-                        }
-
-                        ForEach(mediaViewModel.liveWidgets) { widget in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(widget.listLabel)
-                                        .font(.subheadline.weight(.medium))
-                                    Text(widgetConfigurationLabel(for: widget))
-                                        .font(.caption2)
-                                        .foregroundStyle(BroadcastTheme.subtleText)
-                                }
-                                Spacer()
-                                Button("Editar") {
-                                    mediaViewModel.openWidgetStudio(for: widget)
-                                }
-                                .buttonStyle(.borderless)
-                                Button(role: .destructive) {
-                                    mediaViewModel.removeWidgetFromLive(widget.id)
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                }
-                                .buttonStyle(.borderless)
-                            }
-                        }
-
-                        if let fullScreen = mediaViewModel.fullScreenGraphicResource,
-                           mediaViewModel.liveFullScreenGraphicID != nil {
-                            HStack {
-                                Text("Pantalla completa: \(fullScreen.listLabel)")
-                                    .font(.subheadline)
-                                Spacer()
-                                Button(role: .destructive) {
-                                    mediaViewModel.removeFullScreenFromLive()
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                }
-                                .buttonStyle(.borderless)
-                            }
-                        }
-
-                        if mediaViewModel.isPlaylistPlaying {
-                            Button("Siguiente en playlist", action: mediaViewModel.playNextInQueue)
-                            Button("Detener playlist", role: .destructive, action: mediaViewModel.stopPlaylistPlayback)
-                        }
-
-                        if !mediaViewModel.liveWidgets.isEmpty || mediaViewModel.liveFullScreenGraphicID != nil {
-                            Button("Quitar todos", role: .destructive) {
-                                mediaViewModel.clearAllGraphicsFromProgram()
-                            }
-                        }
-                    }
-                }
-            }
-
-            DirectorInspectorSection("Monitor multiview", systemImage: "display.2") {
-                PreviewMonitorInspectorSummary(
-                    layoutName: previewMonitor.settings.layoutMode.displayName,
-                    onOpenMonitor: openPreviewMonitor,
-                    onConfigure: { isPreviewMonitorSettingsPresented = true }
-                )
-            }
-
-            DirectorInspectorSection("Emisión", systemImage: "dot.radiowaves.up.forward") {
-                VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Facebook Live", systemImage: "f.circle.fill")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(BroadcastTheme.subtleText)
-                        destinationPanelFacebook
-                    }
-
-                    Divider().overlay(BroadcastTheme.workspaceDivider)
-
-                    destinationPanelStream
-                }
-            }
-
-            if let sourceID = viewModel.inspectorSourceID {
-                DirectorInspectorSection("Controles remotos", systemImage: "slider.horizontal.3") {
-                    DirectorRemoteControlsView(
-                        cameraName: viewModel.inspectorSourceName(for: sourceID),
-                        settings: viewModel.settings(for: sourceID),
-                        connectionState: viewModel.connectionState(for: sourceID),
-                        onMutedChange: { viewModel.setMuted($0, for: sourceID) },
-                        onZoomChange: { viewModel.setZoom($0, for: sourceID) },
-                        onExposureChange: { viewModel.setExposureBias($0, for: sourceID) },
-                        onWhiteBalanceChange: { viewModel.setWhiteBalance($0, for: sourceID) },
-                        onLensChange: { viewModel.setLens($0, for: sourceID) },
-                        onReconnect: { viewModel.reconnectCamera(sourceID) }
-                    )
-                }
-            } else {
-                DirectorInspectorSection("Controles remotos", systemImage: "slider.horizontal.3") {
-                    BroadcastInspectorEmptyState("Sin cámara seleccionada", systemImage: "hand.tap")
-                }
+    private var settingsSection: some View {
+        Section {
+            Button {
+                isDirectorSettingsPresented = true
+            } label: {
+                Label("Ajustes del director", systemImage: "gearshape")
             }
         }
-        .frame(width: WorkspaceMetrics.inspectorWidth)
-        .frame(maxHeight: .infinity, alignment: .topLeading)
-        .clipped()
     }
 
     private var mainSwitcherArea: some View {
@@ -627,6 +473,7 @@ struct DirectorSessionView: View {
                                     previewSourceID: viewModel.previewSourceID,
                                     programSourceID: viewModel.programSourceID
                                 ),
+                                hasVideoSignal: source.videoTrack != nil,
                                 connectionState: source.connectionState,
                                 isPreview: source.id == viewModel.previewSourceID,
                                 isProgram: source.id == viewModel.programSourceID,
@@ -695,10 +542,6 @@ struct DirectorSessionView: View {
         )
     }
 
-    private func widgetConfigurationLabel(for widget: BroadcastResource) -> String {
-        mediaViewModel.loadedConfiguration(for: widget)?.resolvedTemplate.title ?? "Widget"
-    }
-
     private var takeBar: some View {
         VStack(spacing: 12) {
             SwitchTransitionControls(transition: $viewModel.selectedTransition)
@@ -718,47 +561,6 @@ struct DirectorSessionView: View {
         }
         .padding(.top, 8)
         .background(.bar)
-    }
-
-    @ViewBuilder
-    private var destinationPanelFacebook: some View {
-        @Bindable var viewModel = viewModel
-        FacebookLivePanel(
-            isConfigured: viewModel.isFacebookConfigured,
-            session: viewModel.facebookSession,
-            pages: viewModel.facebookPages,
-            selectedPageID: viewModel.selectedFacebookPageID,
-            isLoading: viewModel.isFacebookLoading,
-            statusMessage: viewModel.facebookStatusMessage,
-            onSignIn: { viewModel.signInWithFacebook() },
-            onAuthorizePages: { viewModel.authorizeFacebookPages() },
-            onSignOut: { viewModel.signOutFromFacebook() },
-            onSelectPage: { viewModel.selectFacebookPage($0) },
-            onPrepareLive: { viewModel.prepareFacebookLive() }
-        )
-    }
-
-    @ViewBuilder
-    private var destinationPanelStream: some View {
-        @Bindable var viewModel = viewModel
-        StreamDestinationPanel(
-            destination: $viewModel.streamDestination,
-            publisherStats: viewModel.publisherStats,
-            isPublishing: viewModel.isPublishing,
-            onStart: { viewModel.startPublishing() },
-            onStop: { viewModel.stopPublishing() }
-        )
-    }
-
-    @ViewBuilder
-    private var destinationPanel: some View {
-        @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: 20) {
-            destinationPanelFacebook
-            Divider()
-            destinationPanelStream
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -817,6 +619,7 @@ struct DirectorSessionView: View {
                         previewSourceID: viewModel.previewSourceID,
                         programSourceID: viewModel.programSourceID
                     ),
+                    hasVideoSignal: source.videoTrack != nil,
                     connectionState: source.connectionState,
                     isPreview: source.id == viewModel.previewSourceID,
                     isProgram: source.id == viewModel.programSourceID,
@@ -841,25 +644,6 @@ struct DirectorSessionView: View {
         }
     }
 
-    @ViewBuilder
-    private var inspectorSection: some View {
-        if let sourceID = viewModel.inspectorSourceID {
-            Section("Controles remotos") {
-                DirectorRemoteControlsView(
-                    cameraName: viewModel.inspectorSourceName(for: sourceID),
-                    settings: viewModel.settings(for: sourceID),
-                    connectionState: viewModel.connectionState(for: sourceID),
-                    onMutedChange: { viewModel.setMuted($0, for: sourceID) },
-                    onZoomChange: { viewModel.setZoom($0, for: sourceID) },
-                    onExposureChange: { viewModel.setExposureBias($0, for: sourceID) },
-                    onWhiteBalanceChange: { viewModel.setWhiteBalance($0, for: sourceID) },
-                    onLensChange: { viewModel.setLens($0, for: sourceID) },
-                    onReconnect: { viewModel.reconnectCamera(sourceID) }
-                )
-            }
-        }
-    }
-
     private var sourceSidebarSection: some View {
         Section("En red") {
             ForEach(viewModel.devices) { device in
@@ -871,56 +655,14 @@ struct DirectorSessionView: View {
     // MARK: - Helpers
 
     private var canTake: Bool {
-        guard let preview = viewModel.previewSourceID,
-              let program = viewModel.programSourceID else { return false }
-        return preview != program
+        guard let preview = viewModel.previewSourceID else { return false }
+        if let program = viewModel.programSourceID, preview == program { return false }
+        return true
     }
 
     private var programDisplayName: String? {
         guard let id = viewModel.programSourceID else { return nil }
         return viewModel.sources.first { $0.id == id }?.displayName
-    }
-
-    private var previewSelection: Binding<CameraSourceID?> {
-        Binding(
-            get: { viewModel.previewSourceID },
-            set: { newValue in
-                if let newValue { viewModel.selectPreview(newValue) }
-            }
-        )
-    }
-
-    private func sourceRow(_ source: ConnectedCameraSource) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(source.displayName)
-                    .font(.headline)
-                HStack(spacing: 8) {
-                    if source.id == viewModel.previewSourceID {
-                        Text(BroadcastTerminology.previewShort)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.green)
-                    }
-                    if source.id == viewModel.programSourceID {
-                        Text(BroadcastTerminology.programShort)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.red)
-                    }
-                    if source.id == viewModel.programAudioSourceID {
-                        Text(BroadcastTerminology.audioShort)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(BroadcastTheme.audioGold)
-                    }
-                }
-            }
-            Spacer()
-            ConnectionStatusBadge(
-                isActive: source.connectionState == .connected,
-                label: source.connectionState == .connected ? "Live" : "…"
-            )
-        }
-        .contentShape(Rectangle())
-        .onTapGesture { viewModel.selectPreview(source.id) }
     }
 
 #if os(macOS)

@@ -52,6 +52,17 @@ final class DirectorSessionViewModel {
         didSet { StreamDestinationStore.save(streamDestination) }
     }
 
+    var monitorQuality: DirectorMonitorQualitySettings = DirectorMonitorQualityPreferencesStore.load() {
+        didSet {
+            guard monitorQuality != oldValue else { return }
+            DirectorMonitorQualityPreferencesStore.save(monitorQuality)
+            CameraTransportProfile.directorQuality = monitorQuality
+            broadcastMonitorQuality()
+            broadcastSwitcherAssignments()
+            syncProgramEncoder()
+        }
+    }
+
     var isPublishing: Bool {
         publisherStats.state == .publishing || publisherStats.state == .connecting
     }
@@ -76,8 +87,14 @@ final class DirectorSessionViewModel {
     var videoRendererSinkSnapshot: VideoRendererSinkSnapshot {
         VideoRendererSinkRegistry.snapshot()
     }
+    /// Program bus frame counters — confirms Metal compositor is receiving frames.
+    var programFrameBusSnapshot: [ProgramFrameTrackTelemetry] {
+        ProgramFrameTelemetryRegistry.live.snapshot()
+    }
     /// Preview track pinned for the full animated take — survives `take()` assigning preview to program.
     private(set) var transitionIncomingVideoTrack: RTCVideoTrack?
+    /// Take target pinned by source ID through switcher handoff (cut + animated end).
+    private(set) var takeHandoffSourceID: CameraSourceID?
 
     private let settingsStore = CameraSettingsStore.shared
     private let discovery = DiscoveryService()
@@ -110,7 +127,28 @@ final class DirectorSessionViewModel {
         track(for: previewSourceID)
     }
 
-    /// Stable program bus — during animated takes keep pointing at outgoing until handoff completes.
+    /// Preview track pre-decoded on the compositor incoming lane for glitch-free cuts.
+    var warmedPreviewVideoTrack: RTCVideoTrack? {
+        guard !isTransitioning else { return nil }
+        guard let previewSourceID,
+              previewSourceID != programSourceID else { return nil }
+        return previewVideoTrack
+    }
+
+    /// Incoming lane wired into the compositor (handoff pin or preview warm — single entry point).
+    /// Scales to N sources: only the selected preview is warmed; all others stay idle on the bus.
+    var programBusIncomingTrack: RTCVideoTrack? {
+        if isTransitioning {
+            return transitionIncomingVideoTrack
+        }
+        if let takeHandoffSourceID {
+            return track(for: takeHandoffSourceID)
+        }
+        guard monitorQuality.prefetchTakeTarget else { return nil }
+        return warmedPreviewVideoTrack
+    }
+
+    /// On-air program bus only — never mirrors preview (preview warms on the incoming compositor lane).
     var programDisplayTrack: RTCVideoTrack? {
         if isTransitioning {
             return outgoingProgramVideoTrack ?? programVideoTrack
@@ -152,6 +190,8 @@ final class DirectorSessionViewModel {
         observeBroadcastPublisher()
         restoreFacebookSession()
 
+        CameraTransportProfile.directorQuality = monitorQuality
+
         Task {
             await discovery.setIncomingConnectionHandler { [streamReceiver] connection in
                 Task { await streamReceiver.handleIncomingConnection(connection) }
@@ -163,6 +203,7 @@ final class DirectorSessionViewModel {
                 statusMessage = "Esperando cámaras…"
                 await refreshDevices()
                 await switcher.setPreferredTransition(selectedTransition)
+                broadcastMonitorQuality()
             } catch {
                 lastError = error.localizedDescription
                 statusMessage = "Error al iniciar"
@@ -196,6 +237,8 @@ final class DirectorSessionViewModel {
         programSourceID = nil
         programAudioSourceID = nil
         outgoingProgramSourceID = nil
+        transitionIncomingVideoTrack = nil
+        takeHandoffSourceID = nil
         syncPreviewMonitor()
         encoderStats = VideoEncoderStats()
         audioEncoderStats = AudioEncoderStats()
@@ -213,16 +256,27 @@ final class DirectorSessionViewModel {
     }
 
     func selectPreview(_ sourceID: CameraSourceID) {
+        Task { await selectPreviewAndSync(sourceID) }
+    }
+
+    func selectPreviewAndSync(_ sourceID: CameraSourceID) async {
+        guard takeHandoffSourceID == nil else { return }
         inspectorSourceID = sourceID
-        Task {
-            if let event = await switcher.setPreview(sourceID) {
-                applySwitcherEvent(event)
-            }
+        guard previewSourceID != sourceID else {
+            broadcastSwitcherAssignments()
+            return
         }
+        if let event = await switcher.setPreview(sourceID) {
+            applySwitcherEvent(event)
+        }
+        broadcastSwitcherAssignments()
+        // Give remote cameras time to ramp from standby → preview tier before take.
+        try? await Task.sleep(for: .milliseconds(120))
     }
 
     func takeToProgram() {
         guard !isTransitioning else { return }
+        guard takeHandoffSourceID == nil else { return }
         Task { await performTakeToProgram() }
     }
 
@@ -325,18 +379,28 @@ final class DirectorSessionViewModel {
         await switcher.setPreferredTransition(transition)
 
         guard let target = previewSourceID else { return }
+        if let programSourceID, target == programSourceID { return }
 
-        if transition.kind == .cut || transition.duration <= 0 {
-            outgoingProgramSourceID = nil
-            transitionIncomingVideoTrack = nil
-            transitionProgress = 1
-            let events = await switcher.take(to: target, transition: transition)
-            applySwitcherEvents(events)
-            isTransitioning = false
+        broadcastSwitcherAssignments()
+        guard let incoming = await waitForVideoTrack(sourceID: target) else {
+            lastError = "La cámara en preview aún no tiene señal de video."
+            statusMessage = "Espera a que la cámara conecte antes de llevarla al aire."
             return
         }
 
-        transitionIncomingVideoTrack = previewVideoTrack
+        takeHandoffSourceID = target
+        transitionIncomingVideoTrack = incoming
+
+        if transition.kind == .cut || transition.duration <= 0 {
+            outgoingProgramSourceID = nil
+            transitionProgress = 1
+            isTransitioning = false
+            let events = await switcher.take(to: target, transition: transition)
+            applySwitcherEvents(events)
+            await completeTakeHandoff()
+            return
+        }
+
         outgoingProgramSourceID = programSourceID
         isTransitioning = true
         transitionProgress = 0
@@ -358,8 +422,28 @@ final class DirectorSessionViewModel {
         let events = await switcher.take(to: target, transition: transition)
         applySwitcherEvents(events)
         outgoingProgramSourceID = nil
-        transitionIncomingVideoTrack = nil
         isTransitioning = false
+        await completeTakeHandoff()
+    }
+
+    /// Lets compositor finish handoff while take target remains pinned by source ID.
+    private func completeTakeHandoff() async {
+        await Task.yield()
+        takeHandoffSourceID = nil
+        transitionIncomingVideoTrack = nil
+    }
+
+    private func waitForVideoTrack(sourceID: CameraSourceID, attempts: Int = 8) async -> RTCVideoTrack? {
+        for attempt in 0..<attempts {
+            if let track = track(for: sourceID) {
+                return track
+            }
+            if attempt == 0 {
+                broadcastSwitcherAssignments()
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        return track(for: sourceID)
     }
 
     func setProgramAudioSource(_ sourceID: CameraSourceID) {
@@ -511,7 +595,12 @@ final class DirectorSessionViewModel {
         if let index = sources.firstIndex(where: { $0.id == sourceID }) {
             var source = sources[index]
             if let displayName { source.displayName = displayName }
-            if let videoTrack { source.videoTrack = videoTrack }
+            if let videoTrack {
+                source.videoTrack = videoTrack
+                if source.connectionState == .connecting || source.connectionState == .signaling {
+                    source.connectionState = .connected
+                }
+            }
             if let audioTrack { source.audioTrack = audioTrack }
             if let connectionState { source.connectionState = connectionState }
             if let remoteSettings { source.remoteSettings = remoteSettings }
@@ -573,6 +662,18 @@ final class DirectorSessionViewModel {
                 try? await streamReceiver.sendControl(
                     to: source.id,
                     command: .setSwitcherAssignment(assignment)
+                )
+            }
+        }
+    }
+
+    private func broadcastMonitorQuality() {
+        let quality = monitorQuality
+        for source in sources {
+            Task {
+                try? await streamReceiver.sendControl(
+                    to: source.id,
+                    command: .setDirectorMonitorQuality(quality)
                 )
             }
         }
@@ -649,7 +750,10 @@ final class DirectorSessionViewModel {
                 lastEncoderStatsRefresh = .distantPast
                 return
             }
-            await programEncoder.start(programTrack: programVideoTrack)
+            await programEncoder.start(
+                programTrack: programVideoTrack,
+                configuration: monitorQuality.outputEncoderConfiguration
+            )
             encoderStats = await programEncoder.stats()
         }
     }

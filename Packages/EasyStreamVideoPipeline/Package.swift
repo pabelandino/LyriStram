@@ -13,6 +13,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../EasyStreamCore"),
+        .package(path: "../EasyStreamVideoBusNative"),
         .package(url: "https://github.com/stasel/WebRTC.git", from: "150.0.0"),
     ],
     targets: [
@@ -20,6 +21,7 @@ let package = Package(
             name: "EasyStreamVideoPipeline",
             dependencies: [
                 "EasyStreamCore",
+                "EasyStreamVideoBusNative",
                 "WebRTC",
             ],
             swiftSettings: [

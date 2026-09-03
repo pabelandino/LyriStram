@@ -6,6 +6,7 @@
 import SwiftUI
 import EasyStreamFacebook
 import EasyStreamUIComponents
+import EasyStreamVideoPipeline
 #if os(iOS)
 import EasyStreamFacebookLogin
 #endif
@@ -17,6 +18,7 @@ struct EasyStreamApp: App {
 #endif
 
     init() {
+        ProgramInfrastructureBootstrap.installLiveAdapters()
 #if os(iOS)
         EasyStreamFacebookLoginSetup.install()
 #endif

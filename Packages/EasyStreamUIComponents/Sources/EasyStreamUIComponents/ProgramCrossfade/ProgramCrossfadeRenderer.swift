@@ -8,6 +8,14 @@ enum ProgramCrossfadeRenderer {
         storage: inout RTCVideoTrack?,
         sinkCategory: VideoRendererSinkCategory = .programCrossfade
     ) {
+        if let track, let current = storage, current.trackId == track.trackId {
+            if current !== track {
+                current.remove(view)
+                track.add(view)
+                storage = track
+            }
+            return
+        }
         guard storage !== track else { return }
         if let previous = storage {
             previous.remove(view)

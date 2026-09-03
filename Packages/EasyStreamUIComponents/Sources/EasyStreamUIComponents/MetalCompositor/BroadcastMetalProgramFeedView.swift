@@ -16,6 +16,7 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
     let fullScreenResource: BroadcastResource?
     let fullScreenFileURL: URL?
     let fullScreenIsLive: Bool
+    let embedsOverlays: Bool
     let onWidgetLiveAutoDismiss: ((UUID) -> Void)?
 
     func makeUIView(context: Context) -> BroadcastMetalProgramFeedContainerUIView {
@@ -32,7 +33,8 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
             widgetLayers: widgetLayers,
             fullScreenResource: fullScreenResource,
             fullScreenFileURL: fullScreenFileURL,
-            fullScreenIsLive: fullScreenIsLive
+            fullScreenIsLive: fullScreenIsLive,
+            embedsOverlays: embedsOverlays
         )
         return view
     }
@@ -50,7 +52,8 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
             widgetLayers: widgetLayers,
             fullScreenResource: fullScreenResource,
             fullScreenFileURL: fullScreenFileURL,
-            fullScreenIsLive: fullScreenIsLive
+            fullScreenIsLive: fullScreenIsLive,
+            embedsOverlays: embedsOverlays
         )
     }
 
@@ -72,7 +75,6 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
 
         func attach(to container: BroadcastMetalProgramFeedContainerUIView) {
             self.container = container
-            container.compositor.setOverlayProvider(overlayProvider)
         }
 
         func sync(
@@ -85,16 +87,21 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
             widgetLayers: [ProgramFeedWidgetLayer],
             fullScreenResource: BroadcastResource?,
             fullScreenFileURL: URL?,
-            fullScreenIsLive: Bool
+            fullScreenIsLive: Bool,
+            embedsOverlays: Bool
         ) {
             guard let container else { return }
 
-            overlayProvider.widgetLayers = widgetLayers
-            overlayProvider.fullScreenResource = fullScreenResource
-            overlayProvider.fullScreenFileURL = fullScreenFileURL
-            overlayProvider.fullScreenIsLive = fullScreenIsLive
-            container.compositor.setOverlayProvider(overlayProvider)
-            container.compositor.refreshOverlaySnapshot()
+            if embedsOverlays {
+                overlayProvider.widgetLayers = widgetLayers
+                overlayProvider.fullScreenResource = fullScreenResource
+                overlayProvider.fullScreenFileURL = fullScreenFileURL
+                overlayProvider.fullScreenIsLive = fullScreenIsLive
+                container.compositor.setOverlayProvider(overlayProvider)
+                container.compositor.refreshOverlaySnapshot()
+            } else {
+                container.compositor.setOverlayProvider(nil)
+            }
 
             session.apply(
                 on: container,
@@ -137,18 +144,36 @@ final class BroadcastMetalProgramFeedContainerUIView: UIView, ProgramCrossfadeHo
         compositor.attach(to: compositorView)
     }
 
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        guard window != nil else { return }
+        setNeedsLayout()
+    }
+
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        let scale = window?.screen.scale ?? traitCollection.displayScale
+        compositorView.drawableSize = CGSize(
+            width: bounds.width * scale,
+            height: bounds.height * scale
+        )
+        compositor.invalidateDisplay()
+    }
+
     func setCrossfadePresentationMode(idleProgram: Bool, transitioning: Bool, warmingTake: Bool) {
-        compositor.setIdleUsesProgramOnly(idleProgram && !transitioning && !warmingTake)
+        guard !transitioning else { return }
+        compositor.setIdleMode(showIncomingAsProgram: warmingTake)
     }
 
     func enterIdleProgramMode(preservingProgramPresentation: Bool, warmingTake: Bool) {
         _ = preservingProgramPresentation
-        compositor.setIdleUsesProgramOnly(!warmingTake)
+        compositor.setIdleMode(showIncomingAsProgram: warmingTake)
     }
 
     func applyCrossfadeSlots(
@@ -156,17 +181,21 @@ final class BroadcastMetalProgramFeedContainerUIView: UIView, ProgramCrossfadeHo
         takeSlot: ProgramTransitionSlot,
         incomingOnProgram: Bool
     ) {
-        compositor.setTransitionState(
-            isTransitioning: true,
-            frame: ProgramTransitionFrame(
+        applyTransitionFrame(
+            ProgramTransitionFrame(
                 outgoing: programSlot,
                 incoming: takeSlot,
                 lifecycle: .cut,
                 presentationMode: programSlot.usesSpatialPresentation || takeSlot.usesSpatialPresentation
                     ? .spatial
                     : .opacityOnly
-            )
+            ),
+            incomingOnProgram: incomingOnProgram
         )
+    }
+
+    func applyTransitionFrame(_ frame: ProgramTransitionFrame, incomingOnProgram: Bool) {
+        compositor.setTransitionState(isTransitioning: true, frame: frame)
         _ = incomingOnProgram
     }
 
@@ -187,6 +216,23 @@ final class BroadcastMetalProgramFeedContainerUIView: UIView, ProgramCrossfadeHo
     }
 
     func resetTransitionSlotPresentation() {}
+
+    func clearMetalVideoFrames() {
+        compositor.clearMetalVideoFrames()
+    }
+
+    func clearMetalTransitionFrames() {
+        compositor.clearTransitionVideoFrames()
+    }
+
+    func clearProgramVideoFrame() {
+        compositor.clearProgramVideoFrame()
+    }
+
+    func promoteIncomingFrameToProgram() {
+        compositor.promoteIncomingFrameToProgram()
+        compositor.lockProgramContentSizeFromProgramFrame()
+    }
 }
 #endif
 
@@ -207,6 +253,7 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
     let fullScreenResource: BroadcastResource?
     let fullScreenFileURL: URL?
     let fullScreenIsLive: Bool
+    let embedsOverlays: Bool
     let onWidgetLiveAutoDismiss: ((UUID) -> Void)?
 
     func makeNSView(context: Context) -> BroadcastMetalProgramFeedContainerNSView {
@@ -223,7 +270,8 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
             widgetLayers: widgetLayers,
             fullScreenResource: fullScreenResource,
             fullScreenFileURL: fullScreenFileURL,
-            fullScreenIsLive: fullScreenIsLive
+            fullScreenIsLive: fullScreenIsLive,
+            embedsOverlays: embedsOverlays
         )
         return view
     }
@@ -241,7 +289,8 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
             widgetLayers: widgetLayers,
             fullScreenResource: fullScreenResource,
             fullScreenFileURL: fullScreenFileURL,
-            fullScreenIsLive: fullScreenIsLive
+            fullScreenIsLive: fullScreenIsLive,
+            embedsOverlays: embedsOverlays
         )
     }
 
@@ -263,7 +312,6 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
 
         func attach(to container: BroadcastMetalProgramFeedContainerNSView) {
             self.container = container
-            container.compositor.setOverlayProvider(overlayProvider)
         }
 
         func sync(
@@ -276,16 +324,21 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
             widgetLayers: [ProgramFeedWidgetLayer],
             fullScreenResource: BroadcastResource?,
             fullScreenFileURL: URL?,
-            fullScreenIsLive: Bool
+            fullScreenIsLive: Bool,
+            embedsOverlays: Bool
         ) {
             guard let container else { return }
 
-            overlayProvider.widgetLayers = widgetLayers
-            overlayProvider.fullScreenResource = fullScreenResource
-            overlayProvider.fullScreenFileURL = fullScreenFileURL
-            overlayProvider.fullScreenIsLive = fullScreenIsLive
-            container.compositor.setOverlayProvider(overlayProvider)
-            container.compositor.refreshOverlaySnapshot()
+            if embedsOverlays {
+                overlayProvider.widgetLayers = widgetLayers
+                overlayProvider.fullScreenResource = fullScreenResource
+                overlayProvider.fullScreenFileURL = fullScreenFileURL
+                overlayProvider.fullScreenIsLive = fullScreenIsLive
+                container.compositor.setOverlayProvider(overlayProvider)
+                container.compositor.refreshOverlaySnapshot()
+            } else {
+                container.compositor.setOverlayProvider(nil)
+            }
 
             session.apply(
                 on: container,
@@ -328,18 +381,36 @@ final class BroadcastMetalProgramFeedContainerNSView: NSView, ProgramCrossfadeHo
         compositor.attach(to: compositorView)
     }
 
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard window != nil else { return }
+        needsLayout = true
+    }
+
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override func layout() {
+        super.layout()
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        let scale = window?.backingScaleFactor ?? 2
+        compositorView.drawableSize = CGSize(
+            width: bounds.width * scale,
+            height: bounds.height * scale
+        )
+        compositor.invalidateDisplay()
+    }
+
     func setCrossfadePresentationMode(idleProgram: Bool, transitioning: Bool, warmingTake: Bool) {
-        compositor.setIdleUsesProgramOnly(idleProgram && !transitioning && !warmingTake)
+        guard !transitioning else { return }
+        compositor.setIdleMode(showIncomingAsProgram: warmingTake)
     }
 
     func enterIdleProgramMode(preservingProgramPresentation: Bool, warmingTake: Bool) {
         _ = preservingProgramPresentation
-        compositor.setIdleUsesProgramOnly(!warmingTake)
+        compositor.setIdleMode(showIncomingAsProgram: warmingTake)
     }
 
     func applyCrossfadeSlots(
@@ -347,17 +418,21 @@ final class BroadcastMetalProgramFeedContainerNSView: NSView, ProgramCrossfadeHo
         takeSlot: ProgramTransitionSlot,
         incomingOnProgram: Bool
     ) {
-        compositor.setTransitionState(
-            isTransitioning: true,
-            frame: ProgramTransitionFrame(
+        applyTransitionFrame(
+            ProgramTransitionFrame(
                 outgoing: programSlot,
                 incoming: takeSlot,
                 lifecycle: .cut,
                 presentationMode: programSlot.usesSpatialPresentation || takeSlot.usesSpatialPresentation
                     ? .spatial
                     : .opacityOnly
-            )
+            ),
+            incomingOnProgram: incomingOnProgram
         )
+    }
+
+    func applyTransitionFrame(_ frame: ProgramTransitionFrame, incomingOnProgram: Bool) {
+        compositor.setTransitionState(isTransitioning: true, frame: frame)
         _ = incomingOnProgram
     }
 
@@ -378,5 +453,22 @@ final class BroadcastMetalProgramFeedContainerNSView: NSView, ProgramCrossfadeHo
     }
 
     func resetTransitionSlotPresentation() {}
+
+    func clearMetalVideoFrames() {
+        compositor.clearMetalVideoFrames()
+    }
+
+    func clearMetalTransitionFrames() {
+        compositor.clearTransitionVideoFrames()
+    }
+
+    func clearProgramVideoFrame() {
+        compositor.clearProgramVideoFrame()
+    }
+
+    func promoteIncomingFrameToProgram() {
+        compositor.promoteIncomingFrameToProgram()
+        compositor.lockProgramContentSizeFromProgramFrame()
+    }
 }
 #endif

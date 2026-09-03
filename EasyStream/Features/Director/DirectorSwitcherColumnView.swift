@@ -40,9 +40,9 @@ struct DirectorSwitcherColumnView: View {
     }
 
     private var canTake: Bool {
-        guard let preview = viewModel.previewSourceID,
-              preview != viewModel.programSourceID else { return false }
-        return viewModel.sources.contains { $0.id == preview && $0.videoTrack != nil }
+        guard let preview = viewModel.previewSourceID else { return false }
+        if let program = viewModel.programSourceID, preview == program { return false }
+        return viewModel.connectionState(for: preview) == .connected
     }
 }
 
@@ -87,9 +87,9 @@ private struct DirectorMainSwitcherAreaView: View {
     }
 
     private var canTake: Bool {
-        guard let preview = viewModel.previewSourceID,
-              preview != viewModel.programSourceID else { return false }
-        return viewModel.sources.contains { $0.id == preview && $0.videoTrack != nil }
+        guard let preview = viewModel.previewSourceID else { return false }
+        if let program = viewModel.programSourceID, preview == program { return false }
+        return viewModel.connectionState(for: preview) == .connected
     }
 }
 
@@ -129,6 +129,7 @@ private struct DirectorPreviewGridView: View {
                                         previewSourceID: viewModel.previewSourceID,
                                         programSourceID: viewModel.programSourceID
                                     ),
+                                    hasVideoSignal: source.videoTrack != nil,
                                     connectionState: source.connectionState,
                                     isPreview: source.id == viewModel.previewSourceID,
                                     isProgram: source.id == viewModel.programSourceID,

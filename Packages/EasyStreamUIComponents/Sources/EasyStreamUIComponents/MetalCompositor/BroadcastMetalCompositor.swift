@@ -43,9 +43,13 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     private var outgoingFrame = BroadcastMetalVideoFrame.LayerFrame()
     private var incomingFrame = BroadcastMetalVideoFrame.LayerFrame()
     private var programFrame = BroadcastMetalVideoFrame.LayerFrame()
+    private var lockedProgramContentSize: SIMD2<Float> = .zero
+    private var programContentSizeLockFramesRemaining = 0
 
     private var transitionFrame = ProgramTransitionFrame.cutIncoming
     private var isTransitioning = false
+    /// When off-air, render the warmed incoming lane as full program output without attaching preview to program sink.
+    private var idleShowsIncomingAsProgram = false
 
     private let stateLock = NSLock()
     private let frameLock = NSLock()
@@ -94,7 +98,7 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     var programRenderer: RTCVideoRenderer { programSink }
 
     func attach(to view: MTKView) {
-        DispatchQueue.main.async {
+        let configure = {
             self.mtkView = view
             view.device = self.device
             view.colorPixelFormat = .bgra8Unorm
@@ -102,6 +106,11 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
             view.isPaused = true
             view.enableSetNeedsDisplay = false
             view.delegate = self
+        }
+        if Thread.isMainThread {
+            configure()
+        } else {
+            DispatchQueue.main.async(execute: configure)
         }
     }
 
@@ -113,8 +122,12 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         requestDraw()
     }
 
-    func setIdleUsesProgramOnly(_ value: Bool) {
-        _ = value
+    func setIdleMode(showIncomingAsProgram: Bool) {
+        stateLock.lock()
+        idleShowsIncomingAsProgram = showIncomingAsProgram
+        isTransitioning = false
+        transitionFrame = .cutIncoming
+        stateLock.unlock()
         requestDraw()
     }
 
@@ -146,7 +159,8 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         switch slot {
         case .outgoing: outgoingFrame = layerFrame
         case .incoming: incomingFrame = layerFrame
-        case .program: programFrame = layerFrame
+        case .program:
+            programFrame = layerFrame
         }
         frameLock.unlock()
         requestDraw()
@@ -165,6 +179,61 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
                 }
             }
         }
+    }
+
+    func invalidateDisplay() {
+        requestDraw()
+    }
+
+    func clearMetalVideoFrames() {
+        frameLock.lock()
+        outgoingFrame = BroadcastMetalVideoFrame.LayerFrame()
+        incomingFrame = BroadcastMetalVideoFrame.LayerFrame()
+        programFrame = BroadcastMetalVideoFrame.LayerFrame()
+        lockedProgramContentSize = .zero
+        programContentSizeLockFramesRemaining = 0
+        idleShowsIncomingAsProgram = false
+        frameLock.unlock()
+        requestDraw()
+    }
+
+    func clearTransitionVideoFrames() {
+        frameLock.lock()
+        outgoingFrame = BroadcastMetalVideoFrame.LayerFrame()
+        incomingFrame = BroadcastMetalVideoFrame.LayerFrame()
+        frameLock.unlock()
+        requestDraw()
+    }
+
+    func clearProgramVideoFrame() {
+        frameLock.lock()
+        programFrame = BroadcastMetalVideoFrame.LayerFrame()
+        lockedProgramContentSize = .zero
+        programContentSizeLockFramesRemaining = 0
+        frameLock.unlock()
+        requestDraw()
+    }
+
+    func promoteIncomingFrameToProgram() {
+        frameLock.lock()
+        if incomingFrame.pixelBuffer != nil {
+            programFrame = incomingFrame
+            lockedProgramContentSize = incomingFrame.contentSize
+            programContentSizeLockFramesRemaining = 24
+        }
+        incomingFrame = BroadcastMetalVideoFrame.LayerFrame()
+        frameLock.unlock()
+        requestDraw()
+    }
+
+    /// Copies the current program lane dimensions for letterbox stability after a cut.
+    func lockProgramContentSizeFromProgramFrame(forFrames frameCount: Int = 24) {
+        frameLock.lock()
+        if programFrame.contentSize.x > 1, programFrame.contentSize.y > 1 {
+            lockedProgramContentSize = programFrame.contentSize
+            programContentSizeLockFramesRemaining = frameCount
+        }
+        frameLock.unlock()
     }
 
     @MainActor
@@ -200,7 +269,7 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     }
 
     private func buildPipeline() {
-        guard let library = device.makeDefaultLibrary(),
+        guard let library = Self.loadMetalLibrary(device: device),
               let vertex = library.makeFunction(name: "broadcastCompositorVertex"),
               let fragment = library.makeFunction(name: "broadcastCompositorFragment") else {
             return
@@ -211,6 +280,15 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         descriptor.fragmentFunction = fragment
         descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
         pipelineState = try? device.makeRenderPipelineState(descriptor: descriptor)
+    }
+
+    private static func loadMetalLibrary(device: MTLDevice) -> MTLLibrary? {
+        #if SWIFT_PACKAGE
+        if let library = try? device.makeDefaultLibrary(bundle: Bundle.module) {
+            return library
+        }
+        #endif
+        return device.makeDefaultLibrary()
     }
 
     private func render(in view: MTKView) {
@@ -228,8 +306,8 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         passDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 1)
 
         let viewportSize = view.drawableSize
-        var uniforms = makeUniforms(viewportSize: viewportSize)
         var textures = makeVideoTextures()
+        var uniforms = makeUniforms(viewportSize: viewportSize, textures: textures)
 
         overlaySnapshotLock.lock()
         textures.overlayBGRA = overlaySnapshot
@@ -253,10 +331,14 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         commandBuffer.commit()
     }
 
-    private func makeUniforms(viewportSize: CGSize) -> Uniforms {
+    private func makeUniforms(viewportSize: CGSize, textures: TextureSet) -> Uniforms {
         stateLock.lock()
         let transitioning = isTransitioning
         let frame = transitionFrame
+        stateLock.unlock()
+
+        stateLock.lock()
+        let showIncomingAsProgram = idleShowsIncomingAsProgram
         stateLock.unlock()
 
         frameLock.lock()
@@ -268,8 +350,16 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         uniforms.viewportSize = SIMD2(Float(viewportSize.width), Float(viewportSize.height))
 
         if transitioning {
-            uniforms.outgoingContentSize = outgoing.contentSize
-            uniforms.incomingContentSize = incoming.contentSize
+            uniforms.outgoingContentSize = effectiveContentSize(
+                frame: outgoing,
+                bgra: textures.outgoingBGRA,
+                y: textures.outgoingY
+            )
+            uniforms.incomingContentSize = effectiveContentSize(
+                frame: incoming,
+                bgra: textures.incomingBGRA,
+                y: textures.incomingY
+            )
             uniforms.outgoingOpacity = Float(frame.outgoing.opacity)
             uniforms.incomingOpacity = Float(frame.incoming.opacity)
             uniforms.outgoingOffsetX = Float(frame.outgoing.offsetX)
@@ -284,8 +374,35 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
             if let reveal = frame.incoming.reveal {
                 uniforms.incomingReveal = Float(reveal)
             }
+        } else if showIncomingAsProgram {
+            if incoming.pixelBuffer != nil {
+                uniforms.outgoingContentSize = effectiveContentSize(
+                    frame: incoming,
+                    bgra: textures.incomingBGRA,
+                    y: textures.incomingY
+                )
+                uniforms.outgoingOpacity = 1
+                uniforms.outgoingIsNV12 = incoming.isNV12 ? 1 : 0
+                uniforms.hasOutgoing = 1
+            } else {
+                uniforms.outgoingOpacity = 0
+                uniforms.hasOutgoing = 0
+            }
         } else {
-            uniforms.outgoingContentSize = programFrame.contentSize
+            var programContentSize = effectiveContentSize(
+                frame: programFrame,
+                bgra: textures.outgoingBGRA,
+                y: textures.outgoingY
+            )
+            frameLock.lock()
+            if programContentSizeLockFramesRemaining > 0,
+               lockedProgramContentSize.x > 1,
+               lockedProgramContentSize.y > 1 {
+                programContentSize = lockedProgramContentSize
+                programContentSizeLockFramesRemaining -= 1
+            }
+            frameLock.unlock()
+            uniforms.outgoingContentSize = programContentSize
             uniforms.outgoingOpacity = programFrame.pixelBuffer != nil ? 1 : 0
             uniforms.outgoingIsNV12 = programFrame.isNV12 ? 1 : 0
             uniforms.hasOutgoing = programFrame.pixelBuffer != nil ? 1 : 0
@@ -294,16 +411,47 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         return uniforms
     }
 
+    private func effectiveContentSize(
+        frame: BroadcastMetalVideoFrame.LayerFrame,
+        bgra: MTLTexture?,
+        y: MTLTexture?
+    ) -> SIMD2<Float> {
+        if let y, y.width > 1, y.height > 1 {
+            return SIMD2(Float(y.width), Float(y.height))
+        }
+        if let bgra, bgra.width > 1, bgra.height > 1 {
+            return SIMD2(Float(bgra.width), Float(bgra.height))
+        }
+        if frame.contentSize.x > 1, frame.contentSize.y > 1 {
+            return frame.contentSize
+        }
+        return frame.contentSize
+    }
+
     private func makeVideoTextures() -> TextureSet {
         stateLock.lock()
         let transitioning = isTransitioning
+        let showIncomingAsProgram = idleShowsIncomingAsProgram
         stateLock.unlock()
 
         frameLock.lock()
-        let outgoingBuffer = transitioning ? outgoingFrame.pixelBuffer : programFrame.pixelBuffer
-        let outgoingNV12 = transitioning ? outgoingFrame.isNV12 : programFrame.isNV12
+        let programBuffer = programFrame.pixelBuffer
+        let programNV12 = programFrame.isNV12
         let incomingBuffer = incomingFrame.pixelBuffer
         let incomingNV12 = incomingFrame.isNV12
+
+        let outgoingBuffer: CVPixelBuffer?
+        let outgoingNV12: Bool
+        if transitioning {
+            outgoingBuffer = outgoingFrame.pixelBuffer
+            outgoingNV12 = outgoingFrame.isNV12
+        } else if showIncomingAsProgram {
+            outgoingBuffer = incomingBuffer
+            outgoingNV12 = incomingNV12
+        } else {
+            outgoingBuffer = programBuffer
+            outgoingNV12 = programNV12
+        }
         frameLock.unlock()
 
         var set = TextureSet()

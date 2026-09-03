@@ -84,6 +84,7 @@ public struct DirectorStatusBar: View {
 public struct CameraSourceTile: View {
     let name: String
     let track: RTCVideoTrack?
+    let hasVideoSignal: Bool
     let connectionState: StreamConnectionState
     let isPreview: Bool
     let isProgram: Bool
@@ -92,6 +93,7 @@ public struct CameraSourceTile: View {
     public init(
         name: String,
         track: RTCVideoTrack?,
+        hasVideoSignal: Bool = true,
         connectionState: StreamConnectionState,
         isPreview: Bool,
         isProgram: Bool,
@@ -99,6 +101,7 @@ public struct CameraSourceTile: View {
     ) {
         self.name = name
         self.track = track
+        self.hasVideoSignal = hasVideoSignal
         self.connectionState = connectionState
         self.isPreview = isPreview
         self.isProgram = isProgram
@@ -117,6 +120,7 @@ public struct CameraSourceTile: View {
         self.init(
             name: name,
             track: track,
+            hasVideoSignal: track != nil,
             connectionState: isConnected ? .connected : .disconnected,
             isPreview: isPreview,
             isProgram: isProgram,
@@ -192,6 +196,12 @@ public struct CameraSourceTile: View {
     private var placeholderMessage: String {
         switch connectionState {
         case .connected:
+            if isProgram, hasVideoSignal {
+                return "Al aire en PROG"
+            }
+            if hasVideoSignal, !isPreview {
+                return "Toca para preview"
+            }
             return "En espera"
         case .connecting, .signaling:
             return "Conectando…"
@@ -341,10 +351,10 @@ public struct TransitionProgramView: View {
     }
 
     public var body: some View {
-        ProgramCrossfadeVideoView(
+        ProgramMonitorViewFactory.programVideoSurface(
             programTrack: programTrack,
             outgoingTrack: isTransitioning ? outgoingTrack : nil,
-            incomingTrack: isTransitioning ? previewTrack : nil,
+            incomingTrack: previewTrack,
             isTransitioning: isTransitioning,
             progress: progress,
             kind: kind

@@ -12,7 +12,7 @@ import UIKit
 import UIKit
 #endif
 
-public enum DirectorSidebarTab: String, CaseIterable, Identifiable {
+public enum DirectorSidebarTab: String, CaseIterable, Identifiable, Sendable {
     case cameras
     case library
     case playlists
@@ -32,6 +32,32 @@ public enum DirectorSidebarTab: String, CaseIterable, Identifiable {
         case .cameras: "video.fill"
         case .library: "photo.on.rectangle.angled"
         case .playlists: "list.bullet.rectangle"
+        }
+    }
+
+    /// Tabs shown on the left sources rail (library lives on the right rail).
+    public static let leftRailTabs: [DirectorSidebarTab] = [.cameras, .playlists]
+}
+
+public struct DirectorLeftSidebarTabPicker: View {
+    @Binding var selection: DirectorSidebarTab
+
+    public init(selection: Binding<DirectorSidebarTab>) {
+        self._selection = selection
+    }
+
+    public var body: some View {
+        Picker("Panel", selection: $selection) {
+            ForEach(DirectorSidebarTab.leftRailTabs) { tab in
+                Text(tab.title).tag(tab)
+            }
+        }
+        .broadcastNativeSegmentedControl()
+        .padding(.bottom, 4)
+        .onAppear {
+            if !DirectorSidebarTab.leftRailTabs.contains(selection) {
+                selection = .cameras
+            }
         }
     }
 }
