@@ -159,9 +159,9 @@ final class BroadcastMetalProgramFeedContainerUIView: UIView, ProgramCrossfadeHo
         super.layoutSubviews()
         guard bounds.width > 0, bounds.height > 0 else { return }
         let scale = window?.screen.scale ?? traitCollection.displayScale
-        compositorView.drawableSize = CGSize(
-            width: bounds.width * scale,
-            height: bounds.height * scale
+        compositorView.drawableSize = BroadcastMetalDrawableLimits.cappedDrawableSize(
+            bounds: bounds.size,
+            scale: scale
         )
         compositor.invalidateDisplay()
     }
@@ -396,9 +396,9 @@ final class BroadcastMetalProgramFeedContainerNSView: NSView, ProgramCrossfadeHo
         super.layout()
         guard bounds.width > 0, bounds.height > 0 else { return }
         let scale = window?.backingScaleFactor ?? 2
-        compositorView.drawableSize = CGSize(
-            width: bounds.width * scale,
-            height: bounds.height * scale
+        compositorView.drawableSize = BroadcastMetalDrawableLimits.cappedDrawableSize(
+            bounds: bounds.size,
+            scale: scale
         )
         compositor.invalidateDisplay()
     }

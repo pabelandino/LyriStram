@@ -1,0 +1,127 @@
+import CoreVideo
+import EasyStreamCore
+import EasyStreamVideoBusNative
+import Foundation
+import simd
+import WebRTC
+
+/// Thread-safe frame bus — native C++ ring buffer (CVPixelBuffer retain) + Swift conversion queue.
+///
+/// NV12/CVPixelBuffer frames push synchronously on the WebRTC thread so cuts see the latest hold.
+/// I420 software decode converts on `processingQueue` before pushing.
+public final class ProgramFrameDisplayBus: @unchecked Sendable {
+    public static let shared = ProgramFrameDisplayBus()
+
+    public struct Sample: Sendable {
+        public let pixelBuffer: CVPixelBuffer
+        public let contentSize: SIMD2<Float>
+        public let isNV12: Bool
+        public let sequence: UInt64
+    }
+
+    public var onDisplayRefreshRequested: (@Sendable () -> Void)?
+
+    private let processingQueue = DispatchQueue(
+        label: "com.easystream.program-frame-bus.processing",
+        qos: .userInitiated
+    )
+
+    private init() {}
+
+    // MARK: - Ingest
+
+    public func enqueue(_ frame: RTCVideoFrame, lane: ProgramFrameBusSlot) {
+        if let cvBuffer = frame.buffer as? RTCCVPixelBuffer {
+            publish(pixelBuffer: cvBuffer.pixelBuffer, lane: lane)
+            return
+        }
+
+        processingQueue.async { [weak self] in
+            guard let self else { return }
+            if let pixelBuffer = WebRTCVideoFramePixelBuffer.extract(from: frame) {
+                self.publish(pixelBuffer: pixelBuffer, lane: lane)
+            }
+        }
+    }
+
+    public func publish(pixelBuffer: CVPixelBuffer, lane: ProgramFrameBusSlot) {
+        let width = Float(CVPixelBufferGetWidth(pixelBuffer))
+        let height = Float(CVPixelBufferGetHeight(pixelBuffer))
+        let format = CVPixelBufferGetPixelFormatType(pixelBuffer)
+        let isNV12 = format == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+            || format == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+
+        NativeProgramFrameBus.push(lane: lane, pixelBuffer: pixelBuffer, isNV12: isNV12)
+
+        if let sample = displaySample(for: lane) {
+            ProgramBusTrace.lanePublish(
+                lane: lane,
+                width: Int(width),
+                height: Int(height),
+                sequence: sample.sequence
+            )
+        }
+
+        ProgramFrameTelemetryRegistry.live.recordFrame(
+            busSlot: lane,
+            width: Int(width),
+            height: Int(height)
+        )
+    }
+
+    public func publish(_ sample: Sample, lane: ProgramFrameBusSlot) {
+        publish(pixelBuffer: sample.pixelBuffer, lane: lane)
+    }
+
+    // MARK: - Display
+
+    public func displaySample(for lane: ProgramFrameBusSlot) -> Sample? {
+        guard let native = NativeProgramFrameBus.copyDisplayFrame(for: lane) else { return nil }
+        return Sample(
+            pixelBuffer: native.pixelBuffer,
+            contentSize: native.contentSize,
+            isNV12: native.isNV12,
+            sequence: native.sequence
+        )
+    }
+
+    /// Waits briefly for the incoming lane to hold a decodable frame before a cut promote.
+    public func waitForIncomingDisplaySample(maxAttempts: Int = 6, intervalMs: UInt64 = 4) async -> Sample? {
+        for attempt in 0..<maxAttempts {
+            if let sample = displaySample(for: .programIncoming) {
+                return sample
+            }
+            if attempt + 1 < maxAttempts {
+                try? await Task.sleep(for: .milliseconds(intervalMs))
+            }
+        }
+        return displaySample(for: .programIncoming)
+    }
+
+    public func promoteIncomingToOnAir() {
+        let incoming = displaySample(for: .programIncoming)
+        let programBefore = displaySample(for: .programOnAir)
+        NativeProgramFrameBus.promoteIncomingToOnAir()
+        let programAfter = displaySample(for: .programOnAir)
+        ProgramBusTrace.event(
+            "bus promote incoming=\(sizeLabel(incoming)) programBefore=\(sizeLabel(programBefore)) programAfter=\(sizeLabel(programAfter))"
+        )
+    }
+
+    private func sizeLabel(_ sample: Sample?) -> String {
+        guard let sample else { return "nil" }
+        return "\(Int(sample.contentSize.x))x\(Int(sample.contentSize.y)) seq=\(sample.sequence)"
+    }
+
+    public func clearTransitionLanes() {
+        NativeProgramFrameBus.clearTransitionLanes()
+    }
+
+    public func clearAllLanes() {
+        NativeProgramFrameBus.clearAll()
+    }
+
+    public func clearOnAirLane() {
+        NativeProgramFrameBus.clearOnAirLane()
+    }
+}

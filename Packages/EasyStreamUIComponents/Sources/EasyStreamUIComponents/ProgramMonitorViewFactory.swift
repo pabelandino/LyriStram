@@ -18,14 +18,20 @@ public enum ProgramMonitorViewFactory {
     ) -> some View {
         switch configuration.backend {
         case .metalCompositor:
-            ProgramMetalVideoView(
-                programTrack: programTrack,
-                outgoingTrack: outgoingTrack,
-                incomingTrack: incomingTrack,
-                isTransitioning: isTransitioning,
-                progress: progress,
-                kind: kind
-            )
+            // Single persistent MTKView + frame bus: WebRTC decodes on worker threads,
+            // Metal compositor displays — cuts swap textures, never SwiftUI/NSView trees.
+            if programTrack != nil || incomingTrack != nil || isTransitioning {
+                ProgramMetalVideoView(
+                    programTrack: programTrack,
+                    outgoingTrack: outgoingTrack,
+                    incomingTrack: incomingTrack,
+                    isTransitioning: isTransitioning,
+                    progress: progress,
+                    kind: kind
+                )
+            } else {
+                Color.black
+            }
         case .legacyDualWebRTC:
             ProgramCrossfadeVideoView(
                 programTrack: programTrack,

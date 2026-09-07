@@ -3,71 +3,6 @@ import SwiftUI
 import WebRTC
 import EasyStreamCore
 import AppKit
-import AVFoundation
-
-/// WebRTC Metal views report full video resolution as intrinsic size, which breaks SwiftUI HStack layouts.
-public final class LayoutNeutralRTCMTLNSVideoView: RTCMTLNSVideoView {
-    public override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        wantsLayer = true
-        layer?.backgroundColor = NSColor.black.cgColor
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    public override var intrinsicContentSize: NSSize {
-        NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
-    }
-
-    public override func invalidateIntrinsicContentSize() {}
-
-    public override var fittingSize: NSSize {
-        NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
-    }
-}
-
-/// Keeps Metal WebRTC views clipped to SwiftUI layout bounds on macOS.
-public final class ClippingRTCVideoContainer: NSView {
-    public let metalView: LayoutNeutralRTCMTLNSVideoView
-
-    public override init(frame frameRect: NSRect) {
-        metalView = LayoutNeutralRTCMTLNSVideoView(frame: .zero)
-        super.init(frame: frameRect)
-        wantsLayer = true
-        layer?.masksToBounds = true
-        clipsToBounds = true
-        setContentHuggingPriority(.defaultLow, for: .horizontal)
-        setContentHuggingPriority(.defaultLow, for: .vertical)
-        setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        setContentCompressionResistancePriority(.defaultLow, for: .vertical)
-        metalView.wantsLayer = true
-        metalView.layer?.masksToBounds = true
-        metalView.translatesAutoresizingMaskIntoConstraints = true
-        metalView.autoresizingMask = [.width, .height]
-        addSubview(metalView)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    public override var intrinsicContentSize: NSSize {
-        NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
-    }
-
-    public override var fittingSize: NSSize {
-        NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
-    }
-
-    public override func layout() {
-        super.layout()
-        metalView.frame = bounds
-    }
-}
 
 public struct WebRTCVideoView: NSViewRepresentable, Equatable {
     let track: RTCVideoTrack?
@@ -92,11 +27,17 @@ public struct WebRTCVideoView: NSViewRepresentable, Equatable {
 
     public func makeNSView(context: Context) -> ClippingRTCVideoContainer {
         let container = ClippingRTCVideoContainer()
+        container.contentMode = contentMode
+        container.metalView.delegate = context.coordinator
+        context.coordinator.bind(container: container)
         context.coordinator.attach(track: track, category: sinkCategory, to: container.metalView)
         return container
     }
 
     public func updateNSView(_ nsView: ClippingRTCVideoContainer, context: Context) {
+        nsView.contentMode = contentMode
+        nsView.metalView.delegate = context.coordinator
+        context.coordinator.bind(container: nsView)
         context.coordinator.attach(track: track, category: sinkCategory, to: nsView.metalView)
     }
 
@@ -108,70 +49,78 @@ public struct WebRTCVideoView: NSViewRepresentable, Equatable {
         VideoPreviewLayout.boundedSize(for: proposal)
     }
 
-    public final class Coordinator {
+    public final class Coordinator: NSObject, RTCVideoViewDelegate {
         private weak var currentTrack: RTCVideoTrack?
         private weak var currentView: RTCMTLNSVideoView?
+        private weak var container: ClippingRTCVideoContainer?
         private var registeredCategory: VideoRendererSinkCategory?
+
+        func bind(container: ClippingRTCVideoContainer) {
+            self.container = container
+        }
 
         func attach(
             track: RTCVideoTrack?,
             category: VideoRendererSinkCategory,
             to view: RTCMTLNSVideoView
         ) {
-            guard currentTrack !== track || currentView !== view else { return }
-            if let previousTrack = currentTrack, let previousView = currentView {
-                previousTrack.remove(previousView)
+            if currentTrack === track, currentView === view {
+                return
+            }
+
+            if let track, let current = currentTrack, currentView === view {
+                if current.trackId == track.trackId {
+                    if current !== track {
+                        current.remove(view)
+                        track.add(view)
+                        currentTrack = track
+                    }
+                    return
+                }
+                current.remove(view)
+                track.add(view)
                 if let registeredCategory {
                     VideoRendererSinkRegistry.unregister(registeredCategory)
-                    self.registeredCategory = nil
                 }
-            }
-            currentTrack = track
-            currentView = view
-            if let track {
-                track.add(view)
                 VideoRendererSinkRegistry.register(category)
                 registeredCategory = category
+                currentTrack = track
+                return
+            }
+
+            detachCurrent()
+            currentTrack = track
+            currentView = view
+            container?.resetVideoSizeForTrackSwap()
+            guard let track else { return }
+            track.add(view)
+            VideoRendererSinkRegistry.register(category)
+            registeredCategory = category
+        }
+
+        private func detachCurrent() {
+            if let previousTrack = currentTrack, let previousView = currentView {
+                previousTrack.remove(previousView)
+            }
+            if let registeredCategory {
+                VideoRendererSinkRegistry.unregister(registeredCategory)
+                self.registeredCategory = nil
+            }
+            currentTrack = nil
+            currentView = nil
+        }
+
+        public func videoView(_ videoView: RTCVideoRenderer, didChangeVideoSize size: CGSize) {
+            guard let trackId = currentTrack?.trackId else { return }
+            container?.updateVideoSize(size)
+            Task { @MainActor in
+                LiveVideoStreamSizeStore.shared.update(trackId: trackId, size: size)
             }
         }
 
         deinit {
-            if let registeredCategory {
-                VideoRendererSinkRegistry.unregister(registeredCategory)
-            }
+            detachCurrent()
         }
-    }
-}
-
-public struct CameraPreviewView: NSViewRepresentable {
-    let session: AVCaptureSession
-
-    public init(session: AVCaptureSession) {
-        self.session = session
-    }
-
-    public func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
-        previewLayer.videoGravity = .resizeAspectFill
-        view.layer = CALayer()
-        view.wantsLayer = true
-        view.layer?.addSublayer(previewLayer)
-        context.coordinator.previewLayer = previewLayer
-        return view
-    }
-
-    public func updateNSView(_ nsView: NSView, context: Context) {
-        context.coordinator.previewLayer?.session = session
-        context.coordinator.previewLayer?.frame = nsView.bounds
-    }
-
-    public func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-
-    public final class Coordinator {
-        var previewLayer: AVCaptureVideoPreviewLayer?
     }
 }
 #endif

@@ -62,15 +62,24 @@ final class ProgramBusController {
 
         let leavingTransition = phase == .transitioning && !isTransitioning
         guard snapshot != lastSnapshot || leavingTransition else {
-            refreshTrackReferences(
+            let rebinding = refreshTrackReferences(
                 on: host,
                 programTrack: programTrack,
                 warmTrack: warmTrack,
                 outgoingTrack: outgoingTrack,
                 incomingTrack: incomingTrack
             )
+            if rebinding {
+                ProgramBusTrace.event(
+                    "controller refresh-only rebinding prog=\(ProgramBusTrace.shortTrackId(snapshot.programTrackId)) in=\(ProgramBusTrace.shortTrackId(snapshot.incomingTrackId))"
+                )
+            }
             return
         }
+
+        ProgramBusTrace.event(
+            "controller apply phase=\(phaseLabel) prog=\(ProgramBusTrace.shortTrackId(snapshot.programTrackId)) warm=\(ProgramBusTrace.shortTrackId(snapshot.warmTrackId)) in=\(ProgramBusTrace.shortTrackId(snapshot.incomingTrackId)) transitioning=\(isTransitioning)"
+        )
 
         if isTransitioning, let outgoingTrack, let incomingTrack {
             applyTransitioning(
@@ -221,9 +230,16 @@ final class ProgramBusController {
 
     private func performInstantCut(on host: ProgramCrossfadeHost, program: RTCVideoTrack) {
         guard tracksMatch(attachedIncoming, program) else {
+            ProgramBusTrace.event(
+                "controller performInstantCut fallback rebind trackId=\(ProgramBusTrace.shortTrackId(program.trackId)) incomingMatch=false"
+            )
             rebindProgram(on: host, program: program)
             return
         }
+
+        ProgramBusTrace.event(
+            "controller performInstantCut trackId=\(ProgramBusTrace.shortTrackId(program.trackId))"
+        )
 
         host.promoteIncomingFrameToProgram()
 
@@ -241,6 +257,9 @@ final class ProgramBusController {
     }
 
     private func rebindProgram(on host: ProgramCrossfadeHost, program: RTCVideoTrack) {
+        ProgramBusTrace.event(
+            "controller rebindProgram trackId=\(ProgramBusTrace.shortTrackId(program.trackId))"
+        )
         detachTrack(&attachedOutgoing, from: host.outgoingRenderer)
         detachTrack(&attachedIncoming, from: host.incomingRenderer)
         host.clearMetalTransitionFrames()
@@ -306,14 +325,17 @@ final class ProgramBusController {
     }
 
     /// Re-subscribes renderers when WebRTC replaces a track object with the same `trackId`.
+    @discardableResult
     private func refreshTrackReferences(
         on host: ProgramCrossfadeHost,
         programTrack: RTCVideoTrack?,
         warmTrack: RTCVideoTrack?,
         outgoingTrack: RTCVideoTrack?,
         incomingTrack: RTCVideoTrack?
-    ) {
+    ) -> Bool {
+        var rebinding = false
         if let programTrack, tracksMatch(attachedProgram, programTrack), attachedProgram !== programTrack {
+            rebinding = true
             ProgramCrossfadeRenderer.swapAttach(
                 programTrack,
                 to: host.programRenderer,
@@ -321,6 +343,7 @@ final class ProgramBusController {
             )
         }
         if let outgoingTrack, tracksMatch(attachedOutgoing, outgoingTrack), attachedOutgoing !== outgoingTrack {
+            rebinding = true
             ProgramCrossfadeRenderer.swapAttach(
                 outgoingTrack,
                 to: host.outgoingRenderer,
@@ -329,11 +352,22 @@ final class ProgramBusController {
         }
         let incomingHint = warmTrack ?? incomingTrack
         if let incomingHint, tracksMatch(attachedIncoming, incomingHint), attachedIncoming !== incomingHint {
+            rebinding = true
             ProgramCrossfadeRenderer.swapAttach(
                 incomingHint,
                 to: host.incomingRenderer,
                 storage: &attachedIncoming
             )
+        }
+        return rebinding
+    }
+
+    private var phaseLabel: String {
+        switch phase {
+        case .empty: "empty"
+        case .offAirWarm: "offAirWarm"
+        case .onAir: "onAir"
+        case .transitioning: "transitioning"
         }
     }
 

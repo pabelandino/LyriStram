@@ -1,0 +1,26 @@
+---
+description: SwiftUI Pro — modern APIs, performance, accessibility (twostraws/swiftui-agent-skill)
+globs: "**/*.swift"
+alwaysApply: false
+---
+
+# SwiftUI Pro (project skill)
+
+When writing or reviewing SwiftUI in EasyStream, read `.cursor/skills/swiftui-pro/SKILL.md` and load only the reference files relevant to the task:
+
+| Area | Reference |
+|------|-----------|
+| Views, layout, animation | `references/views.md` |
+| Performance, identity | `references/performance.md` |
+| State / data flow | `references/data.md` |
+| Deprecated API | `references/api.md` |
+| Accessibility | `references/accessibility.md` |
+
+## EasyStream-specific priorities
+
+1. **Video tiles & PROG monitor** — stable view identity; one `NSViewRepresentable` per slot; no `GeometryReader` for aspect ratio; use custom `Layout` (`BroadcastAspectRatioLayout`, `BroadcastFixedSizeLayout`).
+2. **Director switcher** — one `View` struct per file under `EasyStream/Features/Director/`; no `@ViewBuilder` computed properties in `body`; disable implicit layout animation on source changes (`.animation(nil, value:)`).
+3. **Theme** — prefer `BroadcastTheme.primaryText` / `subtleText` and `foregroundStyle()` over `.primary` / `.secondary` in studio windows.
+4. **Buttons** — always provide accessibility labels for icon-only or video tiles.
+
+Skill source: [twostraws/swiftui-agent-skill](https://github.com/twostraws/swiftui-agent-skill) (MIT).

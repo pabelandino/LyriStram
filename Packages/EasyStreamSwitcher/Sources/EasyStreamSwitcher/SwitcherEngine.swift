@@ -23,10 +23,7 @@ public actor SwitcherEngine {
 
         var events: [SwitcherEvent] = []
 
-        if snapshot.previewSourceID == nil {
-            snapshot.previewSourceID = id
-            events.append(.previewChanged(id))
-        }
+        // Preview is operator-selected — auto-arming decodes/streams immediately and spikes CPU.
         if snapshot.programAudioSourceID == nil {
             snapshot.programAudioSourceID = id
             events.append(.programAudioChanged(id))

@@ -18,12 +18,15 @@ struct ConnectedCameraSource: Identifiable, Equatable {
     var audioTrack: RTCAudioTrack?
     var connectionState: StreamConnectionState
     var remoteSettings: RemoteCameraSettings
+    var connectionStateUpdatedAt: Date = Date()
 
     static func == (lhs: ConnectedCameraSource, rhs: ConnectedCameraSource) -> Bool {
         lhs.id == rhs.id
             && lhs.displayName == rhs.displayName
             && lhs.connectionState == rhs.connectionState
             && lhs.remoteSettings == rhs.remoteSettings
+            && lhs.videoTrack === rhs.videoTrack
+            && lhs.audioTrack === rhs.audioTrack
     }
 }
 
@@ -56,11 +59,27 @@ final class DirectorSessionViewModel {
         didSet {
             guard monitorQuality != oldValue else { return }
             DirectorMonitorQualityPreferencesStore.save(monitorQuality)
-            CameraTransportProfile.directorQuality = monitorQuality
-            broadcastMonitorQuality()
+            CameraTransportProfile.directorQuality = monitorQuality.effectiveSettings().effectiveSettings()
+            scheduleMonitorQualityBroadcast()
             broadcastSwitcherAssignments()
             syncProgramEncoder()
         }
+    }
+
+    /// Applies quality from an auxiliary panel — preserves PROG-affecting fields while on-air.
+    func applyMonitorQuality(_ proposed: DirectorMonitorQualitySettings) {
+        let merged = DirectorLiveOutputGuard.mergedQualityUpdate(
+            programSourceID: programSourceID,
+            isTransitioning: isTransitioning,
+            isPublishing: isPublishing,
+            current: monitorQuality,
+            proposed: proposed
+        )
+        monitorQuality = merged
+    }
+
+    private var effectiveMonitorQuality: DirectorMonitorQualitySettings {
+        monitorQuality.effectiveSettings()
     }
 
     var isPublishing: Bool {
@@ -109,11 +128,16 @@ final class DirectorSessionViewModel {
     private var encoderTask: Task<Void, Never>?
     private var audioEncoderTask: Task<Void, Never>?
     private var publisherTask: Task<Void, Never>?
+    private var stuckSourceWatchTask: Task<Void, Never>?
+    private var monitorQualityBroadcastTask: Task<Void, Never>?
+    /// Serializes preview/take mutations so concurrent Tasks cannot apply switcher state out of order.
+    private var switcherQueueTail: Task<Void, Never>?
     private var lastEncoderStatsRefresh = Date.distantPast
     private var lastAudioStatsRefresh = Date.distantPast
     private let statsRefreshInterval: TimeInterval = 2.0
     /// H.264 program encoder runs only while RTMP/network publish is active — not during normal monitoring.
     private var isStreamEncodingEnabled = false
+    private var lastBroadcastAssignments: [CameraSourceID: CameraSwitcherAssignment] = [:]
 
     var programVideoTrack: RTCVideoTrack? {
         track(for: programSourceID)
@@ -136,13 +160,15 @@ final class DirectorSessionViewModel {
     }
 
     /// Incoming lane wired into the compositor (handoff pin or preview warm — single entry point).
-    /// Scales to N sources: only the selected preview is warmed; all others stay idle on the bus.
     var programBusIncomingTrack: RTCVideoTrack? {
         if isTransitioning {
             return transitionIncomingVideoTrack
         }
         if let takeHandoffSourceID {
             return track(for: takeHandoffSourceID)
+        }
+        if programSourceID != nil {
+            return warmedPreviewVideoTrack
         }
         guard monitorQuality.prefetchTakeTarget else { return nil }
         return warmedPreviewVideoTrack
@@ -154,6 +180,10 @@ final class DirectorSessionViewModel {
             return outgoingProgramVideoTrack ?? programVideoTrack
         }
         return programVideoTrack
+    }
+
+    var activeStreamingSourceCount: Int {
+        sources.filter { switcherAssignment(for: $0.id).isActive }.count
     }
 
     var connectedSourceCount: Int {
@@ -190,7 +220,7 @@ final class DirectorSessionViewModel {
         observeBroadcastPublisher()
         restoreFacebookSession()
 
-        CameraTransportProfile.directorQuality = monitorQuality
+        CameraTransportProfile.directorQuality = monitorQuality.effectiveSettings()
 
         Task {
             await discovery.setIncomingConnectionHandler { [streamReceiver] connection in
@@ -203,7 +233,8 @@ final class DirectorSessionViewModel {
                 statusMessage = "Esperando cámaras…"
                 await refreshDevices()
                 await switcher.setPreferredTransition(selectedTransition)
-                broadcastMonitorQuality()
+                scheduleMonitorQualityBroadcast(force: true)
+                startStuckSourceWatch()
             } catch {
                 lastError = error.localizedDescription
                 statusMessage = "Error al iniciar"
@@ -232,7 +263,10 @@ final class DirectorSessionViewModel {
         encoderTask?.cancel()
         audioEncoderTask?.cancel()
         publisherTask?.cancel()
+        stuckSourceWatchTask?.cancel()
+        monitorQualityBroadcastTask?.cancel()
         sources = []
+        lastBroadcastAssignments = [:]
         previewSourceID = nil
         programSourceID = nil
         programAudioSourceID = nil
@@ -256,28 +290,41 @@ final class DirectorSessionViewModel {
     }
 
     func selectPreview(_ sourceID: CameraSourceID) {
-        Task { await selectPreviewAndSync(sourceID) }
+        enqueueSwitcherOperation {
+            await self.selectPreviewAndSync(sourceID)
+        }
     }
 
     func selectPreviewAndSync(_ sourceID: CameraSourceID) async {
         guard takeHandoffSourceID == nil else { return }
         inspectorSourceID = sourceID
         guard previewSourceID != sourceID else {
-            broadcastSwitcherAssignments()
+            syncRemoteVideoTrackPolicy()
+            await broadcastSwitcherAssignmentsNow()
             return
         }
         if let event = await switcher.setPreview(sourceID) {
             applySwitcherEvent(event)
+        } else {
+            await broadcastSwitcherAssignmentsNow()
         }
-        broadcastSwitcherAssignments()
-        // Give remote cameras time to ramp from standby → preview tier before take.
-        try? await Task.sleep(for: .milliseconds(120))
+        syncRemoteVideoTrackPolicy()
     }
 
     func takeToProgram() {
         guard !isTransitioning else { return }
         guard takeHandoffSourceID == nil else { return }
-        Task { await performTakeToProgram() }
+        enqueueSwitcherOperation {
+            await self.performTakeToProgram()
+        }
+    }
+
+    private func enqueueSwitcherOperation(_ operation: @escaping @MainActor () async -> Void) {
+        let previous = switcherQueueTail
+        switcherQueueTail = Task { @MainActor in
+            await previous?.value
+            await operation()
+        }
     }
 
     func startPublishing() {
@@ -392,11 +439,17 @@ final class DirectorSessionViewModel {
         transitionIncomingVideoTrack = incoming
 
         if transition.kind == .cut || transition.duration <= 0 {
+            ProgramBusTrace.event(
+                "director take cut begin target=\(ProgramBusTrace.shortSourceID(target.rawValue)) prevProgram=\(ProgramBusTrace.shortSourceID(programSourceID?.rawValue)) preview=\(ProgramBusTrace.shortSourceID(previewSourceID?.rawValue))"
+            )
             outgoingProgramSourceID = nil
             transitionProgress = 1
             isTransitioning = false
             let events = await switcher.take(to: target, transition: transition)
             applySwitcherEvents(events)
+            ProgramBusTrace.event(
+                "director take cut end program=\(ProgramBusTrace.shortSourceID(programSourceID?.rawValue)) preview=\(ProgramBusTrace.shortSourceID(previewSourceID?.rawValue)) incomingTrack=\(ProgramBusTrace.shortTrackId(incoming.trackId))"
+            )
             await completeTakeHandoff()
             return
         }
@@ -421,6 +474,7 @@ final class DirectorSessionViewModel {
         transitionProgress = 1
         let events = await switcher.take(to: target, transition: transition)
         applySwitcherEvents(events)
+        await broadcastSwitcherAssignmentsNow()
         outgoingProgramSourceID = nil
         isTransitioning = false
         await completeTakeHandoff()
@@ -431,6 +485,7 @@ final class DirectorSessionViewModel {
         await Task.yield()
         takeHandoffSourceID = nil
         transitionIncomingVideoTrack = nil
+        syncRemoteVideoTrackPolicy()
     }
 
     private func waitForVideoTrack(sourceID: CameraSourceID, attempts: Int = 8) async -> RTCVideoTrack? {
@@ -439,7 +494,7 @@ final class DirectorSessionViewModel {
                 return track
             }
             if attempt == 0 {
-                broadcastSwitcherAssignments()
+                await broadcastSwitcherAssignmentsNow()
             }
             try? await Task.sleep(for: .milliseconds(100))
         }
@@ -480,6 +535,12 @@ final class DirectorSessionViewModel {
             statusMessage = "Reconectando \(inspectorSourceName(for: sourceID))…"
             do {
                 try await streamReceiver.prepareReconnect(for: sourceID)
+            } catch DirectorStreamError.sourceNotConnected {
+                sources.removeAll { $0.id == sourceID }
+                lastBroadcastAssignments.removeValue(forKey: sourceID)
+                await switcher.unregisterSource(sourceID)
+                await syncSwitcherState()
+                statusMessage = "Esperando que la cámara vuelva a conectar…"
             } catch {
                 upsertSource(sourceID, connectionState: .disconnected)
                 lastError = "No se pudo contactar la cámara. Usa Reconectar en el iPhone."
@@ -496,6 +557,7 @@ final class DirectorSessionViewModel {
         guard let index = sources.firstIndex(where: { $0.id == sourceID }) else { return }
         sources[index].videoTrack = nil
         sources[index].connectionState = .connecting
+        sources[index].connectionStateUpdatedAt = Date()
         syncPreviewMonitor()
     }
 
@@ -534,15 +596,12 @@ final class DirectorSessionViewModel {
     private func handleStreamEvent(_ event: DirectorStreamReceiver.Event) {
         switch event {
         case .sourceConnected(let sourceID, let displayName):
-            Task {
-                let saved = await settingsStore.settings(for: sourceID)
-                upsertSource(sourceID, displayName: displayName, connectionState: .connecting, remoteSettings: saved)
-                if let switchEvent = await switcher.registerSource(sourceID) {
-                    applySwitcherEvent(switchEvent)
-                }
-                await syncSwitcherState()
-                if inspectorSourceID == nil { inspectorSourceID = sourceID }
-                syncProgramAudioEncoder()
+            enqueueSwitcherOperation {
+                let saved = await self.settingsStore.settings(for: sourceID)
+                self.upsertSource(sourceID, displayName: displayName, connectionState: .connecting, remoteSettings: saved)
+                _ = await self.switcher.registerSource(sourceID)
+                await self.syncSwitcherState()
+                if self.inspectorSourceID == nil { self.inspectorSourceID = sourceID }
             }
             statusMessage = "\(displayName) conectada"
 
@@ -556,8 +615,14 @@ final class DirectorSessionViewModel {
             statusMessage = "Cámara desconectada"
 
         case .sourceVideoTrack(let sourceID, let track, let displayName):
+            track.isEnabled = false
             upsertSource(sourceID, displayName: displayName, videoTrack: track, connectionState: .connected)
             statusMessage = "\(connectedSourceCount) cámara(s) en vivo"
+            if previewSourceID == nil {
+                enqueueSwitcherOperation {
+                    await self.selectPreviewAndSync(sourceID)
+                }
+            }
             if sourceID == programSourceID {
                 syncProgramEncoder()
             }
@@ -602,7 +667,12 @@ final class DirectorSessionViewModel {
                 }
             }
             if let audioTrack { source.audioTrack = audioTrack }
-            if let connectionState { source.connectionState = connectionState }
+            if let connectionState {
+                if source.connectionState != connectionState {
+                    source.connectionStateUpdatedAt = Date()
+                }
+                source.connectionState = connectionState
+            }
             if let remoteSettings { source.remoteSettings = remoteSettings }
             sources[index] = source
         } else {
@@ -612,12 +682,17 @@ final class DirectorSessionViewModel {
                 videoTrack: videoTrack,
                 audioTrack: audioTrack,
                 connectionState: connectionState ?? .connecting,
-                remoteSettings: remoteSettings ?? RemoteCameraSettings()
+                remoteSettings: remoteSettings ?? RemoteCameraSettings(),
+                connectionStateUpdatedAt: Date()
             ))
         }
         sources.sort { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
         syncPreviewMonitor()
         broadcastSwitcherAssignments()
+        if videoTrack != nil {
+            scheduleMonitorQualityBroadcast()
+        }
+        syncRemoteVideoTrackPolicy()
     }
 
     private func syncPreviewMonitor() {
@@ -656,19 +731,39 @@ final class DirectorSessionViewModel {
     }
 
     private func broadcastSwitcherAssignments() {
+        Task { await broadcastSwitcherAssignmentsNow() }
+    }
+
+    private func broadcastSwitcherAssignmentsNow() async {
+        syncRemoteVideoTrackPolicy()
+        var pending: [(CameraSourceID, CameraSwitcherAssignment)] = []
         for source in sources {
             let assignment = switcherAssignment(for: source.id)
-            Task {
-                try? await streamReceiver.sendControl(
-                    to: source.id,
-                    command: .setSwitcherAssignment(assignment)
-                )
+            if lastBroadcastAssignments[source.id] != assignment {
+                lastBroadcastAssignments[source.id] = assignment
+                pending.append((source.id, assignment))
+            }
+        }
+        for (sourceID, assignment) in pending where assignment.isActive {
+            ProgramBusTrace.event(
+                "director assignment source=\(ProgramBusTrace.shortSourceID(sourceID.rawValue)) -> \(assignment.rawValue)"
+            )
+        }
+        guard !pending.isEmpty else { return }
+        await withTaskGroup(of: Void.self) { group in
+            for (sourceID, assignment) in pending {
+                group.addTask {
+                    try? await self.streamReceiver.sendControl(
+                        to: sourceID,
+                        command: .setSwitcherAssignment(assignment)
+                    )
+                }
             }
         }
     }
 
     private func broadcastMonitorQuality() {
-        let quality = monitorQuality
+        let quality = effectiveMonitorQuality
         for source in sources {
             Task {
                 try? await streamReceiver.sendControl(
@@ -676,6 +771,20 @@ final class DirectorSessionViewModel {
                     command: .setDirectorMonitorQuality(quality)
                 )
             }
+        }
+    }
+
+    /// Idle sources stop decoding on the director — preview + program lanes are never disabled while on-air.
+    private func syncRemoteVideoTrackPolicy() {
+        for source in sources {
+            guard let track = source.videoTrack else { continue }
+            let assignment = switcherAssignment(for: source.id)
+            track.isEnabled = DirectorLiveOutputGuard.shouldKeepTrackDecoding(
+                sourceID: source.id,
+                programSourceID: programSourceID,
+                previewSourceID: previewSourceID,
+                assignmentIsActive: assignment.isActive
+            )
         }
     }
 
@@ -695,8 +804,50 @@ final class DirectorSessionViewModel {
         previewSourceID = state.previewSourceID
         programSourceID = state.programSourceID
         programAudioSourceID = state.programAudioSourceID
+        updateAudioRouting()
         syncPreviewMonitor()
-        broadcastSwitcherAssignments()
+        await broadcastSwitcherAssignmentsNow()
+        scheduleMonitorQualityBroadcast(force: true)
+        syncRemoteVideoTrackPolicy()
+        syncProgramAudioEncoder()
+    }
+
+    private func scheduleMonitorQualityBroadcast(force: Bool = false) {
+        monitorQualityBroadcastTask?.cancel()
+        monitorQualityBroadcastTask = Task {
+            if !force {
+                try? await Task.sleep(for: .milliseconds(400))
+            }
+            guard !Task.isCancelled else { return }
+            broadcastMonitorQuality()
+        }
+    }
+
+    private func startStuckSourceWatch() {
+        stuckSourceWatchTask?.cancel()
+        stuckSourceWatchTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(10))
+                guard !Task.isCancelled else { break }
+                reconcileStuckSources()
+            }
+        }
+    }
+
+    private func reconcileStuckSources() {
+        let staleThreshold: TimeInterval = 18
+        let now = Date()
+        for source in sources {
+            let age = now.timeIntervalSince(source.connectionStateUpdatedAt)
+            switch source.connectionState {
+            case .connecting, .signaling where age >= staleThreshold:
+                reconnectCamera(source.id)
+            case .connected where source.videoTrack == nil && age >= staleThreshold:
+                reconnectCamera(source.id)
+            default:
+                break
+            }
+        }
     }
 
     private func track(for sourceID: CameraSourceID?) -> RTCVideoTrack? {
@@ -710,7 +861,9 @@ final class DirectorSessionViewModel {
 
     private func updateAudioRouting() {
         for source in sources {
-            source.audioTrack?.isEnabled = source.id == programAudioSourceID
+            // Decode mic audio only for the on-air source — preview tiles are video-only.
+            let onAir = source.id == programSourceID && source.id == programAudioSourceID
+            source.audioTrack?.isEnabled = onAir
         }
     }
 

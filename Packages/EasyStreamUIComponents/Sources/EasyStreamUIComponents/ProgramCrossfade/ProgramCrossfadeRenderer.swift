@@ -10,6 +10,9 @@ enum ProgramCrossfadeRenderer {
     ) {
         if let track, let current = storage, current.trackId == track.trackId {
             if current !== track {
+                ProgramBusTrace.event(
+                    "renderer swapAttach rebind trackId=\(ProgramBusTrace.shortTrackId(track.trackId)) sink=\(sinkCategory)"
+                )
                 current.remove(view)
                 track.add(view)
                 storage = track

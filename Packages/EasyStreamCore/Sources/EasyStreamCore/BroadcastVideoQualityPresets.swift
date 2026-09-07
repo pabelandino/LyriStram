@@ -44,10 +44,10 @@ public enum ProgramMonitorPreset: String, Codable, CaseIterable, Identifiable, S
 
     public var title: String {
         switch self {
-        case .light360: "360p ligero"
-        case .economy540: "540p ahorro"
-        case .balanced720: "720p equilibrado"
-        case .full1080: "1080p completo"
+        case .light360: "640×360 ligero"
+        case .economy540: "960×540 ahorro"
+        case .balanced720: "1280×720 equilibrado"
+        case .full1080: "1920×1080 completo"
         }
     }
 
@@ -71,6 +71,7 @@ public enum ProgramMonitorPreset: String, Codable, CaseIterable, Identifiable, S
 
 /// Preview tile LAN quality — always lower than program to save CPU.
 public enum PreviewTilePreset: String, Codable, CaseIterable, Identifiable, Sendable {
+    case minimal
     case economy
     case standard
 
@@ -78,6 +79,7 @@ public enum PreviewTilePreset: String, Codable, CaseIterable, Identifiable, Send
 
     public var title: String {
         switch self {
+        case .minimal: "Tiles 240p ahorro"
         case .economy: "Tiles 360p"
         case .standard: "Tiles 360p fluido"
         }
@@ -85,6 +87,8 @@ public enum PreviewTilePreset: String, Codable, CaseIterable, Identifiable, Send
 
     public var streamSpec: BroadcastStreamSpec {
         switch self {
+        case .minimal:
+            BroadcastStreamSpec(width: 426, height: 240, frameRate: 10, maxBitrateBps: 350_000)
         case .economy:
             BroadcastStreamSpec(width: 640, height: 360, frameRate: 15, maxBitrateBps: 600_000)
         case .standard:

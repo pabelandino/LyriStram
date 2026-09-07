@@ -23,6 +23,18 @@ public enum CameraTransportProfile: Sendable, Equatable {
         }
     }
 
+    public var streamSpec: BroadcastStreamSpec {
+        let quality = Self.directorQuality
+        switch self {
+        case .standby:
+            return BroadcastStreamSpec(width: 426, height: 240, frameRate: 8, maxBitrateBps: 350_000)
+        case .preview:
+            return quality.previewPreset.streamSpec
+        case .program:
+            return quality.progPreset.streamSpec
+        }
+    }
+
     public var width: Int32 {
         streamSpec.width
     }
@@ -41,15 +53,5 @@ public enum CameraTransportProfile: Sendable, Equatable {
 
     public var minBitrateBps: Int {
         max(200_000, maxBitrateBps / 4)
-    }
-
-    private var streamSpec: BroadcastStreamSpec {
-        let quality = Self.directorQuality
-        switch self {
-        case .standby, .preview:
-            return quality.previewPreset.streamSpec
-        case .program:
-            return quality.progPreset.streamSpec
-        }
     }
 }

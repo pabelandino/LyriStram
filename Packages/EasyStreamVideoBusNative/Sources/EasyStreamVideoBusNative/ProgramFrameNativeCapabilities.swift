@@ -11,4 +11,6 @@ public enum ProgramFrameNativeCapabilities: Sendable {
         }
         return String(cString: cString)
     }
+
+    public static var usesNativePixelRingBuffer: Bool { true }
 }

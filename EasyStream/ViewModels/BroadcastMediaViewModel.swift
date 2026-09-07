@@ -404,7 +404,6 @@ final class BroadcastMediaViewModel {
         editingWidgetResource = nil
         isWidgetStudioOpen = true
         isWidgetPlacementEditing = false
-        LiveProgramAirStore.shared.setDirectorEditingWidget(nil)
     }
 
     func openWidgetStudio(for resource: BroadcastResource) {
@@ -414,18 +413,12 @@ final class BroadcastMediaViewModel {
         draftWidgetDisplayName = resource.listLabel
         isWidgetStudioOpen = true
         isWidgetPlacementEditing = false
-        if liveWidgetIDs.contains(resource.id) {
-            LiveProgramAirStore.shared.setDirectorEditingWidget(resource.id)
-        } else {
-            LiveProgramAirStore.shared.setDirectorEditingWidget(nil)
-        }
     }
 
     func closeWidgetStudio() {
         isWidgetStudioOpen = false
         isWidgetPlacementEditing = false
         editingWidgetResource = nil
-        LiveProgramAirStore.shared.setDirectorEditingWidget(nil)
     }
 
     func toggleWidgetPlacementEditing() {
@@ -483,9 +476,6 @@ final class BroadcastMediaViewModel {
         guard let resource = editingWidgetResource else { return }
         liveWidgetIDs.insert(resource.id)
         isWidgetPlacementEditing = false
-        if isWidgetStudioOpen {
-            LiveProgramAirStore.shared.setDirectorEditingWidget(resource.id)
-        }
         refreshLiveAirBus()
     }
 

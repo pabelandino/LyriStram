@@ -11,6 +11,9 @@ let package = Package(
     products: [
         .library(name: "EasyStreamVideoBusNative", targets: ["EasyStreamVideoBusNative"]),
     ],
+    dependencies: [
+        .package(path: "../EasyStreamCore"),
+    ],
     targets: [
         .target(
             name: "ESVBNativeCore",
@@ -18,11 +21,17 @@ let package = Package(
             publicHeadersPath: "include",
             cxxSettings: [
                 .headerSearchPath("include"),
+            ],
+            linkerSettings: [
+                .linkedFramework("CoreVideo"),
             ]
         ),
         .target(
             name: "EasyStreamVideoBusNative",
-            dependencies: ["ESVBNativeCore"],
+            dependencies: [
+                "ESVBNativeCore",
+                "EasyStreamCore",
+            ],
             path: "Sources/EasyStreamVideoBusNative"
         ),
     ]

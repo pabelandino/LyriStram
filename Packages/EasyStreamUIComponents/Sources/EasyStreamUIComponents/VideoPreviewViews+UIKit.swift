@@ -3,28 +3,6 @@ import SwiftUI
 import WebRTC
 import EasyStreamCore
 import UIKit
-import EasyStreamCameraCapture
-
-/// WebRTC Metal views report full video resolution as intrinsic size, which breaks SwiftUI HStack layouts.
-public final class LayoutNeutralRTCMTLVideoView: RTCMTLVideoView {
-    public override init(frame: CGRect) {
-        super.init(frame: frame)
-        backgroundColor = .black
-        isOpaque = true
-        clipsToBounds = true
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    public override var intrinsicContentSize: CGSize {
-        CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
-    }
-
-    public override func invalidateIntrinsicContentSize() {}
-}
 
 public struct WebRTCVideoView: UIViewRepresentable, Equatable {
     let track: RTCVideoTrack?
@@ -85,21 +63,49 @@ public struct WebRTCVideoView: UIViewRepresentable, Equatable {
             category: VideoRendererSinkCategory,
             to view: RTCMTLVideoView
         ) {
-            guard currentTrack !== track || currentView !== view else { return }
-            if let previousTrack = currentTrack, let previousView = currentView {
-                previousTrack.remove(previousView)
+            if currentTrack === track, currentView === view {
+                return
+            }
+
+            if let track, let current = currentTrack, currentView === view {
+                if current.trackId == track.trackId {
+                    if current !== track {
+                        current.remove(view)
+                        track.add(view)
+                        currentTrack = track
+                    }
+                    return
+                }
+                current.remove(view)
+                track.add(view)
                 if let registeredCategory {
                     VideoRendererSinkRegistry.unregister(registeredCategory)
-                    self.registeredCategory = nil
                 }
-            }
-            currentTrack = track
-            currentView = view
-            if let track {
-                track.add(view)
                 VideoRendererSinkRegistry.register(category)
                 registeredCategory = category
+                currentTrack = track
+                return
             }
+
+            detachCurrent()
+            currentTrack = track
+            currentView = view
+            guard let track else { return }
+            track.add(view)
+            VideoRendererSinkRegistry.register(category)
+            registeredCategory = category
+        }
+
+        private func detachCurrent() {
+            if let previousTrack = currentTrack, let previousView = currentView {
+                previousTrack.remove(previousView)
+            }
+            if let registeredCategory {
+                VideoRendererSinkRegistry.unregister(registeredCategory)
+                self.registeredCategory = nil
+            }
+            currentTrack = nil
+            currentView = nil
         }
 
         func refreshRenderer() {
@@ -137,9 +143,7 @@ public struct WebRTCVideoView: UIViewRepresentable, Equatable {
 
         deinit {
             refreshWorkItem?.cancel()
-            if let registeredCategory {
-                VideoRendererSinkRegistry.unregister(registeredCategory)
-            }
+            detachCurrent()
             if let orientationObserver {
                 NotificationCenter.default.removeObserver(orientationObserver)
             }
@@ -151,95 +155,11 @@ public struct WebRTCVideoView: UIViewRepresentable, Equatable {
             }
         }
 
-        public func videoView(_ videoView: RTCVideoRenderer, didChangeVideoSize size: CGSize) {}
-    }
-}
-
-public final class ClippingRTCVideoContainerView: UIView {
-    let metalView = LayoutNeutralRTCMTLVideoView(frame: .zero)
-
-    public override init(frame: CGRect) {
-        super.init(frame: frame)
-        clipsToBounds = true
-        setContentHuggingPriority(.defaultLow, for: .horizontal)
-        setContentHuggingPriority(.defaultLow, for: .vertical)
-        setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        setContentCompressionResistancePriority(.defaultLow, for: .vertical)
-        metalView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(metalView)
-        NSLayoutConstraint.activate([
-            metalView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            metalView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            metalView.topAnchor.constraint(equalTo: topAnchor),
-            metalView.bottomAnchor.constraint(equalTo: bottomAnchor),
-        ])
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    public override var intrinsicContentSize: CGSize {
-        CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
-    }
-
-    public override func layoutSubviews() {
-        super.layoutSubviews()
-        metalView.setNeedsLayout()
-        metalView.layoutIfNeeded()
-    }
-}
-
-public struct CameraPreviewView: UIViewRepresentable {
-    let session: AVCaptureSession
-
-    public init(session: AVCaptureSession) {
-        self.session = session
-    }
-
-    public func makeUIView(context: Context) -> PreviewContainerView {
-        let view = PreviewContainerView()
-        view.configure(session: session)
-        return view
-    }
-
-    public func updateUIView(_ uiView: PreviewContainerView, context: Context) {
-        uiView.configure(session: session)
-    }
-}
-
-public final class PreviewContainerView: UIView {
-    private let previewLayer = AVCaptureVideoPreviewLayer()
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        previewLayer.videoGravity = .resizeAspectFill
-        layer.addSublayer(previewLayer)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    public override func layoutSubviews() {
-        super.layoutSubviews()
-        previewLayer.frame = bounds
-        previewLayer.connection?.applyCurrentVideoOrientationIfSupported()
-    }
-
-    func configure(session: AVCaptureSession) {
-        previewLayer.session = session
-        previewLayer.connection?.applyCurrentVideoOrientationIfSupported()
-    }
-}
-
-private extension WebRTCVideoContentMode {
-    var uiMetalMode: UIView.ContentMode {
-        switch self {
-        case .aspectFit: .scaleAspectFit
-        case .aspectFill: .scaleAspectFill
+        public func videoView(_ videoView: RTCVideoRenderer, didChangeVideoSize size: CGSize) {
+            guard let trackId = currentTrack?.trackId else { return }
+            Task { @MainActor in
+                LiveVideoStreamSizeStore.shared.update(trackId: trackId, size: size)
+            }
         }
     }
 }

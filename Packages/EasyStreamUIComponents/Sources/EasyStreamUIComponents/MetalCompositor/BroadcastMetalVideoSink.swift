@@ -2,7 +2,7 @@ import EasyStreamCore
 import WebRTC
 import EasyStreamVideoPipeline
 
-/// Receives WebRTC frames and forwards them to `BroadcastMetalCompositor`.
+/// Receives WebRTC frames and forwards them to `ProgramFrameDisplayBus` (decode thread → ring buffer → GPU).
 final class BroadcastMetalVideoSink: NSObject, RTCVideoRenderer {
     enum Slot {
         case outgoing
@@ -11,7 +11,6 @@ final class BroadcastMetalVideoSink: NSObject, RTCVideoRenderer {
     }
 
     let slot: Slot
-    weak var compositor: BroadcastMetalCompositor?
 
     init(slot: Slot) {
         self.slot = slot
@@ -21,16 +20,11 @@ final class BroadcastMetalVideoSink: NSObject, RTCVideoRenderer {
 
     func renderFrame(_ frame: RTCVideoFrame?) {
         guard let frame else { return }
-        ProgramFrameTelemetryRegistry.live.recordFrame(
-            busSlot: slot.busSlot,
-            width: Int(frame.width),
-            height: Int(frame.height)
-        )
-        compositor?.receive(frame, slot: slot)
+        ProgramFrameDisplayBus.shared.enqueue(frame, lane: slot.busSlot)
     }
 }
 
-private extension BroadcastMetalVideoSink.Slot {
+extension BroadcastMetalVideoSink.Slot {
     var busSlot: ProgramFrameBusSlot {
         switch self {
         case .outgoing: .programOutgoing

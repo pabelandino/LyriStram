@@ -100,7 +100,7 @@ public struct FacebookLivePanel: View {
         if pages.isEmpty {
             Text("Autoriza acceso a tus Páginas de Facebook para transmitir en vivo.")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(BroadcastTheme.subtleText)
 
 #if os(iOS)
             Button(action: onAuthorizePages) {
@@ -112,7 +112,7 @@ public struct FacebookLivePanel: View {
 
             Text(FacebookConfiguration.pagePermissionsMetaSetupHint)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(BroadcastTheme.subtleText)
 #endif
         } else {
             Picker("Página", selection: pageSelection) {

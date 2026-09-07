@@ -25,6 +25,7 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
     private var activeLens: CameraLensKind = .wide
     private var isConfigured = false
     private var isStreamingDeliveryEnabled = false
+    private var activeLoadTier: CameraCaptureLoadTier?
 #if os(iOS)
     private var orientationObserver: NSObjectProtocol?
     private var sceneActivationObserver: NSObjectProtocol?
@@ -114,6 +115,22 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         }
     }
 
+    /// Adjusts sensor preset + fps to match switcher role (major CPU/heat win on iPhone/iPad).
+    public func applyCaptureLoadTier(_ tier: CameraCaptureLoadTier, streamSpec: BroadcastStreamSpec) {
+        sessionQueue.async {
+            let preset = tier.sessionPreset(for: streamSpec)
+            if self.activeLoadTier != tier || self.session.sessionPreset != preset {
+                self.activeLoadTier = tier
+                self.session.beginConfiguration()
+                if self.session.canSetSessionPreset(preset) {
+                    self.session.sessionPreset = preset
+                }
+                self.session.commitConfiguration()
+            }
+            self.applyTargetFrameRate(streamSpec.frameRate)
+        }
+    }
+
     /// Adjusts capture frame rate to match the active transport profile (saves CPU when on standby).
     public func setTargetFrameRate(_ frameRate: Int32) async {
         await withCheckedContinuation { continuation in
@@ -125,7 +142,6 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
     }
 
     private func applyTargetFrameRate(_ frameRate: Int32) {
-#if os(iOS)
         guard let device = videoInput?.device else { return }
         let fps = max(1, frameRate)
         do {
@@ -136,7 +152,6 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         } catch {
             return
         }
-#endif
     }
 
     public func discoverAvailableLenses() -> [AvailableCameraLens] {

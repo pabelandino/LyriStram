@@ -19,12 +19,10 @@ public struct BoundedWebRTCVideoView: View {
     }
 
     public var body: some View {
-        GeometryReader { proxy in
-            WebRTCVideoView(track: track, sinkCategory: sinkCategory, contentMode: contentMode)
-                .equatable()
-                .frame(width: proxy.size.width, height: proxy.size.height)
-        }
-        .aspectRatio(16 / 9, contentMode: .fit)
-        .clipped()
+        StableWebRTCVideoSurface(
+            track: track,
+            sinkCategory: sinkCategory,
+            contentMode: contentMode
+        )
     }
 }

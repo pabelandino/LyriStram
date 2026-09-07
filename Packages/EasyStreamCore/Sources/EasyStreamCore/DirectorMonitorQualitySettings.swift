@@ -5,19 +5,27 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
     public var progPreset: ProgramMonitorPreset
     public var previewPreset: PreviewTilePreset
     public var outputPreset: StreamOutputPreset
+    /// Master switch — applies conservative LAN + GPU defaults for laptops and iPads.
+    public var energySaverMode: Bool
     /// Pre-decode the take target on the director bus before Aire (smoother cuts, higher CPU).
     public var prefetchTakeTarget: Bool
+    /// When true, idle cameras stop sending video — keeps director CPU flat as N grows.
+    public var pauseIdleCameraStreams: Bool
 
     public init(
-        progPreset: ProgramMonitorPreset = .balanced720,
-        previewPreset: PreviewTilePreset = .standard,
+        progPreset: ProgramMonitorPreset = .light360,
+        previewPreset: PreviewTilePreset = .minimal,
         outputPreset: StreamOutputPreset = .youtube1080p30,
-        prefetchTakeTarget: Bool = true
+        energySaverMode: Bool = true,
+        prefetchTakeTarget: Bool = false,
+        pauseIdleCameraStreams: Bool = true
     ) {
         self.progPreset = progPreset
         self.previewPreset = previewPreset
         self.outputPreset = outputPreset
+        self.energySaverMode = energySaverMode
         self.prefetchTakeTarget = prefetchTakeTarget
+        self.pauseIdleCameraStreams = pauseIdleCameraStreams
     }
 
     public var outputEncoderConfiguration: VideoEncoderConfiguration {
@@ -29,6 +37,8 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
         case previewPreset
         case outputPreset
         case prefetchTakeTarget
+        case pauseIdleCameraStreams
+        case energySaverMode
         case tier
     }
 
@@ -40,11 +50,13 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        prefetchTakeTarget = try container.decodeIfPresent(Bool.self, forKey: .prefetchTakeTarget) ?? true
+        prefetchTakeTarget = try container.decodeIfPresent(Bool.self, forKey: .prefetchTakeTarget) ?? false
+        pauseIdleCameraStreams = try container.decodeIfPresent(Bool.self, forKey: .pauseIdleCameraStreams) ?? true
+        energySaverMode = try container.decodeIfPresent(Bool.self, forKey: .energySaverMode) ?? false
 
         if let prog = try container.decodeIfPresent(ProgramMonitorPreset.self, forKey: .progPreset) {
             progPreset = prog
-            previewPreset = try container.decodeIfPresent(PreviewTilePreset.self, forKey: .previewPreset) ?? .standard
+            previewPreset = try container.decodeIfPresent(PreviewTilePreset.self, forKey: .previewPreset) ?? .economy
             outputPreset = try container.decodeIfPresent(StreamOutputPreset.self, forKey: .outputPreset) ?? .youtube1080p30
             return
         }
@@ -72,6 +84,20 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
         try container.encode(previewPreset, forKey: .previewPreset)
         try container.encode(outputPreset, forKey: .outputPreset)
         try container.encode(prefetchTakeTarget, forKey: .prefetchTakeTarget)
+        try container.encode(pauseIdleCameraStreams, forKey: .pauseIdleCameraStreams)
+        try container.encode(energySaverMode, forKey: .energySaverMode)
+    }
+
+    /// Applies conservative toggles while energy saver is on (does not override PROG preset the operator chose).
+    public func effectiveSettings() -> DirectorMonitorQualitySettings {
+        guard energySaverMode else { return self }
+        var copy = self
+        copy.prefetchTakeTarget = false
+        copy.pauseIdleCameraStreams = true
+        if copy.previewPreset == .standard {
+            copy.previewPreset = .economy
+        }
+        return copy
     }
 }
 

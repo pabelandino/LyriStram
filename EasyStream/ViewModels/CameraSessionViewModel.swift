@@ -30,7 +30,9 @@ final class CameraSessionViewModel {
     private var userChoseDirector = false
     private var directorConnectionTask: Task<Void, Never>?
     private var connectionGeneration: UInt = 0
-
+    private var lastAppliedTransportAssignment: CameraSwitcherAssignment?
+    private var lastAppliedWebRTCStreamSpec: BroadcastStreamSpec?
+    private var lastAppliedCaptureStreamSpec: BroadcastStreamSpec?
     var canReconnect: Bool {
         isRunning && !isReconnecting && streamState != .connecting && streamState != .signaling
     }
@@ -54,6 +56,7 @@ final class CameraSessionViewModel {
 
     private var discoveryTask: Task<Void, Never>?
     private var streamTask: Task<Void, Never>?
+    private var signalingHealthTask: Task<Void, Never>?
     private(set) var connectedDirectorID: UUID?
     private var pendingDirectorID: UUID?
 
@@ -92,11 +95,14 @@ final class CameraSessionViewModel {
                 statusMessage = "Buscando Director…"
                 await refreshDevices()
                 try capture.start()
+                capture.setStreamingDeliveryEnabled(false)
+                capture.applyCaptureLoadTier(.idle, streamSpec: CameraTransportProfile.standby.streamSpec)
                 RemoteCameraCommandExecutor.applySavedSettings(saved, capture: capture)
                 imagingState = capture.imagingState
                 localPreviewSession = capture.makePreviewSession()
-                wireCaptureToWebRTC()
-                observeStreamClient()
+        wireCaptureToWebRTC()
+        observeStreamClient()
+        startSignalingHealthWatch()
             } catch {
                 lastError = error.localizedDescription
                 statusMessage = "Error al iniciar"
@@ -125,6 +131,8 @@ final class CameraSessionViewModel {
         directorConnectionTask = nil
         streamTask?.cancel()
         streamTask = nil
+        signalingHealthTask?.cancel()
+        signalingHealthTask = nil
         connectedDirectorID = nil
         pendingDirectorID = nil
         selectedDirectorID = nil
@@ -363,13 +371,8 @@ final class CameraSessionViewModel {
         let parameters = NWParameters.tcp
         parameters.allowLocalEndpointReuse = true
         parameters.multipathServiceType = .disabled
-        switch director.platform {
-        case .mac, .iPad:
-            // Infrastructure LAN is more reliable than AWDL for Mac/iPad directors on the same Wi‑Fi.
-            parameters.includePeerToPeer = false
-        default:
-            parameters.includePeerToPeer = true
-        }
+        // Infrastructure Wi‑Fi is more reliable than AWDL when several cameras connect to one director.
+        parameters.includePeerToPeer = false
         return parameters
     }
 
@@ -444,6 +447,13 @@ final class CameraSessionViewModel {
                         ))
                         try await streamClient.startOffer()
                         await reportSettingsState()
+                        Task {
+                            try? await Task.sleep(for: .seconds(25))
+                            guard generation == connectionGeneration else { return }
+                            if streamState == .signaling {
+                                await reconnectStreamToDirector()
+                            }
+                        }
                     } catch {
                         guard generation == connectionGeneration else { break }
                         capture.setStreamingDeliveryEnabled(false)
@@ -485,6 +495,19 @@ final class CameraSessionViewModel {
         }
     }
 
+    private func startSignalingHealthWatch() {
+        signalingHealthTask?.cancel()
+        signalingHealthTask = Task {
+            while isRunning && !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { break }
+                if streamState == .connected, signalingChannel == nil {
+                    reconnect()
+                }
+            }
+        }
+    }
+
     private func refreshDevices() async {
         devices = await discovery.discoveredDevices
     }
@@ -503,6 +526,9 @@ final class CameraSessionViewModel {
         signalingChannel = nil
         connectedDirectorID = nil
         pendingDirectorID = nil
+        lastAppliedTransportAssignment = nil
+        lastAppliedWebRTCStreamSpec = nil
+        lastAppliedCaptureStreamSpec = nil
     }
 
     private func reconnectStreamToDirector() async {
@@ -539,9 +565,50 @@ final class CameraSessionViewModel {
     }
 
     private func applyTransportProfile(for assignment: CameraSwitcherAssignment) async {
-        let profile = CameraTransportProfile.forAssignment(assignment)
-        await streamClient.updateTransportProfile(profile)
-        await capture.setTargetFrameRate(profile.frameRate)
+        let quality = CameraTransportProfile.directorQuality
+        let webRTCProfile = CameraTransportProfile.forAssignment(assignment)
+        let pauseIdle = quality.pauseIdleCameraStreams
+
+        // Keep sensor preset stable for every active role; WebRTC scales preview vs program on the wire.
+        let captureStreamSpec = assignment.isActive
+            ? quality.progPreset.streamSpec
+            : CameraTransportProfile.standby.streamSpec
+        let captureTier: CameraCaptureLoadTier = assignment.isActive ? .program : .idle
+
+        if assignment == lastAppliedTransportAssignment,
+           webRTCProfile.streamSpec == lastAppliedWebRTCStreamSpec,
+           captureStreamSpec == lastAppliedCaptureStreamSpec {
+            return
+        }
+
+        lastAppliedTransportAssignment = assignment
+        lastAppliedWebRTCStreamSpec = webRTCProfile.streamSpec
+        lastAppliedCaptureStreamSpec = captureStreamSpec
+
+        ProgramBusTrace.event(
+            "camera transport apply assignment=\(assignment.rawValue) webrtc=\(webRTCProfile.width)x\(webRTCProfile.height)@\(webRTCProfile.frameRate) capture=\(captureStreamSpec.width)x\(captureStreamSpec.height)@\(captureStreamSpec.frameRate) tier=\(captureTierLabel(for: assignment))"
+        )
+
+        if assignment.isActive {
+            capture.setStreamingDeliveryEnabled(true)
+            await streamClient.updateTransportProfile(webRTCProfile)
+            capture.applyCaptureLoadTier(captureTier, streamSpec: captureStreamSpec)
+        } else if pauseIdle {
+            capture.setStreamingDeliveryEnabled(false)
+            capture.applyCaptureLoadTier(.idle, streamSpec: CameraTransportProfile.standby.streamSpec)
+        } else {
+            capture.setStreamingDeliveryEnabled(true)
+            capture.applyCaptureLoadTier(.idle, streamSpec: CameraTransportProfile.standby.streamSpec)
+            await streamClient.updateTransportProfile(.standby)
+        }
+    }
+
+    private func captureTierLabel(for assignment: CameraSwitcherAssignment) -> String {
+        switch assignment {
+        case .idle: "idle"
+        case .preview: "preview"
+        case .program, .previewAndProgram: "program"
+        }
     }
 
     private func observeStreamClient() {
@@ -552,9 +619,12 @@ final class CameraSessionViewModel {
                     streamState = state
                     switch state {
                     case .connected:
-                        capture.setStreamingDeliveryEnabled(true)
+                        // Wait for director assignment/quality before choosing idle vs active stream.
+                        try? await Task.sleep(for: .milliseconds(250))
                         await applyTransportProfile(for: switcherAssignment)
-                        statusMessage = "Transmitiendo al Director"
+                        statusMessage = switcherAssignment.isActive
+                            ? "Transmitiendo al Director"
+                            : "Conectada · en espera (bajo consumo)"
                     case .disconnected, .failed, .idle:
                         capture.setStreamingDeliveryEnabled(false)
                     default:

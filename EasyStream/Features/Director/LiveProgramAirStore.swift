@@ -14,8 +14,6 @@ final class LiveProgramAirStore {
     private(set) var fullScreenResource: BroadcastResource?
     private(set) var fullScreenFileURL: URL?
     private(set) var fullScreenIsLive = false
-    /// Widget hidden on director monitor while its draft is edited (external output unchanged).
-    private(set) var directorEditingWidgetID: UUID?
     /// Bumps only when committed air graphics actually change (not on director UI edits).
     private(set) var revision: UInt64 = 0
 
@@ -25,11 +23,6 @@ final class LiveProgramAirStore {
 
     func requestWidgetAutoDismiss(_ id: UUID) {
         widgetAutoDismissHandler?(id)
-    }
-
-    func setDirectorEditingWidget(_ id: UUID?) {
-        guard directorEditingWidgetID != id else { return }
-        directorEditingWidgetID = id
     }
 
     func refresh(from media: BroadcastMediaViewModel) {

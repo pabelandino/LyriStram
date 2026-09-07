@@ -3,6 +3,18 @@ import Testing
 import EasyStreamCore
 @testable import EasyStreamSwitcher
 
+@Test func registerSourceDoesNotAutoArmPreview() async {
+    let engine = SwitcherEngine()
+    let camA = CameraSourceID(UUID(uuidString: "00000000-0000-0000-0000-000000000001")!)
+
+    let event = await engine.registerSource(camA)
+    let state = await engine.state
+
+    #expect(state.previewSourceID == nil)
+    #expect(state.programSourceID == nil)
+    #expect(event == .programAudioChanged(camA))
+}
+
 @Test func cutChangesProgramAndAdvancesPreviewToPreviousProgram() async {
     let engine = SwitcherEngine()
     let camA = CameraSourceID(UUID(uuidString: "00000000-0000-0000-0000-000000000001")!)
@@ -10,6 +22,7 @@ import EasyStreamCore
 
     _ = await engine.registerSource(camA)
     _ = await engine.registerSource(camB)
+    _ = await engine.setPreview(camA)
     _ = await engine.cut(to: camA)
     _ = await engine.setPreview(camB)
 
@@ -30,6 +43,7 @@ import EasyStreamCore
 
     _ = await engine.registerSource(camA)
     _ = await engine.registerSource(camB)
+    _ = await engine.setPreview(camA)
     _ = await engine.cut(to: camA)
 
     let events = await engine.unregisterSource(camA)
@@ -52,7 +66,6 @@ import EasyStreamCore
     _ = await engine.registerSource(camB)
     _ = await engine.registerSource(camC)
     _ = await engine.setPreview(camB)
-
     _ = await engine.cut(to: camB)
     _ = await engine.setPreview(camC)
     let events = await engine.cut(to: camC)

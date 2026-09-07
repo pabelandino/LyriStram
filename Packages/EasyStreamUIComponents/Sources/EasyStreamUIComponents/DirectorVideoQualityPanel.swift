@@ -1,159 +1,6 @@
 import SwiftUI
 import EasyStreamCore
 
-// MARK: - Shared chips
-
-struct BroadcastSpecChip: View {
-    let text: String
-    var tint: Color = BroadcastTheme.subtleText
-
-    var body: some View {
-        Text(text)
-            .font(.caption2.weight(.semibold))
-            .monospacedDigit()
-            .foregroundStyle(tint.opacity(0.95))
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(tint.opacity(0.14), in: Capsule())
-    }
-}
-
-struct BroadcastPlatformTagRow: View {
-    let platforms: [BroadcastPlatform]
-
-    var body: some View {
-        HStack(spacing: 6) {
-            ForEach(platforms, id: \.self) { platform in
-                Text(platform.shortLabel)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(platform.accentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(platform.accentColor.opacity(0.14), in: Capsule())
-                    .overlay {
-                        Capsule()
-                            .strokeBorder(platform.accentColor.opacity(0.28), lineWidth: 0.5)
-                    }
-            }
-        }
-    }
-}
-
-// MARK: - Quality picker row
-
-public struct BroadcastQualityDropdown<Option: Identifiable & Hashable>: View {
-    let title: String
-    let systemImage: String
-    let options: [Option]
-    @Binding var selection: Option
-    let label: (Option) -> String
-    let chips: (Option) -> [BroadcastSpecChipModel]
-    let tags: (Option) -> [BroadcastPlatform]
-
-    public init(
-        title: String,
-        systemImage: String,
-        options: [Option],
-        selection: Binding<Option>,
-        label: @escaping (Option) -> String,
-        chips: @escaping (Option) -> [BroadcastSpecChipModel],
-        tags: @escaping (Option) -> [BroadcastPlatform] = { _ in [] }
-    ) {
-        self.title = title
-        self.systemImage = systemImage
-        self.options = options
-        _selection = selection
-        self.label = label
-        self.chips = chips
-        self.tags = tags
-    }
-
-    public var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(BroadcastTheme.studioAccent)
-                    .frame(width: 24, height: 24)
-                    .background(BroadcastTheme.studioAccent.opacity(0.14), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-
-                Spacer(minLength: 0)
-            }
-
-            Menu {
-                ForEach(options) { option in
-                    Button {
-                        selection = option
-                    } label: {
-                        if option == selection {
-                            Label(label(option), systemImage: "checkmark")
-                        } else {
-                            Text(label(option))
-                        }
-                    }
-                }
-            } label: {
-                HStack(alignment: .center, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(label(selection))
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.primary)
-
-                        BroadcastSpecChipRow(models: chips(selection))
-                    }
-
-                    Spacer(minLength: 0)
-
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(BroadcastTheme.subtleText)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 11)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(BroadcastTheme.panelBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(BroadcastTheme.panelBorder, lineWidth: 1)
-                }
-            }
-            .buttonStyle(.plain)
-            .menuStyle(.borderlessButton)
-
-            if !tags(selection).isEmpty {
-                BroadcastPlatformTagRow(platforms: tags(selection))
-                    .padding(.leading, 2)
-            }
-        }
-    }
-}
-
-public struct BroadcastSpecChipModel: Hashable {
-    public let text: String
-    public let tint: Color
-
-    public init(_ text: String, tint: Color = BroadcastTheme.subtleText) {
-        self.text = text
-        self.tint = tint
-    }
-}
-
-struct BroadcastSpecChipRow: View {
-    let models: [BroadcastSpecChipModel]
-
-    var body: some View {
-        HStack(spacing: 6) {
-            ForEach(models, id: \.self) { model in
-                BroadcastSpecChip(text: model.text, tint: model.tint)
-            }
-        }
-    }
-}
-
 // MARK: - Settings helpers
 
 private struct BroadcastSettingsToggleRow: View {
@@ -174,6 +21,7 @@ private struct BroadcastSettingsToggleRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(BroadcastTheme.primaryText)
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(BroadcastTheme.subtleText)
@@ -227,7 +75,23 @@ public struct DirectorVideoQualityPanel: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            BroadcastSettingsToggleRow(
+                title: "Modo ahorro de energía",
+                subtitle: "Pausa cámaras idle, desactiva precalentado y baja tiles. No modifica el preset PROG que elijas.",
+                systemImage: "leaf.fill",
+                isOn: $settings.energySaverMode
+            )
+
             qualitySummaryStrip
+
+            BroadcastQualityDropdown(
+                title: "Tiles preview",
+                systemImage: "rectangle.grid.2x2.fill",
+                options: PreviewTilePreset.allCases,
+                selection: $settings.previewPreset,
+                label: { $0.title },
+                chips: { previewChips(for: $0) }
+            )
 
             BroadcastQualityDropdown(
                 title: "Monitor PROG",
@@ -253,20 +117,32 @@ public struct DirectorVideoQualityPanel: View {
             Divider().overlay(BroadcastTheme.workspaceDivider)
 
             BroadcastSettingsToggleRow(
+                title: "Pausar cámaras en espera",
+                subtitle: "Solo preview y programa envían video. Esencial con 3+ cámaras para evitar que el CPU crezca linealmente.",
+                systemImage: "moon.fill",
+                isOn: $settings.pauseIdleCameraStreams
+            )
+
+            BroadcastSettingsToggleRow(
                 title: "Precalentar corte",
-                subtitle: "Decodifica la cámara de preview antes del take. Usa más CPU pero reduce el retardo al cortar.",
+                subtitle: "Solo al estar al aire: decodifica la preview en el bus Metal antes del take. Off-air la preview ya se ve en los tiles.",
                 systemImage: "bolt.fill",
                 isOn: $settings.prefetchTakeTarget
             )
 
             BroadcastSettingsInfoCallout(
-                text: "Los tiles de preview usan 640×360 para ahorrar CPU. La salida solo se aplica al publicar en vivo."
+                text: "Off-air solo decodifica el tile de preview — el monitor PROG no usa GPU. Con 3+ cámaras activa «Pausar cámaras en espera»."
             )
         }
     }
 
     private var qualitySummaryStrip: some View {
         HStack(spacing: 10) {
+            summaryTile(
+                label: "Tiles",
+                value: settings.previewPreset.streamSpec.displayLabel,
+                tint: BroadcastTheme.previewGreen
+            )
             summaryTile(
                 label: "PROG",
                 value: settings.progPreset.streamSpec.displayLabel,
@@ -288,7 +164,7 @@ public struct DirectorVideoQualityPanel: View {
             Text(value)
                 .font(.caption.weight(.semibold))
                 .monospacedDigit()
-                .foregroundStyle(.primary)
+                .foregroundStyle(BroadcastTheme.primaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
         }
@@ -300,6 +176,15 @@ public struct DirectorVideoQualityPanel: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .strokeBorder(tint.opacity(0.22), lineWidth: 1)
         }
+    }
+
+    private func previewChips(for preset: PreviewTilePreset) -> [BroadcastSpecChipModel] {
+        let spec = preset.streamSpec
+        return [
+            BroadcastSpecChipModel(spec.resolutionLabel, tint: BroadcastTheme.previewGreen),
+            BroadcastSpecChipModel("\(spec.frameRate) fps"),
+            BroadcastSpecChipModel(spec.bitrateMbpsLabel)
+        ]
     }
 
     private func progChips(for preset: ProgramMonitorPreset) -> [BroadcastSpecChipModel] {
@@ -326,25 +211,15 @@ public typealias DirectorMonitorQualityPanel = DirectorVideoQualityPanel
 
 // MARK: - Preset display helpers
 
-extension BroadcastPlatform {
-    var accentColor: Color {
-        switch self {
-        case .youtube: Color(red: 0.95, green: 0.22, blue: 0.18)
-        case .facebook: Color(red: 0.28, green: 0.52, blue: 0.96)
-        case .rtmp: BroadcastTheme.copper
-        }
-    }
-}
-
 extension BroadcastStreamSpec {
-    var resolutionLabel: String { "\(height)p" }
+    var resolutionLabel: String { "\(width)×\(height)" }
     var bitrateMbpsLabel: String {
         String(format: "%.1f Mbps", Double(maxBitrateBps) / 1_000_000)
     }
 }
 
 extension VideoEncoderConfiguration {
-    var resolutionLabel: String { "\(height)p" }
+    var resolutionLabel: String { "\(width)×\(height)" }
     var bitrateMbpsLabel: String {
         String(format: "%.1f Mbps", Double(averageBitrate) / 1_000_000)
     }
