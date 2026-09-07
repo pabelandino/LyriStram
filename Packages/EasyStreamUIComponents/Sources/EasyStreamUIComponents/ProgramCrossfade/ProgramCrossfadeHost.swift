@@ -1,6 +1,6 @@
 import WebRTC
 
-/// Platform container surface consumed by `ProgramCrossfadeSession`.
+/// Platform container surface consumed by `ProgramBusController`.
 ///
 /// Two-slot model (director monitor):
 /// - `programRenderer` / `outgoingRenderer`: permanent on-air bus (outgoing during transitions).
@@ -18,6 +18,7 @@ protocol ProgramCrossfadeHost: AnyObject {
         takeSlot: ProgramTransitionSlot,
         incomingOnProgram: Bool
     )
+    func applyTransitionFrame(_ frame: ProgramTransitionFrame, incomingOnProgram: Bool)
     /// Hides the on-air layer while the incoming track binds to the hidden program renderer.
     func beginTransitionHandoff()
     /// Reveals the on-air layer and hides the take layer in one step.
@@ -28,6 +29,25 @@ protocol ProgramCrossfadeHost: AnyObject {
 }
 
 extension ProgramCrossfadeHost {
+    /// Clears cached GPU frames — Metal hosts override; legacy crossfade ignores.
+    func clearMetalVideoFrames() {}
+
+    func clearMetalTransitionFrames() {}
+
+    func clearProgramVideoFrame() {}
+
+    func resetProgramLetterboxStabilization() {}
+
+    func promoteIncomingFrameToProgram() {}
+
+    func applyTransitionFrame(_ frame: ProgramTransitionFrame, incomingOnProgram: Bool) {
+        applyCrossfadeSlots(
+            programSlot: frame.outgoing,
+            takeSlot: frame.incoming,
+            incomingOnProgram: incomingOnProgram
+        )
+    }
+
     func finalizeTransitionHandoff() {
         completeTransitionHandoff()
     }

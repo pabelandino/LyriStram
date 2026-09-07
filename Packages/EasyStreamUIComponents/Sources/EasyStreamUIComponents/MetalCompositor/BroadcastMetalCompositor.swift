@@ -1,9 +1,17 @@
+import CoreVideo
 import EasyStreamCore
 import Metal
 import MetalKit
+import QuartzCore
 import WebRTC
+import EasyStreamVideoPipeline
 
 /// Shared GPU compositor for program video transitions and widget overlay layers.
+///
+/// Presentation follows Apple's guidance:
+/// - `CVDisplayLink` / `CADisplayLink` drives draws on vsync
+/// - `CVMetalTexture` + `CVPixelBuffer` retained until `MTLCommandBuffer` completes
+/// - Skip draw when compositor is suspended (no program source)
 final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     private struct Uniforms {
         var viewportSize: SIMD2<Float> = .zero
@@ -40,15 +48,15 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     private var textureCache: CVMetalTextureCache?
     private var samplerState: MTLSamplerState?
 
-    private var outgoingFrame = BroadcastMetalVideoFrame.LayerFrame()
-    private var incomingFrame = BroadcastMetalVideoFrame.LayerFrame()
-    private var programFrame = BroadcastMetalVideoFrame.LayerFrame()
+    private var lockedProgramContentSize: SIMD2<Float> = .zero
+    private var programContentSizeLockFramesRemaining = 0
 
     private var transitionFrame = ProgramTransitionFrame.cutIncoming
     private var isTransitioning = false
+    private var idleShowsIncomingAsProgram = false
 
     private let stateLock = NSLock()
-    private let frameLock = NSLock()
+    private let contentSizeLock = NSLock()
     private let overlaySnapshotLock = NSLock()
     private weak var mtkView: MTKView?
 
@@ -56,6 +64,10 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     private var overlaySnapshot: MTLTexture?
     private var overlayAnimationTimer: Timer?
     private var drawScheduled = false
+    private var isCompositorSuspended = false
+    private var hasPresentedVideoFrame = false
+
+    private let displayLinkDriver = BroadcastMetalDisplayLinkDriver()
 
     let outgoingSink: BroadcastMetalVideoSink
     let incomingSink: BroadcastMetalVideoSink
@@ -73,12 +85,9 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         self.programSink = BroadcastMetalVideoSink(slot: .program)
         super.init()
 
-        outgoingSink.compositor = self
-        incomingSink.compositor = self
-        programSink.compositor = self
-
         var cache: CVMetalTextureCache?
-        CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, device, nil, &cache)
+        let cacheAttributes = [kCVMetalTextureCacheMaximumTextureAgeKey: 1.0] as CFDictionary
+        CVMetalTextureCacheCreate(kCFAllocatorDefault, cacheAttributes, device, nil, &cache)
         textureCache = cache
 
         let samplerDescriptor = MTLSamplerDescriptor()
@@ -87,6 +96,10 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         samplerState = device.makeSamplerState(descriptor: samplerDescriptor)
 
         buildPipeline()
+
+        displayLinkDriver.onFrame = { [weak self] in
+            self?.displayLinkTick()
+        }
     }
 
     var outgoingRenderer: RTCVideoRenderer { outgoingSink }
@@ -94,14 +107,41 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     var programRenderer: RTCVideoRenderer { programSink }
 
     func attach(to view: MTKView) {
-        DispatchQueue.main.async {
+        let configure = {
             self.mtkView = view
             view.device = self.device
             view.colorPixelFormat = .bgra8Unorm
             view.framebufferOnly = true
             view.isPaused = true
             view.enableSetNeedsDisplay = false
+            view.autoResizeDrawable = false
             view.delegate = self
+            self.startDisplayLinkIfNeeded()
+        }
+        if Thread.isMainThread {
+            configure()
+        } else {
+            DispatchQueue.main.async(execute: configure)
+        }
+    }
+
+    func detachFromView() {
+        DispatchQueue.main.async {
+            self.displayLinkDriver.stop()
+            self.mtkView = nil
+        }
+    }
+
+    func setCompositorSuspended(_ suspended: Bool) {
+        stateLock.lock()
+        isCompositorSuspended = suspended
+        stateLock.unlock()
+        if suspended {
+            DispatchQueue.main.async {
+                self.displayLinkDriver.stop()
+            }
+        } else {
+            startDisplayLinkIfNeeded()
         }
     }
 
@@ -109,13 +149,20 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         stateLock.lock()
         self.isTransitioning = isTransitioning
         transitionFrame = frame
+        if isTransitioning {
+            isCompositorSuspended = false
+        }
         stateLock.unlock()
-        requestDraw()
+        startDisplayLinkIfNeeded()
     }
 
-    func setIdleUsesProgramOnly(_ value: Bool) {
-        _ = value
-        requestDraw()
+    func setIdleMode(showIncomingAsProgram: Bool) {
+        stateLock.lock()
+        idleShowsIncomingAsProgram = showIncomingAsProgram
+        isTransitioning = false
+        transitionFrame = .cutIncoming
+        stateLock.unlock()
+        startDisplayLinkIfNeeded()
     }
 
     @MainActor
@@ -123,48 +170,113 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         overlayProvider = provider
         updateOverlayAnimationTimer()
         bakeOverlaySnapshot(for: mtkView?.drawableSize ?? .zero)
-        requestDraw()
     }
 
     func invalidateOverlay() {
         Task { @MainActor in
             bakeOverlaySnapshot(for: mtkView?.drawableSize ?? .zero)
         }
-        requestDraw()
     }
 
     @MainActor
     func refreshOverlaySnapshot() {
         bakeOverlaySnapshot(for: mtkView?.drawableSize ?? .zero)
-        requestDraw()
     }
 
     nonisolated func receive(_ frame: RTCVideoFrame?, slot: BroadcastMetalVideoSink.Slot) {
         guard let frame else { return }
-        let layerFrame = BroadcastMetalVideoFrame.layerFrame(from: frame)
-        frameLock.lock()
-        switch slot {
-        case .outgoing: outgoingFrame = layerFrame
-        case .incoming: incomingFrame = layerFrame
-        case .program: programFrame = layerFrame
+        ProgramFrameDisplayBus.shared.enqueue(frame, lane: slot.busSlot)
+    }
+
+    private func startDisplayLinkIfNeeded() {
+        DispatchQueue.main.async {
+            guard self.mtkView != nil else { return }
+            let suspended: Bool = {
+                self.stateLock.lock()
+                defer { self.stateLock.unlock() }
+                return self.isCompositorSuspended
+            }()
+            guard !suspended else { return }
+            self.displayLinkDriver.preferredFramesPerSecond = 60
+            self.displayLinkDriver.start()
         }
-        frameLock.unlock()
-        requestDraw()
+    }
+
+    private func displayLinkTick() {
+        guard let view = mtkView else { return }
+        let suspended: Bool = {
+            stateLock.lock()
+            defer { stateLock.unlock() }
+            return isCompositorSuspended
+        }()
+        guard !suspended else { return }
+        performDraw(on: view)
     }
 
     private func requestDraw() {
         DispatchQueue.main.async {
             guard let view = self.mtkView else { return }
-            if view.drawableSize.width > 1, view.drawableSize.height > 1 {
-                view.draw()
-            } else if !self.drawScheduled {
-                self.drawScheduled = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    self.drawScheduled = false
-                    self.mtkView?.draw()
-                }
+            self.performDraw(on: view)
+        }
+    }
+
+    private func performDraw(on view: MTKView) {
+        if view.drawableSize.width > 1, view.drawableSize.height > 1 {
+            view.draw()
+        } else if !drawScheduled {
+            drawScheduled = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                self.drawScheduled = false
+                self.mtkView?.draw()
             }
         }
+    }
+
+    func invalidateDisplay() {
+        requestDraw()
+    }
+
+    func clearMetalVideoFrames() {
+        ProgramFrameDisplayBus.shared.clearAllLanes()
+        contentSizeLock.lock()
+        lockedProgramContentSize = .zero
+        programContentSizeLockFramesRemaining = 0
+        contentSizeLock.unlock()
+        stateLock.lock()
+        idleShowsIncomingAsProgram = false
+        stateLock.unlock()
+        hasPresentedVideoFrame = false
+        setCompositorSuspended(true)
+    }
+
+    func clearTransitionVideoFrames() {
+        ProgramFrameDisplayBus.shared.clearTransitionLanes()
+    }
+
+    func clearProgramVideoFrame() {
+        ProgramFrameDisplayBus.shared.clearOnAirLane()
+        contentSizeLock.lock()
+        lockedProgramContentSize = .zero
+        programContentSizeLockFramesRemaining = 0
+        contentSizeLock.unlock()
+    }
+
+    func promoteIncomingFrameToProgram() {
+        ProgramBusTrace.event("compositor promoteIncomingFrameToProgram")
+        ProgramFrameDisplayBus.shared.promoteIncomingToOnAir()
+        lockProgramContentSizeFromProgramFrame(forFrames: 240)
+        setCompositorSuspended(false)
+        requestDraw()
+    }
+
+    func lockProgramContentSizeFromProgramFrame(forFrames frameCount: Int = 24) {
+        guard let sample = ProgramFrameDisplayBus.shared.displaySample(for: .programOnAir) else { return }
+        contentSizeLock.lock()
+        if sample.contentSize.x > 1, sample.contentSize.y > 1 {
+            lockedProgramContentSize = sample.contentSize
+            programContentSizeLockFramesRemaining = frameCount
+        }
+        contentSizeLock.unlock()
     }
 
     @MainActor
@@ -178,7 +290,6 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
             guard let self else { return }
             Task { @MainActor in
                 self.bakeOverlaySnapshot(for: self.mtkView?.drawableSize ?? .zero)
-                self.requestDraw()
             }
         }
     }
@@ -200,7 +311,7 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     }
 
     private func buildPipeline() {
-        guard let library = device.makeDefaultLibrary(),
+        guard let library = Self.loadMetalLibrary(device: device),
               let vertex = library.makeFunction(name: "broadcastCompositorVertex"),
               let fragment = library.makeFunction(name: "broadcastCompositorFragment") else {
             return
@@ -213,28 +324,62 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         pipelineState = try? device.makeRenderPipelineState(descriptor: descriptor)
     }
 
+    private static func loadMetalLibrary(device: MTLDevice) -> MTLLibrary? {
+        #if SWIFT_PACKAGE
+        if let library = try? device.makeDefaultLibrary(bundle: Bundle.module) {
+            return library
+        }
+        #endif
+        return device.makeDefaultLibrary()
+    }
+
     private func render(in view: MTKView) {
         guard view.drawableSize.width > 1, view.drawableSize.height > 1 else { return }
         guard let pipelineState,
               let drawable = view.currentDrawable,
               let passDescriptor = view.currentRenderPassDescriptor,
               let commandBuffer = commandQueue.makeCommandBuffer(),
-              let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: passDescriptor),
-              let samplerState else {
+              let samplerState,
+              let textureCache else {
             return
         }
 
-        passDescriptor.colorAttachments[0].loadAction = .clear
-        passDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 1)
-
-        let viewportSize = view.drawableSize
-        var uniforms = makeUniforms(viewportSize: viewportSize)
-        var textures = makeVideoTextures()
+        var binding = makeVideoTextureBinding(cache: textureCache)
 
         overlaySnapshotLock.lock()
-        textures.overlayBGRA = overlaySnapshot
+        let overlayTexture = overlaySnapshot
         overlaySnapshotLock.unlock()
-        uniforms.hasOverlay = textures.overlayBGRA != nil ? 1 : 0
+
+        let hasOverlay = overlayTexture != nil
+        logCompositorDraw(binding: binding)
+
+        guard binding.hasOutgoingVideo || binding.hasIncomingVideo else {
+            binding.releaseAfterGPU()
+            return
+        }
+
+        passDescriptor.colorAttachments[0].loadAction = hasPresentedVideoFrame ? .load : .clear
+        if !hasPresentedVideoFrame {
+            passDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 1)
+        }
+
+        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: passDescriptor) else {
+            binding.releaseAfterGPU()
+            return
+        }
+
+        let viewportSize = view.drawableSize
+        var textures = TextureSet(
+            outgoingBGRA: binding.outgoingBGRA,
+            outgoingY: binding.outgoingY,
+            outgoingCbCr: binding.outgoingCbCr,
+            incomingBGRA: binding.incomingBGRA,
+            incomingY: binding.incomingY,
+            incomingCbCr: binding.incomingCbCr,
+            overlayBGRA: overlayTexture
+        )
+        var uniforms = makeUniforms(viewportSize: viewportSize, textures: textures, binding: binding)
+        uniforms.hasOverlay = hasOverlay ? 1 : 0
 
         encoder.setRenderPipelineState(pipelineState)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<Uniforms>.stride, index: 0)
@@ -249,27 +394,103 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
         encoder.endEncoding()
 
+        commandBuffer.addCompletedHandler { [binding] _ in
+            binding.releaseAfterGPU()
+        }
+
         commandBuffer.present(drawable)
         commandBuffer.commit()
+
+        if binding.hasOutgoingVideo {
+            hasPresentedVideoFrame = true
+        }
     }
 
-    private func makeUniforms(viewportSize: CGSize) -> Uniforms {
+    private func layerFrame(for lane: ProgramFrameBusSlot) -> BroadcastMetalVideoFrame.LayerFrame {
+        guard let sample = ProgramFrameDisplayBus.shared.displaySample(for: lane) else {
+            return BroadcastMetalVideoFrame.LayerFrame()
+        }
+        return BroadcastMetalVideoFrame.LayerFrame(
+            pixelBuffer: sample.pixelBuffer,
+            contentSize: sample.contentSize,
+            isNV12: sample.isNV12
+        )
+    }
+
+    private func makeVideoTextureBinding(cache: CVMetalTextureCache) -> BroadcastMetalTextureBinding {
+        stateLock.lock()
+        let transitioning = isTransitioning
+        let showIncomingAsProgram = idleShowsIncomingAsProgram
+        stateLock.unlock()
+
+        let programFrame = layerFrame(for: .programOnAir)
+        let incomingFrame = layerFrame(for: .programIncoming)
+        let outgoingFrame = layerFrame(for: .programOutgoing)
+
+        let binding = BroadcastMetalTextureBinding()
+
+        if transitioning {
+            binding.bindOutgoing(
+                from: outgoingFrame.pixelBuffer,
+                isNV12: outgoingFrame.isNV12,
+                cache: cache
+            )
+            binding.bindIncoming(
+                from: incomingFrame.pixelBuffer,
+                isNV12: incomingFrame.isNV12,
+                cache: cache
+            )
+        } else if showIncomingAsProgram {
+            binding.bindOutgoing(
+                from: incomingFrame.pixelBuffer,
+                isNV12: incomingFrame.isNV12,
+                cache: cache
+            )
+        } else {
+            binding.bindOutgoing(
+                from: programFrame.pixelBuffer,
+                isNV12: programFrame.isNV12,
+                cache: cache
+            )
+        }
+
+        return binding
+    }
+
+    private func makeUniforms(
+        viewportSize: CGSize,
+        textures: TextureSet,
+        binding: BroadcastMetalTextureBinding
+    ) -> Uniforms {
         stateLock.lock()
         let transitioning = isTransitioning
         let frame = transitionFrame
         stateLock.unlock()
 
-        frameLock.lock()
+        stateLock.lock()
+        let showIncomingAsProgram = idleShowsIncomingAsProgram
+        stateLock.unlock()
+
+        let programFrame = layerFrame(for: .programOnAir)
+        let incomingFrame = layerFrame(for: .programIncoming)
+        let outgoingFrame = layerFrame(for: .programOutgoing)
         let outgoing = transitioning ? outgoingFrame : programFrame
         let incoming = incomingFrame
-        frameLock.unlock()
 
         var uniforms = Uniforms()
         uniforms.viewportSize = SIMD2(Float(viewportSize.width), Float(viewportSize.height))
 
         if transitioning {
-            uniforms.outgoingContentSize = outgoing.contentSize
-            uniforms.incomingContentSize = incoming.contentSize
+            uniforms.outgoingContentSize = effectiveContentSize(
+                frame: outgoing,
+                bgra: textures.outgoingBGRA,
+                y: textures.outgoingY
+            )
+            uniforms.incomingContentSize = effectiveContentSize(
+                frame: incoming,
+                bgra: textures.incomingBGRA,
+                y: textures.incomingY
+            )
             uniforms.outgoingOpacity = Float(frame.outgoing.opacity)
             uniforms.incomingOpacity = Float(frame.incoming.opacity)
             uniforms.outgoingOffsetX = Float(frame.outgoing.offsetX)
@@ -279,51 +500,88 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
             uniforms.usesSpatial = frame.usesVisualTransform ? 1 : 0
             uniforms.outgoingIsNV12 = outgoing.isNV12 ? 1 : 0
             uniforms.incomingIsNV12 = incoming.isNV12 ? 1 : 0
-            uniforms.hasOutgoing = outgoing.pixelBuffer != nil ? 1 : 0
-            uniforms.hasIncoming = incoming.pixelBuffer != nil ? 1 : 0
+            uniforms.hasOutgoing = binding.hasOutgoingVideo ? 1 : 0
+            uniforms.hasIncoming = binding.hasIncomingVideo ? 1 : 0
             if let reveal = frame.incoming.reveal {
                 uniforms.incomingReveal = Float(reveal)
             }
+        } else if showIncomingAsProgram {
+            if binding.hasOutgoingVideo {
+                uniforms.outgoingContentSize = effectiveContentSize(
+                    frame: incoming,
+                    bgra: textures.incomingBGRA,
+                    y: textures.incomingY
+                )
+                uniforms.outgoingOpacity = 1
+                uniforms.outgoingIsNV12 = incoming.isNV12 ? 1 : 0
+                uniforms.hasOutgoing = 1
+            } else {
+                uniforms.outgoingOpacity = 0
+                uniforms.hasOutgoing = 0
+            }
         } else {
-            uniforms.outgoingContentSize = programFrame.contentSize
-            uniforms.outgoingOpacity = programFrame.pixelBuffer != nil ? 1 : 0
+            var programContentSize = effectiveContentSize(
+                frame: programFrame,
+                bgra: textures.outgoingBGRA,
+                y: textures.outgoingY
+            )
+            contentSizeLock.lock()
+            if programContentSizeLockFramesRemaining > 0,
+               lockedProgramContentSize.x > 1,
+               lockedProgramContentSize.y > 1 {
+                programContentSize = lockedProgramContentSize
+                programContentSizeLockFramesRemaining -= 1
+            }
+            contentSizeLock.unlock()
+            uniforms.outgoingContentSize = programContentSize
+            uniforms.outgoingOpacity = binding.hasOutgoingVideo ? 1 : 0
             uniforms.outgoingIsNV12 = programFrame.isNV12 ? 1 : 0
-            uniforms.hasOutgoing = programFrame.pixelBuffer != nil ? 1 : 0
+            uniforms.hasOutgoing = binding.hasOutgoingVideo ? 1 : 0
         }
 
         return uniforms
     }
 
-    private func makeVideoTextures() -> TextureSet {
+    private func logCompositorDraw(binding: BroadcastMetalTextureBinding) {
         stateLock.lock()
         let transitioning = isTransitioning
+        let showIncomingAsProgram = idleShowsIncomingAsProgram
         stateLock.unlock()
 
-        frameLock.lock()
-        let outgoingBuffer = transitioning ? outgoingFrame.pixelBuffer : programFrame.pixelBuffer
-        let outgoingNV12 = transitioning ? outgoingFrame.isNV12 : programFrame.isNV12
-        let incomingBuffer = incomingFrame.pixelBuffer
-        let incomingNV12 = incomingFrame.isNV12
-        frameLock.unlock()
-
-        var set = TextureSet()
-        if outgoingNV12 {
-            let planes = BroadcastMetalTextureUploader.makeNV12Textures(from: outgoingBuffer, cache: textureCache)
-            set.outgoingY = planes.y
-            set.outgoingCbCr = planes.cbcr
-        } else {
-            set.outgoingBGRA = BroadcastMetalTextureUploader.makeBGRATexture(from: outgoingBuffer, cache: textureCache)
+        guard binding.hasOutgoingVideo else {
+            ProgramBusTrace.eventThrottled(
+                "compositor-miss",
+                intervalMs: 300,
+                "compositor draw miss outgoing transitioning=\(transitioning) incomingAsProgram=\(showIncomingAsProgram)"
+            )
+            return
         }
 
-        if incomingNV12 {
-            let planes = BroadcastMetalTextureUploader.makeNV12Textures(from: incomingBuffer, cache: textureCache)
-            set.incomingY = planes.y
-            set.incomingCbCr = planes.cbcr
-        } else {
-            set.incomingBGRA = BroadcastMetalTextureUploader.makeBGRATexture(from: incomingBuffer, cache: textureCache)
-        }
+        let width = Int(binding.outgoingY?.width ?? binding.outgoingBGRA?.width ?? 0)
+        let height = Int(binding.outgoingY?.height ?? binding.outgoingBGRA?.height ?? 0)
+        guard width > 0, height > 0 else { return }
+        ProgramBusTrace.compositorPresent(
+            width: width,
+            height: height,
+            transitioning: transitioning
+        )
+    }
 
-        return set
+    private func effectiveContentSize(
+        frame: BroadcastMetalVideoFrame.LayerFrame,
+        bgra: MTLTexture?,
+        y: MTLTexture?
+    ) -> SIMD2<Float> {
+        if let y, y.width > 1, y.height > 1 {
+            return SIMD2(Float(y.width), Float(y.height))
+        }
+        if let bgra, bgra.width > 1, bgra.height > 1 {
+            return SIMD2(Float(bgra.width), Float(bgra.height))
+        }
+        if frame.contentSize.x > 1, frame.contentSize.y > 1 {
+            return frame.contentSize
+        }
+        return frame.contentSize
     }
 }
 
@@ -332,7 +590,6 @@ extension BroadcastMetalCompositor: MTKViewDelegate {
         Task { @MainActor in
             bakeOverlaySnapshot(for: size)
         }
-        requestDraw()
     }
 
     func draw(in view: MTKView) {

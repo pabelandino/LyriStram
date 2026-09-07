@@ -1,17 +1,32 @@
 import WebRTC
+import EasyStreamCore
 
 enum ProgramCrossfadeRenderer {
     static func swapAttach(
         _ track: RTCVideoTrack?,
         to view: RTCVideoRenderer,
-        storage: inout RTCVideoTrack?
+        storage: inout RTCVideoTrack?,
+        sinkCategory: VideoRendererSinkCategory = .programCrossfade
     ) {
+        if let track, let current = storage, current.trackId == track.trackId {
+            if current !== track {
+                ProgramBusTrace.event(
+                    "renderer swapAttach rebind trackId=\(ProgramBusTrace.shortTrackId(track.trackId)) sink=\(sinkCategory)"
+                )
+                current.remove(view)
+                track.add(view)
+                storage = track
+            }
+            return
+        }
         guard storage !== track else { return }
+        if let previous = storage {
+            previous.remove(view)
+            VideoRendererSinkRegistry.unregister(sinkCategory)
+        }
         if let track {
             track.add(view)
-        }
-        if let previous = storage, previous !== track {
-            previous.remove(view)
+            VideoRendererSinkRegistry.register(sinkCategory)
         }
         storage = track
     }
@@ -39,6 +54,9 @@ enum ProgramCrossfadeRenderer {
 
     /// Detaches the track and clears the last GPU frame so hidden slots cannot bleed through.
     static func detachAndClear(_ view: RTCVideoRenderer, storage: inout RTCVideoTrack?) {
+        if storage != nil {
+            VideoRendererSinkRegistry.unregister(.programCrossfade)
+        }
         detach(view, storage: &storage)
         clearFrame(in: view)
     }

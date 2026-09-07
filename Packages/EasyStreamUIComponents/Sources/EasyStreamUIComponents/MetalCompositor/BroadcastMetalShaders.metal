@@ -54,18 +54,9 @@ inline float3 yuvToRgb(float y, float2 cbcr) {
 }
 
 inline float2 aspectFitUV(float2 uv, float2 contentSize, float2 viewportSize) {
-    if (contentSize.x <= 0.0 || contentSize.y <= 0.0) {
-        return uv;
-    }
-    float contentAspect = contentSize.x / contentSize.y;
-    float viewAspect = viewportSize.x / viewportSize.y;
-    float2 scale = float2(1.0);
-    if (contentAspect > viewAspect) {
-        scale.y = viewAspect / contentAspect;
-    } else {
-        scale.x = contentAspect / viewAspect;
-    }
-    return (uv - 0.5) / scale + 0.5;
+    (void)contentSize;
+    (void)viewportSize;
+    return uv;
 }
 
 inline float4 sampleBGRA(

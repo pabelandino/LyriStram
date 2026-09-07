@@ -26,6 +26,7 @@ struct ProgramOutputSyncBridge: View {
         [
             viewModel.programSourceID?.rawValue.uuidString ?? "none",
             viewModel.previewSourceID?.rawValue.uuidString ?? "none",
+            viewModel.takeHandoffSourceID?.rawValue.uuidString ?? "none",
             String(viewModel.isTransitioning),
             viewModel.selectedTransition.kind.rawValue
         ].joined(separator: "|")
@@ -35,9 +36,7 @@ struct ProgramOutputSyncBridge: View {
         DirectorProgramOutputStore.shared.syncVideoBus(
             programDisplayTrack: viewModel.programDisplayTrack,
             outgoingProgramTrack: viewModel.outgoingProgramVideoTrack,
-            incomingProgramTrack: viewModel.isTransitioning
-                ? viewModel.transitionIncomingVideoTrack
-                : nil,
+            incomingProgramTrack: viewModel.programBusIncomingTrack,
             isTransitioning: viewModel.isTransitioning,
             transitionProgress: viewModel.transitionProgress,
             transitionKind: viewModel.selectedTransition.kind,

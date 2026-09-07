@@ -12,4 +12,6 @@ public enum EasyStreamLog {
     public static let rtmp = Logger(subsystem: subsystem, category: "rtmp")
     public static let facebook = Logger(subsystem: subsystem, category: "facebook")
     public static let app = Logger(subsystem: subsystem, category: "app")
+    /// PROG frame bus: Take cuts, lane holds, compositor, camera transport ramps.
+    public static let programBus = Logger(subsystem: subsystem, category: "ProgramBus")
 }

@@ -36,7 +36,7 @@ public struct CameraClientControlsView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 14) {
             muteControl
             lensPicker
             zoomControl
@@ -63,10 +63,12 @@ public struct CameraClientControlsView: View {
                         Button {
                             onLensSelected(lens.kind)
                         } label: {
-                            Text(lens.localizedName)
+                            Text(lensShortLabel(lens))
                                 .font(.caption.weight(.semibold))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
                                 .background(
                                     activeLens == lens.kind ? BroadcastTheme.studioAccent : BroadcastTheme.panelElevated,
                                     in: Capsule()
@@ -134,6 +136,15 @@ public struct CameraClientControlsView: View {
 #else
             .broadcastNativeSegmentedControl()
 #endif
+        }
+    }
+
+    private func lensShortLabel(_ lens: AvailableCameraLens) -> String {
+        switch lens.kind {
+        case .ultraWide: "Ultra wide"
+        case .wide: "Wide"
+        case .telephoto: "Tele"
+        case .front: "Front"
         }
     }
 }

@@ -28,6 +28,9 @@ public actor ProgramAudioEncoderPipeline {
     }
 
     public func start(configuration: AudioEncoderConfiguration = .broadcastAAC) async {
+        if isActive {
+            return
+        }
         await stopInternal(emitStopped: false)
 
         do {

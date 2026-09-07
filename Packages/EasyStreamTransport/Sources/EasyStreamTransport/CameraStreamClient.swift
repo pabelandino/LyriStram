@@ -22,7 +22,7 @@ public actor CameraStreamClient {
     private var audioTrack: RTCAudioTrack?
     private var eventContinuation: AsyncStream<Event>.Continuation?
     private var hasCreatedOffer = false
-    private var transportProfile = CameraTransportProfile.preview
+    private var transportProfile = CameraTransportProfile.standby
 
     public init() {}
 
@@ -119,6 +119,8 @@ public actor CameraStreamClient {
         if let audioTrack {
             pc.add(audioTrack, streamIds: ["easystream"])
         }
+
+        EasyStreamWebRTCH264Preferences.preferH264Video(on: pc, factory: factory, receiver: false)
 
         let offer = try await pc.offer(for: WebRTCConfiguration.offerConstraints())
         try await pc.setLocalDescription(offer)

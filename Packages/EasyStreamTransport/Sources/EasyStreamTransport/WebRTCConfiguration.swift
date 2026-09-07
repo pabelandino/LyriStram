@@ -14,8 +14,12 @@ enum WebRTCConfiguration {
     /// Director factory with playout PCM tap for broadcast encoding.
     static func directorFactory() -> RTCPeerConnectionFactory {
         _ = initializeOnce
-        let encoderFactory = RTCDefaultVideoEncoderFactory()
-        let decoderFactory = RTCDefaultVideoDecoderFactory()
+        let encoderFactory = makePreferredH264EncoderFactory()
+#if os(macOS)
+        let decoderFactory = EasyStreamVideoDecoderFactory(h264HardwareOnly: true)
+#else
+        let decoderFactory = EasyStreamVideoDecoderFactory(h264HardwareOnly: false)
+#endif
 #if os(iOS)
         return RTCPeerConnectionFactory(
             encoderFactory: encoderFactory,
@@ -33,12 +37,20 @@ enum WebRTCConfiguration {
     /// Camera client factory with default audio capture device.
     static func cameraFactory() -> RTCPeerConnectionFactory {
         _ = initializeOnce
-        let encoderFactory = RTCDefaultVideoEncoderFactory()
+        let encoderFactory = makePreferredH264EncoderFactory()
         let decoderFactory = RTCDefaultVideoDecoderFactory()
         return RTCPeerConnectionFactory(
             encoderFactory: encoderFactory,
             decoderFactory: decoderFactory
         )
+    }
+
+    private static func makePreferredH264EncoderFactory() -> RTCDefaultVideoEncoderFactory {
+        let factory = RTCDefaultVideoEncoderFactory()
+        if let h264 = EasyStreamWebRTCH264Preferences.preferredH264EncoderCodec() {
+            factory.preferredCodec = h264
+        }
+        return factory
     }
 
     static func peerConstraints() -> RTCMediaConstraints {

@@ -23,6 +23,8 @@ public enum RemoteCameraCommandExecutor {
             applySavedSettings(settings, capture: capture)
         case .setSwitcherAssignment:
             break
+        case .setDirectorMonitorQuality:
+            break
         case .reconnectStream:
             break
         }

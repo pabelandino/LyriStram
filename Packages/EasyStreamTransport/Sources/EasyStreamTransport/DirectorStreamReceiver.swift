@@ -196,6 +196,7 @@ public actor DirectorStreamReceiver {
         do {
             let remote = RTCSessionDescription(type: .offer, sdp: sdp)
             try await pc.setRemoteDescription(remote)
+            EasyStreamWebRTCH264Preferences.preferH264Video(on: pc, factory: factory, receiver: true)
             let answer = try await pc.answer(for: WebRTCConfiguration.offerConstraints())
             try await pc.setLocalDescription(answer)
             try await channel.send(.answer(sessionID: sessionID, sdp: answer.sdp))

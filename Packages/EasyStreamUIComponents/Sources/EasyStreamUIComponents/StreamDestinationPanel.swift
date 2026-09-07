@@ -58,7 +58,7 @@ public struct StreamDestinationPanel: View {
         case .connecting:
             Label("Conectando…", systemImage: "arrow.triangle.2.circlepath")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(BroadcastTheme.subtleText)
         case .publishing:
             Text("Enviando · \(publisherStats.videoFramesSent) video · \(publisherStats.audioPacketsSent) audio · \(formatBytes(publisherStats.bytesSent))")
                 .font(.caption.monospacedDigit())

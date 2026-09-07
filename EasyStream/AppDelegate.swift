@@ -12,6 +12,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     }
 
     func application(
+        _ application: UIApplication,
+        supportedInterfaceOrientationsFor window: UIWindow?
+    ) -> UIInterfaceOrientationMask {
+        AppOrientationPolicy.supportedMask
+    }
+
+    func application(
         _ app: UIApplication,
         open url: URL,
         options: [UIApplication.OpenURLOptionsKey: Any] = [:]

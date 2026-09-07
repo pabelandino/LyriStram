@@ -4,12 +4,14 @@ import AVFoundation
 import UIKit
 
 public enum CaptureVideoOrientation {
+    /// Default camera framing — landscape 16:9 for director tiles and program.
+    public static func preferredCameraLandscape() -> AVCaptureVideoOrientation {
+        .landscapeRight
+    }
+
     /// Preferred on the main thread; falls back to device orientation off-main.
     public static func current() -> AVCaptureVideoOrientation {
-        if Thread.isMainThread, let interface = interfaceOrientation() {
-            return interface
-        }
-        return currentFromDevice()
+        preferredCameraLandscape()
     }
 
     /// Safe to call from capture session queues — hops to the main thread when needed.

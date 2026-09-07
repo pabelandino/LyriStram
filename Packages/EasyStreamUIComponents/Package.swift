@@ -15,6 +15,7 @@ let package = Package(
         .package(path: "../EasyStreamCore"),
         .package(path: "../EasyStreamCameraCapture"),
         .package(path: "../EasyStreamFacebook"),
+        .package(path: "../EasyStreamVideoPipeline"),
         .package(url: "https://github.com/stasel/WebRTC.git", from: "150.0.0"),
     ],
     targets: [
@@ -24,6 +25,7 @@ let package = Package(
                 "EasyStreamCore",
                 "EasyStreamCameraCapture",
                 "EasyStreamFacebook",
+                "EasyStreamVideoPipeline",
                 "WebRTC",
             ]
         ),

@@ -46,7 +46,7 @@ public struct BroadcastMetalProgramFeedView: View {
         BroadcastMetalProgramFeedPlatformView(
             programTrack: programDisplayTrack,
             outgoingTrack: isTransitioning ? outgoingProgramTrack : nil,
-            incomingTrack: isTransitioning ? incomingProgramTrack : nil,
+            incomingTrack: incomingProgramTrack,
             isTransitioning: isTransitioning,
             progress: transitionProgress,
             kind: transitionKind,
@@ -54,6 +54,7 @@ public struct BroadcastMetalProgramFeedView: View {
             fullScreenResource: fullScreenResource,
             fullScreenFileURL: fullScreenFileURL,
             fullScreenIsLive: fullScreenIsLive,
+            embedsOverlays: true,
             onWidgetLiveAutoDismiss: onWidgetLiveAutoDismiss
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
