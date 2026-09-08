@@ -45,8 +45,20 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
     }
 
     public func publish(pixelBuffer: CVPixelBuffer, lane: ProgramFrameBusSlot) {
-        let width = Float(CVPixelBufferGetWidth(pixelBuffer))
-        let height = Float(CVPixelBufferGetHeight(pixelBuffer))
+        let width = CVPixelBufferGetWidth(pixelBuffer)
+        let height = CVPixelBufferGetHeight(pixelBuffer)
+        if lane == .programOnAir,
+           !ProgramFrameQualityGate.acceptsOnAirFrame(width: width, height: height) {
+            ProgramBusTrace.eventThrottled(
+                "bus-drop-onair-subhd",
+                intervalMs: 500,
+                "bus drop on-air sub-threshold frame \(width)x\(height)"
+            )
+            return
+        }
+
+        let widthF = Float(width)
+        let heightF = Float(height)
         let format = CVPixelBufferGetPixelFormatType(pixelBuffer)
         let isNV12 = format == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
             || format == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
@@ -56,16 +68,16 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
         if let sample = displaySample(for: lane) {
             ProgramBusTrace.lanePublish(
                 lane: lane,
-                width: Int(width),
-                height: Int(height),
+                width: Int(widthF),
+                height: Int(heightF),
                 sequence: sample.sequence
             )
         }
 
         ProgramFrameTelemetryRegistry.live.recordFrame(
             busSlot: lane,
-            width: Int(width),
-            height: Int(height)
+            width: Int(widthF),
+            height: Int(heightF)
         )
     }
 
@@ -98,8 +110,22 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
         return displaySample(for: .programIncoming)
     }
 
+    public func incomingMeetsProgramDisplayThreshold() -> Bool {
+        guard let incoming = displaySample(for: .programIncoming) else { return false }
+        return ProgramFrameQualityGate.acceptsOnAirFrame(
+            width: Int(incoming.contentSize.x),
+            height: Int(incoming.contentSize.y)
+        )
+    }
+
     public func promoteIncomingToOnAir() {
         let incoming = displaySample(for: .programIncoming)
+        guard incomingMeetsProgramDisplayThreshold() else {
+            ProgramBusTrace.event(
+                "bus promote skipped incoming=\(sizeLabel(incoming)) below program threshold"
+            )
+            return
+        }
         let programBefore = displaySample(for: .programOnAir)
         NativeProgramFrameBus.promoteIncomingToOnAir()
         let programAfter = displaySample(for: .programOnAir)

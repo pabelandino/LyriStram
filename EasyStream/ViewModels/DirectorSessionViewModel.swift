@@ -452,6 +452,7 @@ final class DirectorSessionViewModel {
             isTransitioning = false
             let events = await switcher.take(to: target, transition: transition)
             applySwitcherEvents(events)
+            await broadcastSwitcherAssignmentsNow()
             ProgramBusTrace.event(
                 "director take cut end program=\(ProgramBusTrace.shortSourceID(programSourceID?.rawValue)) preview=\(ProgramBusTrace.shortSourceID(previewSourceID?.rawValue)) incomingTrack=\(ProgramBusTrace.shortTrackId(incoming.trackId))"
             )

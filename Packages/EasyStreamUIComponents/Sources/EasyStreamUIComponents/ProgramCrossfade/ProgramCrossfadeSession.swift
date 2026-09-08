@@ -1,5 +1,6 @@
 import EasyStreamCore
 import WebRTC
+import EasyStreamVideoPipeline
 
 /// Single source of truth for the three-lane Metal program bus (program / outgoing / incoming).
 ///
@@ -238,10 +239,14 @@ final class ProgramBusController {
         }
 
         ProgramBusTrace.event(
-            "controller performInstantCut trackId=\(ProgramBusTrace.shortTrackId(program.trackId))"
+            "controller performInstantCut trackId=\(ProgramBusTrace.shortTrackId(program.trackId)) promoteIncoming=\(ProgramFrameDisplayBus.shared.incomingMeetsProgramDisplayThreshold())"
         )
 
-        host.promoteIncomingFrameToProgram()
+        if ProgramFrameDisplayBus.shared.incomingMeetsProgramDisplayThreshold() {
+            host.promoteIncomingFrameToProgram()
+        } else {
+            host.clearProgramVideoFrame()
+        }
 
         attachedIncoming?.remove(host.incomingRenderer)
         if !tracksMatch(attachedProgram, program) {

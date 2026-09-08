@@ -1,16 +1,16 @@
 # Graph Report - EasyStream  (2026-09-07)
 
 ## Corpus Check
-- 337 files · ~79,837 words
+- 338 files · ~80,045 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3992 nodes · 8902 edges · 223 communities (216 shown, 7 thin omitted)
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 699 edges (avg confidence: 0.8)
+- 3999 nodes · 8923 edges · 224 communities (216 shown, 8 thin omitted)
+- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 700 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0b8b2efd`
+- Built from commit: `22352f94`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -35,11 +35,11 @@
 - .connectIfNeeded
 - Data
 - .boundedSize
-- BroadcastMetalProgramFeedPlatformView
-- Color
-- DirectorSessionViewModel
+- BroadcastMetalProgramFeedContainerNSView
+- BroadcastTheme
+- Task
+- DiscoveredDevice
 - View
-- PreviewMonitorCamera
 - ProgramFeedWidgetLayer
 - CameraSessionLandscapeControlsColumn
 - .body
@@ -60,7 +60,7 @@
 - EasyStreamUITests
 - SignalingChannel
 - FacebookConfiguration
-- DiscoveryEvent
+- DiscoveryViewModel
 - AVCaptureVideoOrientation
 - BroadcastFontPreset
 - PackageDescription
@@ -69,32 +69,32 @@
 - ProgramCrossfadePlatformView
 - UIView
 - ProgramCrossfadePlatformView
-- SignalStrengthView
-- H264VideoEncoder
+- DiscoveredDeviceRow
+- .recreateSession
 - CameraStreamClient
 - .decode
 - BroadcastResourceRepository
 - DirectorPreviewMonitorStore
-- FacebookPlatformAuth.swift
+- AVFoundation
 - ProgramCrossfadeContainerUIView
 - .layerFrame
 - BroadcastWidgetStudioGradientBindings
-- FacebookAuthError
+- .color
 - BroadcastWidgetTemplate
 - ProgramFrameDisplayBus
-- DirectorInspectorSection
-- CaseIterable
+- .content
+- StreamOutputPreset
 - Driver
 - BroadcastMetalEmptyOverlayProvider
-- ConnectedCameraSource
-- Equatable
+- .event
+- ProgramTransitionFrame
 - .matches
 - TeamIntercomPeer
 - BonjourServiceType
 - LayoutNeutralRTCMTLVideoView
 - ProgramFrameRingBuffer
-- Testing
-- CodingKeys
+- FacebookPlatformAuth.swift
+- Color
 - BroadcastPlaylist
 - BroadcastMetalCompositor
 - RemoteCameraCommand
@@ -108,133 +108,134 @@
 - BroadcastMetalTextureBinding
 - Error
 - StreamDestination
-- RemoteWhiteBalanceOption
-- StreamConnectionState
+- Identifiable
+- RoleSelectionView
 - FLVBuilder
 - CameraSwitcherAssignment
 - Sendable
 - BroadcastWidgetStudioPanel
 - FacebookWebLoginSession
-- WebRTCConfiguration
-- ClockWidgetView
+- RoundedRectangle
+- DirectorProgramAirGraphicsView
 - .displayRect
 - .resized
 - ProgramFrameTrackTelemetry
 - FacebookGraphClient
-- Event
-- BroadcastStreamSpec
+- FacebookSignInRequest
+- CameraTransportProfile
 - AppOrientationPolicy
 - PreviewContainerView
-- Codable
+- FacebookAuthError
 - NSView
-- MessageType
+- CodingKeys
 - BroadcastMetalVideoSink
 - AppRole
 - .application
-- .content
-- .handleOffer
+- ProgramFrameNativeStatus
+- DirectorStreamReceiver
 - WebRTCProgramFrameSink
-- RoundedRectangle
+- IntercomPushToTalkButton
 - PeerConnectionDelegateBridge
-- TakeToProgramButton
-- BroadcastDraggableWidgetOverlay
+- BroadcastTakeButtonStyle
+- .signIn
 - LogoAnimationModifier
 - VideoRendererSinkCategory
 - BroadcastMetalWidgetOverlayContent
 - BroadcastResourceKind
 - NativeProgramFrameBus
-- BroadcastCleanProgramFeedView
+- WebRTCVideoContentMode
 - ProgramFrameRingBuffer.cpp
-- LiveProgramFeedView
+- BroadcastPlaylistPanel
 - StreamDestinationPanel
 - RTMPStreamError
 - DirectorProgramOutputStore
-- DiscoveredDevice
-- DirectorProgramAirGraphicsView
+- Event
+- BroadcastWidgetContentView
 - BroadcastSpecChipModel
 - BroadcastAspectRatioLayout
 - DirectorStudioSettingsTab
 - .extract
-- CameraPreviewView
-- BroadcastWidgetStudioFontControls
-- PreviewMonitorSettings
+- .body
+- BroadcastWidgetStudioLogoFields
+- Equatable
 - ProgramCrossfadeContainerNSView
-- EncoderCallbackBridge
+- H264VideoEncoder
 - LocalNetworkPermissionTrigger
 - BroadcastFixedSizeLayout
 - BroadcastMediaLibraryPanel
 - VideoEncoderConfiguration
-- BroadcastLogoAnimation
-- BroadcastMetalDisplayLinkDriver
+- CaseIterable
+- Bool
 - AACAudioEncoder
-- BroadcastMetalProgramFeedContainerNSView
-- StableWidgetOverlayView
-- DirectorStreamReceiver
+- BroadcastMetalProgramFeedContainerUIView
+- DiscoveryEvent
+- ProgramMonitorPreset
 - CameraSourceTile
-- WebRTCVideoContentMode
+- ProgramOutputDisplayDiscovery
 - ProgramFrameBusSlot
 - NSObject
-- .color
+- TransitionCurve
 - EasyStream — Agent context
 - LowerThirdProWidgetView
 - .applyExternalDisplayPreference
 - DirectorProgramVideoBusView
 - EncodedVideoSample
 - LiveVideoStreamSizeStore
-- .applySlot
-- BroadcastWidgetPlacement
+- .preferH264Video
+- BroadcastWidgetCanvas
 - BroadcastTransmissionMenu
 - ClippingRTCVideoContainer
-- DirectorPreviewTileCell
+- WebRTCConfiguration
 - BroadcastGlassPanelModifier
 - .cappedDrawableSize
 - .broadcastMediaPhotoImporter
 - BroadcastPanelModifier
-- BroadcastConnectionStatusLine
+- StreamConnectionState
 - TeamIntercomService
 - LayoutNeutralRTCMTLNSVideoView
 - IntercomPushToTalkPulseRing
 - BroadcastWidgetConfiguration
-- FacebookLivePanel
+- BroadcastCleanProgramFeedView
 - BroadcastWidgetLogoPhotoImporter
 - TransitionPreferencesStore
-- DeferredBroadcastLibraryPanel
+- LiveProgramFeedView
 - BroadcastMetalProgramFeedView
-- ProgramOutputDisplayDiscovery
+- .swapAttach
 - DirectorStudioSettingsHubIOSLayout
-- ProgramAudioSourcePanel
 - .body
-- PreviewMonitorLayoutMode
+- CameraSessionIntercomCard
+- EasyStreamVideoDecoderFactory
 - CameraPermissionStatus
-- BroadcastInspectorEmptyState
-- ProgramOutputSyncBridge
-- .performTakeToProgram
+- DirectorLiveOutputGuard
+- DirectorWorkspaceSession
+- DirectorSessionViewModel
 - BroadcastResourceRow
 - DirectorStudioSettingsHubView+IOS.swift
 - CodingKeys
-- .reload
-- ProgramMetalVideoView
-- CameraCaptureLoadTier
+- TakeToProgramButton
+- RTCPeerConnection
+- BroadcastStreamSpec
 - State
 - BroadcastMediaThumbnailLoader
 - .body
-- DirectorWorkspaceSession
+- Event
 - BroadcastFixedTileSlot
-- .editingChrome
-- .preferH264Video
+- BroadcastDraggableWidgetOverlay
+- BroadcastSectionHeader
 - PreviewMultiviewGridSpec
-- EasyStreamVideoDecoderFactory
-- DirectorRemoteControlsView
+- PreviewMonitorInspectorSummary
+- ClockWidgetView
 - BroadcastGlassStyles.swift
 - ProgramFrameNativeCapabilities
 - BroadcastFormField
 - DirectorStatusBar
-- NWError
-- .body
-- .track
-- ConnectionStatusBadge
+- Phase
+- WidgetResizeCorner
+- ProgramOutputSyncBridge
+- .frame
 - GraphAPIErrorResponse
-- DirectorStudioSettingsHubView+MacOS.swift
+- BroadcastFixedAspectContainer
+- DirectorSourcesPanel
 
 ## God Nodes (most connected - your core abstractions)
 1. `EasyStreamCore` - 182 edges
@@ -245,7 +246,7 @@
 6. `BroadcastWidgetConfiguration` - 75 edges
 7. `TeamIntercomService` - 63 edges
 8. `BroadcastMetalCompositor` - 57 edges
-9. `SwitchTransitionKind` - 55 edges
+9. `SwitchTransitionKind` - 56 edges
 10. `WebRTC` - 53 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -253,8 +254,8 @@
   EasyStream/Features/Director/DirectorPreviewMonitorStore.swift → Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/PreviewMonitorCamera.swift
 - `.programDisplayName` --references--> `PreviewMonitorCamera`  [INFERRED]
   EasyStream/Features/Director/DirectorPreviewMonitorStore.swift → Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/PreviewMonitorCamera.swift
-- `.body` --calls--> `CameraClientControlsView`  [INFERRED]
-  EasyStream/Features/Camera/CameraSessionControlsCard.swift → Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/CameraClientControlsView.swift
+- `.body` --calls--> `BroadcastSectionHeader`  [INFERRED]
+  EasyStream/Features/Camera/CameraSessionControlsCard.swift → Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastSectionHeader.swift
 - `.body` --calls--> `BroadcastGlowButtonStyle`  [INFERRED]
   EasyStream/Features/Camera/CameraSessionDirectorCard.swift → Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastGlowButtonStyle.swift
 - `.body` --calls--> `BroadcastSectionHeader`  [INFERRED]
@@ -263,11 +264,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (223 total, 7 thin omitted)
+## Communities (224 total, 8 thin omitted)
 
 ### Community 0 - "EasyStreamCore"
 Cohesion: 0.05
-Nodes (6): EasyStreamCameraCapture, EasyStreamCore, EasyStreamTransport, EasyStreamUIComponents, PhotosUI, SwiftUI
+Nodes (4): EasyStreamCore, EasyStreamUIComponents, PhotosUI, SwiftUI
 
 ### Community 1 - "RTMPPublisher"
 Cohesion: 0.17
@@ -282,28 +283,28 @@ Cohesion: 0.12
 Nodes (16): StreamPublisherState, connecting, failed, idle, publishing, stopped, StreamPublisherStats, Int (+8 more)
 
 ### Community 4 - "UIKit"
-Cohesion: 0.05
-Nodes (11): AppKit, AVFoundation, AVKit, ImageIO, CameraStreamConfiguration, AVCaptureSession, CGFloat, Int32 (+3 more)
+Cohesion: 0.06
+Nodes (8): AppKit, AVKit, ImageIO, PlatformSettings, QuartzCore, UIKit, UniformTypeIdentifiers, WebKit
 
 ### Community 5 - "BroadcastGlowButtonStyle"
-Cohesion: 0.08
-Nodes (20): .cameraPermissionView, BroadcastGlassBorderedButtonStyle, Configuration, View, Configuration, View, BroadcastGlowButtonStyle, Bool (+12 more)
+Cohesion: 0.11
+Nodes (16): ButtonStyle, .cameraPermissionView, BroadcastGlassBorderedButtonStyle, Configuration, View, Configuration, View, BroadcastGlowButtonStyle (+8 more)
 
 ### Community 6 - "PlayoutTapAudioDevice"
 Cohesion: 0.08
 Nodes (25): AudioBufferList, AVAudioSourceNode, PlayoutTapAudioDevice, .deviceInputSampleRate, .deviceOutputSampleRate, .inputIOBufferDuration, .inputLatency, .inputNumberOfChannels (+17 more)
 
 ### Community 7 - "ProgramCrossfadeHost"
-Cohesion: 0.09
-Nodes (22): CFAbsoluteTime, ProgramBusTrace, Bool, Int, String, UInt64, UUID, Void (+14 more)
+Cohesion: 0.17
+Nodes (11): ProgramCrossfadeHost, Bool, ProgramBusController, .phaseLabel, Snapshot, Bool, Double, Int (+3 more)
 
 ### Community 8 - "ProgramFrameNativeBus"
 Cohesion: 0.07
 Nodes (26): CVPixelBufferRef, LaneState, __CVBuffer, DisplayFrame, height, isNV12, pixelBuffer, sequence (+18 more)
 
 ### Community 9 - "CameraSessionViewModel"
-Cohesion: 0.13
-Nodes (15): .body, .body, CameraSessionViewModel, .availableDirectors, .canReconnect, .isMuted, AVCaptureSession, Bool (+7 more)
+Cohesion: 0.11
+Nodes (17): .body, .body, CameraSessionViewModel, .availableDirectors, .canReconnect, .isMuted, AVCaptureSession, Bool (+9 more)
 
 ### Community 10 - "TransitionUniforms"
 Cohesion: 0.10
@@ -314,8 +315,8 @@ Cohesion: 0.10
 Nodes (20): CameraSessionLandscapeLayout, Binding, Bool, Double, Float, CameraSessionView, .exposureBinding, .streamBadgeLabel (+12 more)
 
 ### Community 12 - "FacebookSession"
-Cohesion: 0.17
-Nodes (6): FacebookLiveService, String, FacebookSession, .isSignedIn, Bool, FacebookSessionStore
+Cohesion: 0.11
+Nodes (17): .body, DirectorSettingsEmissionSection, .body, FacebookLiveService, String, FacebookPage, FacebookSession, .isSignedIn (+9 more)
 
 ### Community 13 - "ProgramOutputDisplayOption"
 Cohesion: 0.21
@@ -330,11 +331,11 @@ Cohesion: 0.09
 Nodes (16): DirectorSessionView, .body, .platformDirectorToolbar, .platformSwitcherLayout, ToolbarContent, View, .keyboardShortcuts, .platformDirectorBody (+8 more)
 
 ### Community 16 - "CameraCaptureService"
-Cohesion: 0.12
-Nodes (13): AVCaptureDeviceInput, AVCaptureVideoDataOutputSampleBufferDelegate, CameraCaptureService, AVCaptureDevice, AVCaptureSession, CMTime, CVPixelBuffer, Double (+5 more)
+Cohesion: 0.10
+Nodes (17): AVCaptureDeviceInput, AVCaptureVideoDataOutputSampleBufferDelegate, CameraCaptureLoadTier, idle, preview, program, CameraCaptureService, AVCaptureDevice (+9 more)
 
 ### Community 17 - ".connectIfNeeded"
-Cohesion: 0.16
+Cohesion: 0.17
 Nodes (9): ObjectIdentifier, NWBrowser, NWConnection, NWListener, NWParameters, NWTXTRecord, Set, String (+1 more)
 
 ### Community 18 - "Data"
@@ -345,57 +346,57 @@ Nodes (11): AMF0, RTMPChunk, RTMPChunkReader, RTMPChunkWriter, RTMPMessageType, 
 Cohesion: 0.40
 Nodes (3): CGSize, ProposedViewSize, VideoPreviewLayout
 
-### Community 20 - "BroadcastMetalProgramFeedPlatformView"
-Cohesion: 0.14
-Nodes (17): BroadcastMetalProgramFeedPlatformView, Coordinator, CoordinatorSyncKey, CGRect, CGSize, Context, Coordinator, Double (+9 more)
+### Community 20 - "BroadcastMetalProgramFeedContainerNSView"
+Cohesion: 0.10
+Nodes (22): BroadcastMetalProgramFeedContainerNSView, .incomingRenderer, .outgoingRenderer, .programRenderer, BroadcastMetalProgramFeedPlatformView, Coordinator, CoordinatorSyncKey, .body (+14 more)
 
-### Community 21 - "Color"
-Cohesion: 0.09
-Nodes (23): BroadcastGlassProminentButtonStyle, BroadcastLiveStreamSizeBadge, .body, LiveLabel, ProgramBusLiveResolutionBadge, .body, String, BroadcastNeonProgressBar (+15 more)
+### Community 21 - "BroadcastTheme"
+Cohesion: 0.10
+Nodes (22): BroadcastInspectorEmptyState, .body, String, BroadcastTallyPill, .body, String, BroadcastTheme, .templatePicker (+14 more)
 
-### Community 22 - "DirectorSessionViewModel"
-Cohesion: 0.08
-Nodes (24): DirectorCamerasSidebarContent, .body, .body, .sessionContent, .body, DirectorStreamSettingsWindowContent, .body, Void (+16 more)
+### Community 22 - "Task"
+Cohesion: 0.10
+Nodes (11): .sessionContent, DirectorStreamSettingsWindowContent, .body, Void, .effectiveMonitorQuality, .monitorQuality, Bool, MainActor (+3 more)
 
-### Community 23 - "View"
-Cohesion: 0.16
-Nodes (15): BroadcastPlatformTagRow, .body, .body, BroadcastSpecChip, .body, String, BroadcastSpecChipRow, .body (+7 more)
-
-### Community 24 - "PreviewMonitorCamera"
+### Community 23 - "DiscoveredDevice"
 Cohesion: 0.12
-Nodes (24): PreviewMonitorCamera, Bool, Int, RTCVideoTrack, String, PreviewMonitorCellView, .body, .borderColor (+16 more)
+Nodes (22): CameraSessionDirectorCard, .body, Bool, String, UUID, Void, Hasher, DiscoveredDevice (+14 more)
+
+### Community 24 - "View"
+Cohesion: 0.25
+Nodes (13): PreviewMonitorCamera, Bool, Int, RTCVideoTrack, String, PreviewMonitorMultiviewGrid, .body, .pageCount (+5 more)
 
 ### Community 25 - "ProgramFeedWidgetLayer"
-Cohesion: 0.40
-Nodes (9): ProgramFeedView, ProgramFeedWidgetLayer, Binding, Bool, Double, RTCVideoTrack, String, URL (+1 more)
+Cohesion: 0.22
+Nodes (16): .body, BroadcastWidgetPlacement, PreviewWidgetOverlayView, .body, Binding, Bool, ProgramFeedView, .body (+8 more)
 
 ### Community 26 - "CameraSessionLandscapeControlsColumn"
-Cohesion: 0.11
-Nodes (22): CameraSessionLandscapeControlsColumn, Binding, Bool, Double, Float, .body, CameraSessionLandscapePreviewColumn, .body (+14 more)
+Cohesion: 0.12
+Nodes (19): CameraSessionLandscapeChrome, CameraSessionLandscapeControlsColumn, Binding, Bool, Double, Float, .body, CameraSessionLandscapePreviewColumn (+11 more)
 
 ### Community 27 - ".body"
 Cohesion: 0.27
 Nodes (4): .body, ProgramOutputWindowPlacement, Int, NSWindow
 
 ### Community 28 - "BroadcastResource"
-Cohesion: 0.14
-Nodes (16): DirectorLiveFullScreenGraphicRow, .body, Void, .airFullScreenGraphicResource, .draftWidgetResource, .fullScreenGraphicResource, .playlistQueueLabel, .previewFullScreenGraphicResource (+8 more)
+Cohesion: 0.10
+Nodes (19): DirectorLiveFullScreenGraphicRow, .body, DirectorLiveWidgetRow, .widgetConfigurationLabel, String, Void, .airFullScreenGraphicResource, .committedLiveAirWidgetLayers (+11 more)
 
 ### Community 29 - "ProgramVideoEncoderPipeline"
-Cohesion: 0.14
-Nodes (15): Event, failed, sample, started, stopped, ProgramVideoEncoderPipeline, AsyncStream, Bool (+7 more)
+Cohesion: 0.20
+Nodes (9): ProgramVideoEncoderPipeline, AsyncStream, Bool, CMTime, CVPixelBuffer, Never, RTCVideoTrack, Task (+1 more)
 
 ### Community 30 - "BroadcastMediaViewModel"
 Cohesion: 0.08
-Nodes (25): DirectorLibraryRailView, .body, DirectorLiveWidgetRow, .body, .widgetConfigurationLabel, DirectorSettingsLiveGraphicsSection, .body, String (+17 more)
+Nodes (26): DirectorLibraryRailView, .body, DirectorPlaylistsSidebarContent, DirectorProgramPreviewOverlayView, DirectorProgramStudioHintsOverlay, .body, .directorWorkspaceLayout, .body (+18 more)
 
 ### Community 31 - "DirectorMonitorQualitySettings"
-Cohesion: 0.10
-Nodes (18): PreviewTilePreset, economy, .id, minimal, standard, .streamSpec, .title, DirectorMonitorQualityPreferencesStore (+10 more)
+Cohesion: 0.15
+Nodes (11): DirectorMonitorQualityPreferencesStore, DirectorMonitorQualitySettings, .outputEncoderConfiguration, LegacyTier, balanced, economy, high, Bool (+3 more)
 
 ### Community 32 - "CameraSourceID"
-Cohesion: 0.11
-Nodes (25): EasyStreamSwitcher, TimeInterval, SwitcherSnapshot, SwitchTransition, CameraSourceID, .id, UUID, Set (+17 more)
+Cohesion: 0.12
+Nodes (22): EasyStreamSwitcher, TimeInterval, SwitcherSnapshot, SwitchTransition, CameraSourceID, .id, UUID, Set (+14 more)
 
 ### Community 33 - "ProgramAudioEncoderPipeline"
 Cohesion: 0.13
@@ -403,14 +404,14 @@ Nodes (15): Event, failed, sample, started, stopped, ProgramAudioEncoderPipeline
 
 ### Community 34 - "CameraLensKind"
 Cohesion: 0.06
-Nodes (43): CameraSessionControlsCard, Binding, Bool, ClosedRange, Double, Float, Void, AvailableCameraLens (+35 more)
+Nodes (44): CameraSessionControlsCard, .body, Binding, Bool, ClosedRange, Double, Float, Void (+36 more)
 
 ### Community 35 - "PreviewMonitorSettingsForm"
 Cohesion: 0.18
 Nodes (12): .monitorTab, PreviewMonitorSettingsForm, .body, Binding, Bool, String, Void, PreviewMonitorSettingsPanel (+4 more)
 
 ### Community 36 - "Coordinator"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (12): DispatchWorkItem, Coordinator, CGSize, Context, Coordinator, NSObjectProtocol, ProposedViewSize, RTCMTLVideoView (+4 more)
 
 ### Community 37 - "BroadcastHexColorWell"
@@ -418,16 +419,16 @@ Cohesion: 0.19
 Nodes (12): NSColorPanel, NSPanel, BroadcastHexColorWell, .body, .iosColorPicker, MacColorPanelController, NativeMacColorPanelButton, .body (+4 more)
 
 ### Community 38 - "SignalingMessage"
-Cohesion: 0.14
-Nodes (12): SignalingMessage, answer, control, hello, ice, offer, settingsState, Decoder (+4 more)
+Cohesion: 0.09
+Nodes (22): MessageType, answer, control, hello, ice, offer, settingsState, RemoteStreamSession (+14 more)
 
 ### Community 39 - "CountdownAnimationModifier"
 Cohesion: 0.13
 Nodes (17): Animation, CountdownAnimationModifier, .animation, .flipDegrees, .offsetY, .opacity, .scale, CountdownWidgetView (+9 more)
 
 ### Community 40 - "DirectorSidebarTab"
-Cohesion: 0.10
-Nodes (17): DirectorPlaylistsSidebarContent, .directorWorkspaceLayout, DirectorSourceSidebarView, .body, DirectorLeftSidebarTabPicker, .body, Binding, DirectorSidebarTab (+9 more)
+Cohesion: 0.12
+Nodes (13): DirectorLeftSidebarTabPicker, .body, Binding, DirectorSidebarTab, cameras, .id, library, playlists (+5 more)
 
 ### Community 41 - "ProgramPreviewVisibilityPolicy"
 Cohesion: 0.15
@@ -438,32 +439,32 @@ Cohesion: 0.15
 Nodes (6): EasyStreamUITests, EasyStreamUITestsLaunchTests, .runsForEachTargetApplicationUIConfiguration, Bool, XCTest, XCTestCase
 
 ### Community 43 - "SignalingChannel"
-Cohesion: 0.20
-Nodes (10): Event, connected, disconnected, failed, message, SignalingChannel, AsyncStream, Bool (+2 more)
+Cohesion: 0.16
+Nodes (13): NWError, .isEasyStreamLocalNetworkPermissionIssue, Bool, Event, connected, disconnected, failed, message (+5 more)
 
 ### Community 44 - "FacebookConfiguration"
 Cohesion: 0.15
 Nodes (12): FacebookConfiguration, .appID, .basicOAuthScopeList, .callbackURLScheme, .clientToken, .isConfigured, .oauthScopeList, .oauthScopes (+4 more)
 
-### Community 45 - "DiscoveryEvent"
-Cohesion: 0.16
-Nodes (12): DiscoveryViewModel, Never, String, Task, Void, DiscoveryEvent, advertisingFailed, browsingFailed (+4 more)
+### Community 45 - "DiscoveryViewModel"
+Cohesion: 0.33
+Nodes (5): DiscoveryViewModel, Never, String, Task, Void
 
 ### Community 46 - "AVCaptureVideoOrientation"
 Cohesion: 0.27
 Nodes (5): AVCaptureOutput, AVCaptureVideoOrientation, CMSampleBuffer, AVCaptureConnection, CaptureVideoOrientation
 
 ### Community 47 - "BroadcastFontPreset"
-Cohesion: 0.14
-Nodes (17): NSFont, BroadcastFontPreset, boldDisplay, condensed, .displayName, monospaced, rounded, serif (+9 more)
+Cohesion: 0.15
+Nodes (16): NSFont, BroadcastFontPreset, boldDisplay, condensed, .displayName, monospaced, rounded, serif (+8 more)
 
 ### Community 49 - "LiveProgramAirStore"
-Cohesion: 0.06
-Nodes (34): DirectorMainSwitcherAreaView, .body, .canTake, Bool, DirectorPreviewGridView, .body, DirectorProgramLiveMonitorView, .body (+26 more)
+Cohesion: 0.05
+Nodes (41): DirectorMainSwitcherAreaView, .body, .canTake, Bool, DirectorPreviewGridView, .body, .body, DirectorPreviewTileScroller (+33 more)
 
 ### Community 50 - "SwitchTransitionKind"
-Cohesion: 0.10
-Nodes (24): SwitchTransitionKind, cut, .displayName, dissolve, fade, .id, slide, wipe (+16 more)
+Cohesion: 0.09
+Nodes (30): SwitchTransitionKind, cut, .displayName, dissolve, fade, .id, slide, wipe (+22 more)
 
 ### Community 51 - "ProgramCrossfadePlatformView"
 Cohesion: 0.15
@@ -471,23 +472,23 @@ Nodes (12): ProgramCrossfadeLayout, CGSize, ProposedViewSize, Coordinator, Progr
 
 ### Community 52 - "UIView"
 Cohesion: 0.17
-Nodes (6): ProgramTransitionRevealMask, CGRect, Double, CGFloat, Double, UIView
+Nodes (7): CALayer, ProgramTransitionRevealMask, CGRect, Double, CGFloat, Double, UIView
 
 ### Community 53 - "ProgramCrossfadePlatformView"
 Cohesion: 0.23
 Nodes (9): Coordinator, ProgramCrossfadePlatformView, Bool, CGSize, Context, Coordinator, Double, ProposedViewSize (+1 more)
 
-### Community 54 - "SignalStrengthView"
-Cohesion: 0.50
-Nodes (3): SignalStrengthView, .body, Int
+### Community 54 - "DiscoveredDeviceRow"
+Cohesion: 0.29
+Nodes (5): DiscoveredDeviceRow, .body, SignalStrengthView, .body, Int
 
-### Community 55 - "H264VideoEncoder"
-Cohesion: 0.15
-Nodes (13): OSStatus, H264VideoEncoder, AsyncStream, CMTime, CVPixelBuffer, Int32, VideoEncoderError, configurationFailed (+5 more)
+### Community 55 - ".recreateSession"
+Cohesion: 0.21
+Nodes (10): OSStatus, CMTime, CVPixelBuffer, Int32, VideoEncoderError, configurationFailed, encodeFailed, sampleExtractionFailed (+2 more)
 
 ### Community 56 - "CameraStreamClient"
 Cohesion: 0.07
-Nodes (24): Bool, CameraStreamClient, .isAudioMuted, .localVideoTrack, Event, connectionState, failed, localVideoTrackReady (+16 more)
+Nodes (24): CameraStreamClient, .isAudioMuted, .localVideoTrack, Event, connectionState, failed, localVideoTrackReady, RTCPeerConnection (+16 more)
 
 ### Community 57 - ".decode"
 Cohesion: 0.27
@@ -501,9 +502,9 @@ Nodes (8): BroadcastResourceIndexEntry, BroadcastResourceRepository, BroadcastRe
 Cohesion: 0.15
 Nodes (10): DirectorPreviewMonitorStore, .previewDisplayName, .programDisplayName, .settings, Int, Never, String, Task (+2 more)
 
-### Community 60 - "FacebookPlatformAuth.swift"
-Cohesion: 0.08
-Nodes (15): App, AppTrackingTransparency, EasyStreamApp, EasyStreamFacebook, EasyStreamFacebookLogin, EasyStreamVideoBusNative, FacebookCore, FacebookLogin (+7 more)
+### Community 60 - "AVFoundation"
+Cohesion: 0.10
+Nodes (7): AVFoundation, EasyStreamCameraCapture, EasyStreamTransport, CameraStreamConfiguration, AVCaptureSession, CGFloat, Int32
 
 ### Community 61 - "ProgramCrossfadeContainerUIView"
 Cohesion: 0.13
@@ -514,28 +515,28 @@ Cohesion: 0.14
 Nodes (14): CGImage, BroadcastMetalI420ConversionCache, BroadcastMetalTextureUploader, BroadcastMetalVideoFrame, LayerFrame, CVMetalTextureCache, CVPixelBuffer, CVPixelBufferPool (+6 more)
 
 ### Community 63 - "BroadcastWidgetStudioGradientBindings"
-Cohesion: 0.14
-Nodes (15): BroadcastWidgetStudioGradientBindings, Binding, Bool, String, .body, BroadcastWidgetStudioOptionalLogoImportControl, .body, Void (+7 more)
+Cohesion: 0.16
+Nodes (13): BroadcastWidgetStudioGradientBindings, Binding, Bool, String, .body, BroadcastWidgetStudioOptionalLogoImportControl, .body, Void (+5 more)
 
-### Community 64 - "FacebookAuthError"
-Cohesion: 0.11
-Nodes (18): LocalizedError, FacebookAuthError, appIDNotConfigured, cancelled, clientTokenNotConfigured, denied, .errorDescription, invalidCallback (+10 more)
+### Community 64 - ".color"
+Cohesion: 0.14
+Nodes (16): .currentColor, BroadcastWidgetColors, Binding, Double, LinearGradient, String, CGFloat, String (+8 more)
 
 ### Community 65 - "BroadcastWidgetTemplate"
 Cohesion: 0.14
 Nodes (15): BroadcastWidgetTemplate, animatedLogo, clock, countdown, logo, lowerThird, lowerThirdPro, .mentoTemplates (+7 more)
 
 ### Community 66 - "ProgramFrameDisplayBus"
-Cohesion: 0.16
-Nodes (11): ProgramFrameDisplayBus, Sample, Bool, CVPixelBuffer, Float, Int, RTCVideoFrame, SIMD2 (+3 more)
+Cohesion: 0.13
+Nodes (14): ProgramFrameQualityGate, Bool, Int, ProgramFrameDisplayBus, Sample, Bool, CVPixelBuffer, Float (+6 more)
 
-### Community 67 - "DirectorInspectorSection"
-Cohesion: 0.24
-Nodes (8): .body, BroadcastSectionHeader, .body, String, DirectorInspectorSection, .body, Content, String
+### Community 67 - ".content"
+Cohesion: 0.15
+Nodes (14): AnyView, .body, CachedWidgetLogoView, Content, Image, URL, DirectorInspectorPanel, .body (+6 more)
 
-### Community 68 - "CaseIterable"
-Cohesion: 0.08
-Nodes (25): CaseIterable, BroadcastPlatform, facebook, rtmp, .shortLabel, youtube, StreamOutputPreset, .detail (+17 more)
+### Community 68 - "StreamOutputPreset"
+Cohesion: 0.11
+Nodes (18): BroadcastPlatform, facebook, rtmp, .shortLabel, youtube, StreamOutputPreset, .detail, facebook1080p30 (+10 more)
 
 ### Community 69 - "Driver"
 Cohesion: 0.27
@@ -545,21 +546,21 @@ Nodes (9): CFTimeInterval, Driver, ProgramTransitionDisplayLink, CADisplayLink, 
 Cohesion: 0.29
 Nodes (6): BroadcastMetalEmptyOverlayProvider, .needsContinuousRefresh, Bool, CGSize, MTLDevice, MTLTexture
 
-### Community 71 - "ConnectedCameraSource"
-Cohesion: 0.14
-Nodes (12): DirectorSettingsRemoteControlsSection, .body, ConnectedCameraSource, Date, Double, Float, RTCAudioTrack, RTCVideoTrack (+4 more)
+### Community 71 - ".event"
+Cohesion: 0.27
+Nodes (7): CFAbsoluteTime, ProgramBusTrace, Bool, Int, String, UInt64, Void
 
-### Community 72 - "Equatable"
-Cohesion: 0.07
-Nodes (36): Equatable, Phase, empty, offAirWarm, onAir, transitioning, CutTransitionEffect, DissolveTransitionEffect (+28 more)
+### Community 72 - "ProgramTransitionFrame"
+Cohesion: 0.12
+Nodes (22): CutTransitionEffect, DissolveTransitionEffect, FadeTransitionEffect, ProgramTransitionEffect, SlideTransitionEffect, Double, LinearProgress, WipeTransitionEffect (+14 more)
 
 ### Community 73 - ".matches"
 Cohesion: 0.24
 Nodes (7): BroadcastDisplayNameSanitizer, BroadcastMediaSearch, Character, .isHexDigit, Bool, String, Bool
 
 ### Community 74 - "TeamIntercomPeer"
-Cohesion: 0.18
-Nodes (14): IntercomConstants, Double, String, UInt16, UUID, TeamIntercomPeer, .activeTargetPeer, Bool (+6 more)
+Cohesion: 0.15
+Nodes (15): IntercomConstants, Double, String, UInt16, UUID, TeamIntercomPeer, .activeTargetPeer, Bool (+7 more)
 
 ### Community 75 - "BonjourServiceType"
 Cohesion: 0.13
@@ -573,53 +574,53 @@ Nodes (11): ClippingRTCVideoContainerView, .intrinsicContentSize, CGRect, CGSize
 Cohesion: 0.22
 Nodes (8): FrameDescriptor, size_t, ProgramFrameRingBuffer, count_, latest, push, slots_, writeIndex_
 
-### Community 78 - "Testing"
-Cohesion: 0.10
-Nodes (6): EasyStreamTests, deviceIdentityPersistsID(), StreamDestinationFacebookParsing, String, facebookSecureStreamURLParsing(), Testing
+### Community 78 - "FacebookPlatformAuth.swift"
+Cohesion: 0.07
+Nodes (11): AppTrackingTransparency, EasyStreamFacebook, EasyStreamFacebookLogin, EasyStreamTests, FacebookCore, FacebookLogin, deviceIdentityPersistsID(), StreamDestinationFacebookParsing (+3 more)
 
-### Community 79 - "CodingKeys"
-Cohesion: 0.17
-Nodes (12): CodingKeys, candidate, command, deviceID, displayName, role, sdp, sdpMid (+4 more)
+### Community 79 - "Color"
+Cohesion: 0.16
+Nodes (12): BroadcastGlassProminentButtonStyle, BroadcastLiveStreamSizeBadge, .body, LiveLabel, ProgramBusLiveResolutionBadge, .body, String, BroadcastSpecChip (+4 more)
 
 ### Community 80 - "BroadcastPlaylist"
-Cohesion: 0.09
-Nodes (24): .body, BroadcastPlaylist, BroadcastPlaylistKind, image, mixed, .systemImage, .title, video (+16 more)
+Cohesion: 0.10
+Nodes (20): .body, String, BroadcastPlaylist, BroadcastPlaylistKind, image, mixed, .systemImage, .title (+12 more)
 
 ### Community 81 - "BroadcastMetalCompositor"
-Cohesion: 0.07
-Nodes (26): AnyObject, MTKView, MTKViewDelegate, MTLCommandQueue, MTLLibrary, MTLRenderPipelineState, MTLSamplerState, BroadcastMetalCompositor (+18 more)
+Cohesion: 0.09
+Nodes (24): MTKView, MTKViewDelegate, MTLCommandQueue, MTLLibrary, MTLRenderPipelineState, MTLSamplerState, BroadcastMetalCompositor, .incomingRenderer (+16 more)
 
 ### Community 82 - "RemoteCameraCommand"
-Cohesion: 0.13
-Nodes (18): CameraSettingsStore, RemoteCameraCommand, applySavedSettings, reconnectStream, setDirectorMonitorQuality, setExposureBias, setLens, setMuted (+10 more)
+Cohesion: 0.10
+Nodes (25): CameraSettingsStore, RemoteCameraCommand, applySavedSettings, reconnectStream, setDirectorMonitorQuality, setExposureBias, setLens, setMuted (+17 more)
 
 ### Community 83 - "View"
 Cohesion: 0.15
 Nodes (7): BroadcastHiddenToolbarModifier, BroadcastStudioChromeModifier, CGFloat, Content, View, View, ViewModifier
 
 ### Community 84 - "String"
-Cohesion: 0.15
-Nodes (16): DeviceIdentity, .suggestedRole, DevicePlatform, .displayName, iPad, iPhone, mac, unknown (+8 more)
+Cohesion: 0.17
+Nodes (12): BroadcastGradientStyle, Double, DeviceIdentity, .suggestedRole, DevicePlatform, .displayName, iPad, iPhone (+4 more)
 
 ### Community 85 - "Foundation"
-Cohesion: 0.07
-Nodes (11): CoreMedia, EasyStreamAudioPipeline, EasyStreamDiscovery, EasyStreamStreaming, Foundation, Network, Observation, OSLog (+3 more)
+Cohesion: 0.08
+Nodes (10): CoreMedia, EasyStreamAudioPipeline, EasyStreamDiscovery, EasyStreamStreaming, Foundation, Network, Observation, OSLog (+2 more)
 
 ### Community 86 - "WebRTC"
 Cohesion: 0.06
-Nodes (9): CoreGraphics, CoreVideo, DirectorPreviewGridMetrics, CGFloat, EasyStreamVideoPipeline, Metal, MetalKit, QuartzCore (+1 more)
+Nodes (9): CoreGraphics, CoreVideo, DirectorPreviewGridMetrics, CGFloat, EasyStreamVideoPipeline, Metal, MetalKit, simd (+1 more)
 
 ### Community 87 - "BroadcastMetalSwiftUIOverlayProvider"
 Cohesion: 0.19
 Nodes (12): BroadcastMetalSwiftUIOverlayProvider, .needsContinuousRefresh, .overlayRefreshInterval, Bool, CGSize, MTLDevice, MTLTexture, String (+4 more)
 
 ### Community 88 - "WebRTCVideoFramePublisher"
-Cohesion: 0.26
+Cohesion: 0.27
 Nodes (6): CVPixelBuffer, Int32, Int64, RTCVideoRotation, RTCVideoSource, WebRTCVideoFramePublisher
 
 ### Community 89 - "DiscoveryService"
-Cohesion: 0.13
-Nodes (16): EasyStreamLog, DiscoveryService, .discoveredDevices, AsyncStream, Bool, NWBrowser, NWConnection, NWEndpoint (+8 more)
+Cohesion: 0.14
+Nodes (15): EasyStreamLog, DiscoveryService, .discoveredDevices, Bool, NWBrowser, NWConnection, NWEndpoint, NWListener (+7 more)
 
 ### Community 90 - "BroadcastMetalTextureBinding"
 Cohesion: 0.36
@@ -633,41 +634,41 @@ Nodes (20): Error, AudioEncoderError, conversionFailed, converterCreationFailed,
 Cohesion: 0.14
 Nodes (15): .streamDestination, ParsedStreamDestination, StreamDestination, .isConfigured, StreamDestinationError, .errorDescription, invalidURL, missingApp (+7 more)
 
-### Community 93 - "RemoteWhiteBalanceOption"
+### Community 93 - "Identifiable"
 Cohesion: 0.06
-Nodes (32): RemoteLensOption, .displayName, front, .id, telephoto, ultraWide, wide, RemoteWhiteBalanceOption (+24 more)
+Nodes (37): Identifiable, RemoteLensOption, .displayName, front, .id, telephoto, ultraWide, wide (+29 more)
 
-### Community 94 - "StreamConnectionState"
-Cohesion: 0.24
-Nodes (10): RemoteStreamSession, StreamConnectionState, connected, connecting, disconnected, failed, idle, signaling (+2 more)
+### Community 94 - "RoleSelectionView"
+Cohesion: 0.18
+Nodes (11): RoleCard, .body, RoleSelectionView, .body, .footer, .header, .roleCards, Binding (+3 more)
 
 ### Community 95 - "FLVBuilder"
 Cohesion: 0.23
 Nodes (7): FLVBuilder, CMFormatDescription, CMTime, Data, Int, UInt32, UInt8
 
 ### Community 96 - "CameraSwitcherAssignment"
-Cohesion: 0.08
-Nodes (28): .body, CameraSwitcherAssignment, .displayName, idle, .isActive, preview, previewAndProgram, program (+20 more)
+Cohesion: 0.10
+Nodes (24): .body, CameraSessionLandscapePreviewHeader, .body, Bool, String, CameraSwitcherAssignment, .displayName, idle (+16 more)
 
 ### Community 97 - "Sendable"
-Cohesion: 0.27
-Nodes (12): AudioEncoderConfiguration, AudioStreamPacketDescription, EncodedAudioSample, ProgramAudioTapRegistry, Storage, CMTime, Data, Double (+4 more)
+Cohesion: 0.20
+Nodes (14): AudioEncoderConfiguration, AudioEncoderStats, AudioStreamPacketDescription, EncodedAudioSample, ProgramAudioTapRegistry, Storage, Bool, CMTime (+6 more)
 
 ### Community 98 - "BroadcastWidgetStudioPanel"
-Cohesion: 0.17
-Nodes (14): BroadcastWidgetStudioPanel, .body, .fontSection, .header, .nameField, .previewModeSection, .showsFontSection, .templateBadge (+6 more)
+Cohesion: 0.21
+Nodes (12): BroadcastWidgetStudioPanel, .body, .fontSection, .header, .nameField, .showsFontSection, .templateBadge, Binding (+4 more)
 
 ### Community 99 - "FacebookWebLoginSession"
-Cohesion: 0.06
-Nodes (30): AccessToken, CheckedContinuation, Notification, NSWindowDelegate, FacebookAuthService, FacebookTokenParser, FacebookWebLoginSession, Bool (+22 more)
+Cohesion: 0.12
+Nodes (19): CheckedContinuation, Notification, NSWindowDelegate, FacebookTokenParser, FacebookWebLoginSession, Bool, Error, NSWindow (+11 more)
 
-### Community 100 - "WebRTCConfiguration"
-Cohesion: 0.26
-Nodes (5): RTCMediaConstraints, RTCPeerConnectionFactory, WebRTCConfiguration, RTCConfiguration, RTCDefaultVideoEncoderFactory
+### Community 100 - "RoundedRectangle"
+Cohesion: 0.15
+Nodes (15): Configuration, View, PreviewMonitorCellView, .body, .borderColor, .bottomBar, .leadingLabels, .overlayLayer (+7 more)
 
-### Community 101 - "ClockWidgetView"
-Cohesion: 0.60
-Nodes (4): ClockWidgetView, .body, Date, String
+### Community 101 - "DirectorProgramAirGraphicsView"
+Cohesion: 0.20
+Nodes (11): DirectorProgramAirGraphicsView, .body, Bool, URL, UUID, Void, .body, StableWidgetOverlayView (+3 more)
 
 ### Community 102 - ".displayRect"
 Cohesion: 0.20
@@ -685,77 +686,77 @@ Nodes (9): .programFrameBusSnapshot, ProgramFrameTelemetryNoOp, ProgramFrameTele
 Cohesion: 0.31
 Nodes (8): FacebookGraphClient, Data, String, URL, T, URLQueryItem, URLRequest, URLSession
 
-### Community 106 - "Event"
-Cohesion: 0.20
-Nodes (10): Event, failed, sourceAudioTrack, sourceConnected, sourceConnectionState, sourceDisconnected, sourceSettingsUpdated, sourceVideoTrack (+2 more)
+### Community 106 - "FacebookSignInRequest"
+Cohesion: 0.22
+Nodes (6): FacebookAuthService, FacebookNativeAuthBridge, FacebookSignInRequest, Bool, String, SignInHandler
 
-### Community 107 - "BroadcastStreamSpec"
-Cohesion: 0.08
-Nodes (27): BroadcastStreamSpec, .displayLabel, ProgramMonitorPreset, balanced720, .detail, economy540, full1080, .id (+19 more)
+### Community 107 - "CameraTransportProfile"
+Cohesion: 0.15
+Nodes (12): CameraTransportProfile, .frameRate, .height, .maxBitrateBps, .minBitrateBps, preview, program, standby (+4 more)
 
 ### Community 108 - "AppOrientationPolicy"
-Cohesion: 0.24
-Nodes (5): AppOrientationPolicy, UIInterfaceOrientationMask, CameraSessionLandscapeChrome, Content, View
+Cohesion: 0.28
+Nodes (4): AppOrientationPolicy, UIInterfaceOrientationMask, Content, View
 
 ### Community 109 - "PreviewContainerView"
 Cohesion: 0.20
 Nodes (8): CameraPreviewView, AVCaptureSession, Context, PreviewContainerView, AVCaptureSession, CGRect, NSCoder, UIViewRepresentable
 
-### Community 110 - "Codable"
-Cohesion: 0.21
-Nodes (12): Codable, CodingKey, Identifiable, CodingKeys, accessToken, id, name, secureStreamURL (+4 more)
+### Community 110 - "FacebookAuthError"
+Cohesion: 0.08
+Nodes (27): CodingKey, LocalizedError, CodingKeys, accessToken, id, name, secureStreamURL, FacebookAuthError (+19 more)
 
 ### Community 111 - "NSView"
-Cohesion: 0.15
-Nodes (10): NSColor, BroadcastBarlessWindowConfigurator, BroadcastWindowAppearanceConfigurator, Context, NSWindow, Bool, String, NSView (+2 more)
+Cohesion: 0.10
+Nodes (17): AVCaptureVideoPreviewLayer, NSColor, NSViewRepresentable, BroadcastBarlessWindowConfigurator, BroadcastWindowAppearanceConfigurator, Context, NSWindow, CameraPreviewView (+9 more)
 
-### Community 112 - "MessageType"
-Cohesion: 0.29
-Nodes (7): MessageType, answer, control, hello, ice, offer, settingsState
+### Community 112 - "CodingKeys"
+Cohesion: 0.17
+Nodes (12): CodingKeys, candidate, command, deviceID, displayName, role, sdp, sdpMid (+4 more)
 
 ### Community 113 - "BroadcastMetalVideoSink"
 Cohesion: 0.18
 Nodes (8): RTCVideoFrame, BroadcastMetalVideoSink, Slot, incoming, outgoing, program, CGSize, RTCVideoFrame
 
 ### Community 114 - "AppRole"
-Cohesion: 0.09
-Nodes (23): AppCoordinator, .selectedRole, RootView, .body, RoleSelectionScreen, .body, AppRole, .advertisedServiceType (+15 more)
+Cohesion: 0.12
+Nodes (17): AppCoordinator, .selectedRole, RootView, .body, RoleSelectionScreen, .body, AppRole, .advertisedServiceType (+9 more)
 
 ### Community 115 - ".application"
 Cohesion: 0.17
 Nodes (11): Any, Bool, UIApplication, UIInterfaceOrientationMask, URL, FacebookSDKBootstrap, Any, Bool (+3 more)
 
-### Community 116 - ".content"
-Cohesion: 0.11
-Nodes (18): AnyView, .body, CachedWidgetLogoView, Content, Image, URL, DirectorInspectorPanel, .body (+10 more)
+### Community 116 - "ProgramFrameNativeStatus"
+Cohesion: 0.18
+Nodes (6): EasyStreamVideoBusNative, EasyStreamFacebookLoginSetup, ProgramFrameNativeStatus, .moduleVersion, String, ProgramInfrastructureBootstrap
 
-### Community 117 - ".handleOffer"
-Cohesion: 0.22
-Nodes (8): RTCPeerConnection, Int32, RTCIceCandidate, RTCMediaConstraints, RTCMediaStreamTrack, RTCSessionDescription, String, UUID
+### Community 117 - "DirectorStreamReceiver"
+Cohesion: 0.17
+Nodes (11): DirectorStreamReceiver, SessionContext, AsyncStream, Int32, NWConnection, RTCIceCandidate, RTCMediaStreamTrack, RTCPeerConnection (+3 more)
 
 ### Community 118 - "WebRTCProgramFrameSink"
 Cohesion: 0.22
 Nodes (8): CGSize, CMTime, CVPixelBuffer, RTCVideoFrame, Sendable, Void, WebRTCProgramFrameSink, RTCVideoRenderer
 
-### Community 119 - "RoundedRectangle"
-Cohesion: 0.10
-Nodes (24): DirectorProgramStudioHintsOverlay, .body, .body, IntercomPushToTalkButton, .activeCornerRadius, .buttonShape, .iconName, .idleCornerRadius (+16 more)
+### Community 119 - "IntercomPushToTalkButton"
+Cohesion: 0.16
+Nodes (14): IntercomPushToTalkButton, .activeCornerRadius, .buttonShape, .iconName, .idleCornerRadius, .isLive, .micIcon, .ringColor (+6 more)
 
 ### Community 120 - "PeerConnectionDelegateBridge"
 Cohesion: 0.16
 Nodes (13): PeerConnectionDelegateBridge, RTCIceCandidate, RTCMediaStreamTrack, RTCPeerConnection, RTCPeerConnectionState, Void, RTCDataChannel, RTCIceConnectionState (+5 more)
 
-### Community 121 - "TakeToProgramButton"
-Cohesion: 0.16
-Nodes (12): ButtonStyle, BroadcastTakeButtonStyle, Bool, Configuration, LinearGradient, View, Bool, Gesture (+4 more)
-
-### Community 122 - "BroadcastDraggableWidgetOverlay"
+### Community 121 - "BroadcastTakeButtonStyle"
 Cohesion: 0.33
-Nodes (8): BroadcastDraggableWidgetOverlay, Binding, Bool, CGFloat, Content, WidgetOverlayContentSizing, fillFrame, uniformSquare
+Nodes (5): BroadcastTakeButtonStyle, Bool, Configuration, LinearGradient, View
+
+### Community 122 - ".signIn"
+Cohesion: 0.33
+Nodes (5): AccessToken, FacebookPlatformAuth, Bool, String, UIViewController
 
 ### Community 123 - "LogoAnimationModifier"
-Cohesion: 0.21
-Nodes (13): AnimatedLogoWidgetView, .body, .placeholderLogo, LogoAnimationCycle, LogoAnimationModifier, .anim, LogoMotionContainer, .body (+5 more)
+Cohesion: 0.19
+Nodes (14): AnimatedLogoWidgetView, .body, .placeholderLogo, LogoAnimationCycle, LogoAnimationModifier, .anim, LogoMotionContainer, .body (+6 more)
 
 ### Community 124 - "VideoRendererSinkCategory"
 Cohesion: 0.18
@@ -766,24 +767,24 @@ Cohesion: 0.52
 Nodes (5): BroadcastMetalWidgetOverlayContent, Bool, URL, UUID, Void
 
 ### Community 126 - "BroadcastResourceKind"
-Cohesion: 0.15
-Nodes (10): BroadcastMacFilePicker, URL, Void, BroadcastResourceKind, image, .systemImage, .title, video (+2 more)
+Cohesion: 0.11
+Nodes (12): BroadcastMacFilePicker, .librarySearchText, URL, UUID, Void, BroadcastResourceKind, image, .systemImage (+4 more)
 
 ### Community 127 - "NativeProgramFrameBus"
 Cohesion: 0.23
 Nodes (7): DisplayFrame, NativeProgramFrameBus, Bool, CVPixelBuffer, Float, SIMD2, UInt64
 
-### Community 128 - "BroadcastCleanProgramFeedView"
-Cohesion: 0.39
-Nodes (8): BroadcastCleanProgramFeedView, .body, Bool, Double, RTCVideoTrack, URL, UUID, Void
+### Community 128 - "WebRTCVideoContentMode"
+Cohesion: 0.13
+Nodes (16): BoundedWebRTCVideoView, .body, RTCVideoTrack, .videoContent, .videoLayer, DirectorCameraTileVideoSurface, .body, DirectorProgramVideoSurface (+8 more)
 
 ### Community 129 - "ProgramFrameRingBuffer.cpp"
 Cohesion: 0.40
 Nodes (5): FrameDescriptor, size_t, ProgramFrameRingBuffer::latest(), ProgramFrameRingBuffer::ProgramFrameRingBuffer(), ProgramFrameRingBuffer::push()
 
-### Community 130 - "LiveProgramFeedView"
-Cohesion: 0.42
-Nodes (8): LiveProgramFeedView, Bool, Double, RTCVideoTrack, String, URL, UUID, Void
+### Community 130 - "BroadcastPlaylistPanel"
+Cohesion: 0.31
+Nodes (9): BroadcastPlaylistPanel, .body, BroadcastPlaylistRow, .body, Bool, Int, String, UUID (+1 more)
 
 ### Community 131 - "StreamDestinationPanel"
 Cohesion: 0.27
@@ -797,21 +798,21 @@ Nodes (7): RTMPStreamError, commandFailed, connectionFailed, .errorDescription, 
 Cohesion: 0.42
 Nodes (6): DirectorProgramOutputStore, Bool, Double, RTCVideoTrack, String, URL
 
-### Community 134 - "DiscoveredDevice"
-Cohesion: 0.13
-Nodes (13): CameraSessionDirectorCard, .body, Bool, String, UUID, Void, NWParameters, Hasher (+5 more)
+### Community 134 - "Event"
+Cohesion: 0.20
+Nodes (10): Event, failed, sourceAudioTrack, sourceConnected, sourceConnectionState, sourceDisconnected, sourceSettingsUpdated, sourceVideoTrack (+2 more)
 
-### Community 135 - "DirectorProgramAirGraphicsView"
-Cohesion: 0.40
-Nodes (5): DirectorProgramAirGraphicsView, Bool, URL, UUID, Void
+### Community 135 - "BroadcastWidgetContentView"
+Cohesion: 0.27
+Nodes (9): .body, BroadcastWidgetContentView, Bool, URL, Void, BroadcastWidgetOverlayView, .body, Bool (+1 more)
 
 ### Community 136 - "BroadcastSpecChipModel"
 Cohesion: 0.15
 Nodes (15): Option, BroadcastQualityDropdown, Binding, String, BroadcastSpecChipModel, String, BroadcastSettingsInfoCallout, .body (+7 more)
 
 ### Community 137 - "BroadcastAspectRatioLayout"
-Cohesion: 0.15
-Nodes (11): Layout, BroadcastAspectRatioLayout, CGFloat, CGRect, CGSize, ProposedViewSize, Subviews, BroadcastFixedAspectContainer (+3 more)
+Cohesion: 0.27
+Nodes (6): BroadcastAspectRatioLayout, CGFloat, CGRect, CGSize, ProposedViewSize, Subviews
 
 ### Community 138 - "DirectorStudioSettingsTab"
 Cohesion: 0.13
@@ -821,69 +822,69 @@ Nodes (15): DirectorStudioSettingsSidebarLabel, .body, .iPadSidebar, DirectorStu
 Cohesion: 0.29
 Nodes (6): I420ToNV12Converter, CVPixelBuffer, CVPixelBufferPool, RTCI420Buffer, RTCVideoFrame, WebRTCVideoFramePixelBuffer
 
-### Community 140 - "CameraPreviewView"
-Cohesion: 0.23
-Nodes (8): AVCaptureVideoPreviewLayer, CALayer, NSViewRepresentable, CameraPreviewView, Coordinator, AVCaptureSession, Context, Coordinator
+### Community 140 - ".body"
+Cohesion: 0.22
+Nodes (9): App, EasyStreamApp, .body, DirectorStreamSettingsWindowView, .body, DirectorStudioSettingsWindowView, .body, DirectorProgramOutputWindowView (+1 more)
 
-### Community 141 - "BroadcastWidgetStudioFontControls"
-Cohesion: 0.09
-Nodes (22): BroadcastWidgetStudioClockFields, .body, BroadcastWidgetStudioCountdownFields, .body, BroadcastWidgetStudioFontControls, .body, Bool, String (+14 more)
+### Community 141 - "BroadcastWidgetStudioLogoFields"
+Cohesion: 0.18
+Nodes (10): BroadcastWidgetStudioLogoFields, .body, URL, Void, BroadcastWidgetStudioLogoImportControl, .body, URL, Void (+2 more)
 
-### Community 142 - "PreviewMonitorSettings"
-Cohesion: 0.26
-Nodes (10): PreviewMonitorAppearance, PreviewMonitorOverlayOptions, PreviewMonitorRGBColor, PreviewMonitorSettings, Bool, Double, .swiftUIColor, PreviewMonitorSettingsSheet (+2 more)
+### Community 142 - "Equatable"
+Cohesion: 0.12
+Nodes (25): Codable, Equatable, PreviewMonitorAppearance, PreviewMonitorLayoutMode, auto, .displayName, grid2x2, grid3x3 (+17 more)
 
 ### Community 143 - "ProgramCrossfadeContainerNSView"
-Cohesion: 0.13
-Nodes (10): ProgramCrossfadeContainerNSView, .incomingRenderer, .intrinsicContentSize, .outgoingRenderer, .programRenderer, Bool, NSCoder, NSRect (+2 more)
+Cohesion: 0.10
+Nodes (15): AnyObject, ProgramCrossfadeContainerNSView, .incomingRenderer, .intrinsicContentSize, .outgoingRenderer, .programRenderer, Bool, NSCoder (+7 more)
 
-### Community 145 - "EncoderCallbackBridge"
-Cohesion: 0.43
-Nodes (4): EncoderCallbackBridge, Bool, CMSampleBuffer, Void
+### Community 145 - "H264VideoEncoder"
+Cohesion: 0.22
+Nodes (7): EncoderCallbackBridge, H264VideoEncoder, AsyncStream, Bool, CMSampleBuffer, Void, VTCompressionOutputCallback
 
 ### Community 148 - "BroadcastFixedSizeLayout"
-Cohesion: 0.29
-Nodes (6): BroadcastFixedSizeLayout, CGFloat, CGRect, CGSize, ProposedViewSize, Subviews
+Cohesion: 0.25
+Nodes (7): Layout, BroadcastFixedSizeLayout, CGFloat, CGRect, CGSize, ProposedViewSize, Subviews
 
 ### Community 149 - "BroadcastMediaLibraryPanel"
-Cohesion: 0.33
-Nodes (9): BroadcastMediaLibraryPanel, .body, .filteredPlaylists, Binding, Set, String, URL, UUID (+1 more)
+Cohesion: 0.16
+Nodes (17): BroadcastMediaLibraryPanel, .body, .filteredPlaylists, Binding, Set, String, URL, UUID (+9 more)
 
 ### Community 150 - "VideoEncoderConfiguration"
-Cohesion: 0.20
-Nodes (9): CameraTransportDefaults, Int, Int32, VideoEncoderConfiguration, VideoEncoderStats, .estimatedBitrateKbps, .bitrateMbpsLabel, .displayLabel (+1 more)
+Cohesion: 0.24
+Nodes (8): .encoderConfiguration, CameraTransportDefaults, Int, Int32, VideoEncoderConfiguration, .bitrateMbpsLabel, .displayLabel, .resolutionLabel
 
-### Community 151 - "BroadcastLogoAnimation"
+### Community 151 - "CaseIterable"
+Cohesion: 0.09
+Nodes (21): CaseIterable, BroadcastCountdownAnimation, bounce, .displayName, fadeScale, flipClock, slideUp, BroadcastLogoAnimation (+13 more)
+
+### Community 152 - "Bool"
 Cohesion: 0.12
-Nodes (15): BroadcastCountdownAnimation, bounce, .displayName, fadeScale, flipClock, slideUp, BroadcastLogoAnimation, .displayName (+7 more)
-
-### Community 152 - "BroadcastMetalDisplayLinkDriver"
-Cohesion: 0.27
-Nodes (5): BroadcastMetalDisplayLinkDriver, CADisplayLink, CVDisplayLink, Int, Void
+Nodes (7): Bool, BroadcastMetalDisplayLinkDriver, CADisplayLink, CVDisplayLink, Int, Void, Bool
 
 ### Community 153 - "AACAudioEncoder"
-Cohesion: 0.23
+Cohesion: 0.26
 Nodes (7): AACAudioEncoder, AsyncStream, AVAudioConverter, Data, Double, Int64, UInt32
 
-### Community 154 - "BroadcastMetalProgramFeedContainerNSView"
-Cohesion: 0.07
-Nodes (11): Int, BroadcastMetalProgramFeedContainerNSView, .incomingRenderer, .outgoingRenderer, .programRenderer, BroadcastMetalProgramFeedContainerUIView, .incomingRenderer, .outgoingRenderer (+3 more)
+### Community 154 - "BroadcastMetalProgramFeedContainerUIView"
+Cohesion: 0.08
+Nodes (6): Int, BroadcastMetalProgramFeedContainerUIView, .incomingRenderer, .outgoingRenderer, .programRenderer, RTCVideoRenderer
 
-### Community 155 - "StableWidgetOverlayView"
-Cohesion: 0.60
-Nodes (4): StableWidgetOverlayView, .body, UUID, Void
+### Community 155 - "DiscoveryEvent"
+Cohesion: 0.24
+Nodes (8): DiscoveryEvent, advertisingFailed, browsingFailed, deviceAppeared, deviceRemoved, deviceUpdated, localNetworkPermissionRequired, AsyncStream
 
-### Community 156 - "DirectorStreamReceiver"
-Cohesion: 0.28
-Nodes (4): DirectorStreamReceiver, AsyncStream, NWConnection, RTCPeerConnectionState
+### Community 156 - "ProgramMonitorPreset"
+Cohesion: 0.22
+Nodes (9): ProgramMonitorPreset, balanced720, .detail, economy540, full1080, .id, light360, .streamSpec (+1 more)
 
 ### Community 157 - "CameraSourceTile"
 Cohesion: 0.26
 Nodes (11): CameraSourceTile, .accessibilityHint, .accessibilityLabel, .body, .borderColor, .placeholderMessage, .placeholderSymbolName, Bool (+3 more)
 
-### Community 158 - "WebRTCVideoContentMode"
-Cohesion: 0.13
-Nodes (16): BoundedWebRTCVideoView, .body, RTCVideoTrack, .videoContent, .videoLayer, DirectorCameraTileVideoSurface, .body, DirectorProgramVideoSurface (+8 more)
+### Community 158 - "ProgramOutputDisplayDiscovery"
+Cohesion: 0.33
+Nodes (4): NSScreen, ProgramOutputDisplayDiscovery, .hasExternalDisplay, Int
 
 ### Community 159 - "ProgramFrameBusSlot"
 Cohesion: 0.13
@@ -893,20 +894,20 @@ Nodes (17): ESVBBusLane, ProgramFrameBusSlot, programIncoming, programOnAir, pro
 Cohesion: 0.22
 Nodes (9): AppDelegate, NSObject, ProgramCrossfadeLetterboxSizeDelegate, CGSize, MainActor, RTCVideoRenderer, Void, RTCVideoViewDelegate (+1 more)
 
-### Community 161 - ".color"
-Cohesion: 0.26
-Nodes (8): .currentColor, BroadcastWidgetColors, Binding, Double, LinearGradient, String, .body, UnitPoint
+### Community 161 - "TransitionCurve"
+Cohesion: 0.25
+Nodes (6): Double, LinearProgress, TransitionCurve, easeInOutCubic, linear, smoothStep
 
 ### Community 162 - "EasyStream — Agent context"
 Cohesion: 0.40
 Nodes (4): Conventions, Cursor rules, EasyStream — Agent context, Skills (project-local)
 
 ### Community 163 - "LowerThirdProWidgetView"
-Cohesion: 0.13
-Nodes (16): .body, LowerThirdProWidgetView, .body, SequencePhase, offscreen, onscreen, Bool, URL (+8 more)
+Cohesion: 0.40
+Nodes (5): LowerThirdProWidgetView, .body, Bool, URL, Void
 
 ### Community 164 - ".applyExternalDisplayPreference"
-Cohesion: 0.53
+Cohesion: 0.43
 Nodes (3): PreviewMonitorWindowPlacement, Bool, NSWindow
 
 ### Community 165 - "DirectorProgramVideoBusView"
@@ -918,16 +919,16 @@ Cohesion: 0.60
 Nodes (5): EncodedVideoSample, Bool, CMFormatDescription, CMTime, Data
 
 ### Community 167 - "LiveVideoStreamSizeStore"
-Cohesion: 0.57
-Nodes (3): LiveVideoStreamSizeStore, CGSize, String
+Cohesion: 0.23
+Nodes (8): LiveVideoStreamSizeStore, CGSize, String, BroadcastPlatformTagRow, .body, .body, BroadcastSpecChipRow, .body
 
-### Community 168 - ".applySlot"
-Cohesion: 0.30
-Nodes (4): ProgramTransitionSlotPresenter, ProgramTransitionSlotView, CGFloat, Double
+### Community 168 - ".preferH264Video"
+Cohesion: 0.31
+Nodes (6): EasyStreamWebRTCH264Preferences, Bool, RTCPeerConnection, RTCPeerConnectionFactory, RTCVideoCodecInfo, RTCRtpCodecCapability
 
-### Community 169 - "BroadcastWidgetPlacement"
-Cohesion: 0.11
-Nodes (29): AVPlayer, .body, DirectorProgramPreviewOverlayView, .body, BroadcastWidgetPlacement, BroadcastAsyncImageResourceView, .body, BroadcastResourceDisplayView (+21 more)
+### Community 169 - "BroadcastWidgetCanvas"
+Cohesion: 0.14
+Nodes (19): AVPlayer, BroadcastAsyncImageResourceView, .body, BroadcastResourceDisplayView, .body, BroadcastVideoResourceView, .body, Binding (+11 more)
 
 ### Community 170 - "BroadcastTransmissionMenu"
 Cohesion: 0.24
@@ -937,16 +938,16 @@ Nodes (10): BroadcastTransmissionMenu, .body, .externalDisplaySection, .facebook
 Cohesion: 0.11
 Nodes (17): ClippingRTCVideoContainer, .contentMode, .fittingSize, .intrinsicContentSize, CGSize, NSCoder, NSRect, NSSize (+9 more)
 
-### Community 172 - "DirectorPreviewTileCell"
-Cohesion: 0.40
-Nodes (5): DirectorPreviewTileCell, DirectorPreviewTileScroller, .body, Void, ScrollViewProxy
+### Community 172 - "WebRTCConfiguration"
+Cohesion: 0.36
+Nodes (4): RTCPeerConnectionFactory, WebRTCConfiguration, RTCConfiguration, RTCDefaultVideoEncoderFactory
 
 ### Community 173 - "BroadcastGlassPanelModifier"
 Cohesion: 0.31
 Nodes (5): BroadcastGlassPanelModifier, CGFloat, Content, View, View
 
 ### Community 174 - ".cappedDrawableSize"
-Cohesion: 0.27
+Cohesion: 0.24
 Nodes (4): BroadcastMetalDrawableLimits, Bool, CGFloat, CGSize
 
 ### Community 175 - ".broadcastMediaPhotoImporter"
@@ -957,12 +958,12 @@ Nodes (6): Binding, Bool, Data, String, Void, View
 Cohesion: 0.31
 Nodes (5): BroadcastPanelModifier, Bool, Content, View, View
 
-### Community 177 - "BroadcastConnectionStatusLine"
-Cohesion: 0.35
-Nodes (7): BroadcastConnectionLoadingIndicator, BroadcastConnectionStatusLine, .body, .showsBar, Bool, Font, String
+### Community 177 - "StreamConnectionState"
+Cohesion: 0.15
+Nodes (17): StreamConnectionState, connected, connecting, disconnected, failed, idle, signaling, BroadcastConnectionLoadingIndicator (+9 more)
 
 ### Community 178 - "TeamIntercomService"
-Cohesion: 0.17
+Cohesion: 0.16
 Nodes (11): AVAudioEngine, AVAudioPCMBuffer, AVAudioPlayerNode, AVAudioFormat, .isValidIntercomFormat, AVAudioConverter, Bool, Data (+3 more)
 
 ### Community 179 - "LayoutNeutralRTCMTLNSVideoView"
@@ -975,59 +976,51 @@ Nodes (9): IntercomActivationRing, .body, IntercomPushToTalkPulseRing, .body, In
 
 ### Community 181 - "BroadcastWidgetConfiguration"
 Cohesion: 0.09
-Nodes (23): BroadcastGradientStyle, BroadcastWidgetConfiguration, .resolvedSubtitleColorHex, .resolvedTemplate, .resolvedTickerBackgroundHex, .resolvedTickerTextColorHex, .resolvedTitleColorHex, .resolvedUseLowerThirdGradient (+15 more)
+Nodes (26): BroadcastWidgetConfiguration, .resolvedSubtitleColorHex, .resolvedTemplate, .resolvedTickerBackgroundHex, .resolvedTickerTextColorHex, .resolvedTitleColorHex, .resolvedUseLowerThirdGradient, .resolvedUseTickerGradient (+18 more)
 
-### Community 182 - "FacebookLivePanel"
+### Community 182 - "BroadcastCleanProgramFeedView"
 Cohesion: 0.39
-Nodes (7): FacebookLivePanel, .body, .pageSelection, Binding, Bool, String, Void
+Nodes (8): BroadcastCleanProgramFeedView, .body, Bool, Double, RTCVideoTrack, URL, UUID, Void
 
 ### Community 183 - "BroadcastWidgetLogoPhotoImporter"
 Cohesion: 0.25
 Nodes (7): BroadcastWidgetLogoPhotoImporter, Bool, Content, Data, PhotosPickerItem, View, Void
 
-### Community 185 - "DeferredBroadcastLibraryPanel"
-Cohesion: 0.33
-Nodes (8): DeferredBroadcastLibraryPanel, .body, .loadToken, Binding, Set, String, UUID, Void
+### Community 185 - "LiveProgramFeedView"
+Cohesion: 0.42
+Nodes (8): LiveProgramFeedView, Bool, Double, RTCVideoTrack, String, URL, UUID, Void
 
 ### Community 186 - "BroadcastMetalProgramFeedView"
-Cohesion: 0.39
-Nodes (8): BroadcastMetalProgramFeedView, .body, Bool, Double, RTCVideoTrack, URL, UUID, Void
+Cohesion: 0.46
+Nodes (7): BroadcastMetalProgramFeedView, Bool, Double, RTCVideoTrack, URL, UUID, Void
 
-### Community 187 - "ProgramOutputDisplayDiscovery"
-Cohesion: 0.29
-Nodes (4): NSScreen, ProgramOutputDisplayDiscovery, .hasExternalDisplay, Int
+### Community 187 - ".swapAttach"
+Cohesion: 0.56
+Nodes (3): ProgramCrossfadeRenderer, RTCVideoRenderer, RTCVideoTrack
 
 ### Community 188 - "DirectorStudioSettingsHubIOSLayout"
 Cohesion: 0.13
 Nodes (14): DirectorStudioSettingsDeferredDetail, .body, Content, DirectorStudioSettingsHubPlatformLayout, Binding, UserInterfaceSizeClass, View, View (+6 more)
 
-### Community 189 - "ProgramAudioSourcePanel"
-Cohesion: 0.48
-Nodes (5): ProgramAudioSourcePanel, SourceOption, Bool, String, Void
+### Community 189 - ".body"
+Cohesion: 0.23
+Nodes (10): DirectorSettingsStudioTab, .body, DirectorInspectorSection, Content, String, ProgramAudioSourcePanel, SourceOption, Bool (+2 more)
 
-### Community 190 - ".body"
-Cohesion: 0.25
-Nodes (6): CameraSessionIntercomCard, .body, DirectorSettingsEmissionSection, DirectorSettingsStudioTab, .body, UUID
+### Community 190 - "CameraSessionIntercomCard"
+Cohesion: 0.40
+Nodes (3): CameraSessionIntercomCard, .body, UUID
 
-### Community 191 - "PreviewMonitorLayoutMode"
-Cohesion: 0.20
-Nodes (10): PreviewMonitorLayoutMode, auto, .displayName, grid2x2, grid3x3, grid4x4, grid5x5, .id (+2 more)
+### Community 191 - "EasyStreamVideoDecoderFactory"
+Cohesion: 0.32
+Nodes (5): EasyStreamVideoDecoderFactory, Bool, RTCVideoCodecInfo, RTCVideoDecoder, RTCVideoDecoderFactory
 
 ### Community 192 - "CameraPermissionStatus"
 Cohesion: 0.33
 Nodes (5): CameraPermissionStatus, authorized, denied, notDetermined, restricted
 
-### Community 193 - "BroadcastInspectorEmptyState"
-Cohesion: 0.40
-Nodes (4): BroadcastInspectorEmptyState, .body, String, .body
-
-### Community 194 - "ProgramOutputSyncBridge"
-Cohesion: 0.50
-Nodes (4): ProgramOutputSyncBridge, .body, .stableVideoToken, String
-
-### Community 195 - ".performTakeToProgram"
-Cohesion: 0.17
-Nodes (4): DirectorLiveOutputGuard, Bool, .activeStreamingSourceCount, Int
+### Community 195 - "DirectorSessionViewModel"
+Cohesion: 0.08
+Nodes (30): DirectorCamerasSidebarContent, .body, DirectorPreviewTileCell, Void, DirectorSettingsRemoteControlsSection, .body, ConnectedCameraSource, DirectorSessionViewModel (+22 more)
 
 ### Community 196 - "BroadcastResourceRow"
 Cohesion: 0.22
@@ -1037,17 +1030,17 @@ Nodes (11): BroadcastCompactLiveBadge, .body, BroadcastAsyncThumbnailImage, Broa
 Cohesion: 0.25
 Nodes (8): CodingKeys, energySaverMode, outputPreset, pauseIdleCameraStreams, prefetchTakeTarget, previewPreset, progPreset, tier
 
-### Community 199 - ".reload"
-Cohesion: 0.28
-Nodes (3): Data, Int, String
+### Community 199 - "TakeToProgramButton"
+Cohesion: 0.38
+Nodes (6): Bool, Gesture, Void, TakeToProgramButton, .body, .pressGesture
 
-### Community 201 - "ProgramMetalVideoView"
-Cohesion: 0.43
-Nodes (6): ProgramMetalVideoView, .body, .metalPlatformView, Bool, Double, RTCVideoTrack
+### Community 201 - "RTCPeerConnection"
+Cohesion: 0.47
+Nodes (3): RTCPeerConnection, RTCMediaConstraints, RTCSessionDescription
 
-### Community 202 - "CameraCaptureLoadTier"
-Cohesion: 0.28
-Nodes (7): AVCaptureSession.Preset, .lowestStablePreset, CameraCaptureLoadTier, idle, preview, program, AVCaptureSession
+### Community 202 - "BroadcastStreamSpec"
+Cohesion: 0.14
+Nodes (16): AVCaptureSession.Preset, .lowestStablePreset, AVCaptureSession, BroadcastStreamSpec, .displayLabel, PreviewTilePreset, economy, .id (+8 more)
 
 ### Community 203 - "State"
 Cohesion: 0.40
@@ -1061,29 +1054,33 @@ Nodes (14): NSImage, BroadcastMediaThumbnailLoader, CGFloat, Image, URL, Thumbna
 Cohesion: 0.27
 Nodes (7): DirectorPreviewMonitorWindowView, .body, .monitorKeyboardShortcuts, PreviewMonitorHeaderBar, .body, Int, String
 
+### Community 206 - "Event"
+Cohesion: 0.33
+Nodes (6): Event, failed, sample, started, stopped, String
+
 ### Community 207 - "BroadcastFixedTileSlot"
-Cohesion: 0.32
-Nodes (6): .body, BroadcastFixedTileSlot, .body, CGFloat, CGSize, Content
+Cohesion: 0.38
+Nodes (5): BroadcastFixedTileSlot, .body, CGFloat, CGSize, Content
 
-### Community 208 - ".editingChrome"
-Cohesion: 0.21
-Nodes (9): CGRect, CGSize, Gesture, WidgetResizeCorner, bottomLeading, bottomTrailing, .opposite, topLeading (+1 more)
+### Community 208 - "BroadcastDraggableWidgetOverlay"
+Cohesion: 0.16
+Nodes (14): BroadcastDraggableWidgetOverlay, .body, Binding, Bool, CGFloat, CGRect, CGSize, Content (+6 more)
 
-### Community 209 - ".preferH264Video"
-Cohesion: 0.31
-Nodes (6): EasyStreamWebRTCH264Preferences, Bool, RTCPeerConnection, RTCPeerConnectionFactory, RTCVideoCodecInfo, RTCRtpCodecCapability
+### Community 209 - "BroadcastSectionHeader"
+Cohesion: 0.40
+Nodes (4): BroadcastSectionHeader, .body, String, .body
 
 ### Community 210 - "PreviewMultiviewGridSpec"
 Cohesion: 0.54
 Nodes (4): .totalPages, PreviewMultiviewGridSpec, PreviewMultiviewLayoutEngine, Int
 
-### Community 211 - "EasyStreamVideoDecoderFactory"
-Cohesion: 0.32
-Nodes (5): EasyStreamVideoDecoderFactory, Bool, RTCVideoCodecInfo, RTCVideoDecoder, RTCVideoDecoderFactory
+### Community 211 - "PreviewMonitorInspectorSummary"
+Cohesion: 0.60
+Nodes (4): PreviewMonitorInspectorSummary, .body, String, Void
 
-### Community 212 - "DirectorRemoteControlsView"
-Cohesion: 0.43
-Nodes (7): DirectorRemoteControlsView, .reconnectButtonTitle, Bool, Double, Float, String, Void
+### Community 212 - "ClockWidgetView"
+Cohesion: 0.60
+Nodes (4): ClockWidgetView, .body, Date, String
 
 ### Community 214 - "ProgramFrameNativeCapabilities"
 Cohesion: 0.33
@@ -1097,45 +1094,49 @@ Nodes (5): BroadcastFormField, .body, Binding, String, .body
 Cohesion: 0.42
 Nodes (6): DirectorStatusBar, .body, .cameraCountLabel, Bool, Int, String
 
-### Community 217 - "NWError"
-Cohesion: 0.67
-Nodes (3): NWError, .isEasyStreamLocalNetworkPermissionIssue, Bool
-
-### Community 218 - ".body"
-Cohesion: 0.33
-Nodes (6): .body, DirectorStreamSettingsWindowView, .body, DirectorStudioSettingsWindowView, .body, DirectorProgramOutputWindowView
-
-### Community 219 - ".track"
+### Community 217 - "Phase"
 Cohesion: 0.40
-Nodes (4): .outgoingProgramVideoTrack, .previewVideoTrack, .programBusIncomingTrack, .programVideoTrack
+Nodes (5): Phase, empty, offAirWarm, onAir, transitioning
 
-### Community 220 - "ConnectionStatusBadge"
-Cohesion: 0.60
-Nodes (4): ConnectionStatusBadge, .body, Bool, String
+### Community 218 - "WidgetResizeCorner"
+Cohesion: 0.33
+Nodes (6): WidgetResizeCorner, bottomLeading, bottomTrailing, .opposite, topLeading, topTrailing
+
+### Community 219 - "ProgramOutputSyncBridge"
+Cohesion: 0.50
+Nodes (4): ProgramOutputSyncBridge, .body, .stableVideoToken, String
 
 ### Community 221 - "GraphAPIErrorResponse"
 Cohesion: 1.00
 Nodes (3): Decodable, GraphAPIErrorResponse, GraphError
 
+### Community 222 - "BroadcastFixedAspectContainer"
+Cohesion: 0.60
+Nodes (3): BroadcastFixedAspectContainer, CGFloat, Content
+
+### Community 223 - "DirectorSourcesPanel"
+Cohesion: 0.60
+Nodes (4): DirectorSourcesPanel, .body, Content, String
+
 ## Knowledge Gaps
 - **593 isolated node(s):** `roleSelection`, `session`, `phone`, `tablet`, `mac` (+588 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `EasyStreamCore` connect `EasyStreamCore` to `CameraSourceID`, `LowerThirdProWidgetView`, `UIKit`, `BroadcastResourceRow`, `Equatable`, `Testing`, `BroadcastConnectionStatusLine`, `Foundation`, `WebRTC`, `LogoAnimationModifier`, `FacebookPlatformAuth.swift`?**
-  _High betweenness centrality (0.098) - this node is a cross-community bridge._
-- **Why does `DirectorSessionViewModel` connect `DirectorSessionViewModel` to `DirectorStudioSettingsHubView`, `BroadcastStreamPublisher`, `DiscoveredDevice`, `FacebookSession`, `DirectorSessionView`, `VideoEncoderConfiguration`, `DirectorStreamReceiver`, `ProgramVideoEncoderPipeline`, `DirectorMonitorQualitySettings`, `CameraSourceID`, `ProgramAudioEncoderPipeline`, `DirectorProgramVideoBusView`, `DirectorSidebarTab`, `DirectorPreviewTileCell`, `LiveProgramAirStore`, `TransitionPreferencesStore`, `.body`, `ProgramOutputSyncBridge`, `.performTakeToProgram`, `ConnectedCameraSource`, `DirectorWorkspaceSession`, `Foundation`, `DiscoveryService`, `.track`, `StreamDestination`, `CameraSwitcherAssignment`, `ProgramFrameTrackTelemetry`, `Codable`, `VideoRendererSinkCategory`?**
+- **Why does `EasyStreamCore` connect `EasyStreamCore` to `CameraSourceID`, `UIKit`, `ProgramTransitionFrame`, `FacebookPlatformAuth.swift`, `StreamConnectionState`, `.frame`, `ProgramFrameNativeStatus`, `Foundation`, `WebRTC`, `AVFoundation`, `RoleSelectionView`?**
+  _High betweenness centrality (0.086) - this node is a cross-community bridge._
+- **Why does `Foundation` connect `Foundation` to `WebRTCVideoContentMode`, `UIKit`, `DirectorStudioSettingsTab`, `FacebookSession`, `ProgramOutputDisplayOption`, `Equatable`, `ProgramCrossfadeContainerNSView`, `Data`, `CaseIterable`, `DirectorMonitorQualitySettings`, `CameraSourceID`, `TransitionCurve`, `CameraLensKind`, `SignalingMessage`, `DirectorSidebarTab`, `ProgramPreviewVisibilityPolicy`, `FacebookConfiguration`, `LiveProgramAirStore`, `TransitionPreferencesStore`, `BroadcastResourceRepository`, `DirectorPreviewMonitorStore`, `AVFoundation`, `ProgramFrameDisplayBus`, `StreamOutputPreset`, `.event`, `ProgramTransitionFrame`, `.matches`, `TeamIntercomPeer`, `BonjourServiceType`, `FacebookPlatformAuth.swift`, `BroadcastPlaylist`, `WebRTC`, `ProgramFrameNativeCapabilities`, `StreamDestination`, `CameraSwitcherAssignment`, `Sendable`, `ProgramFrameTrackTelemetry`, `FacebookSignInRequest`, `CameraTransportProfile`, `FacebookAuthError`, `AppRole`, `VideoRendererSinkCategory`, `BroadcastResourceKind`?**
+  _High betweenness centrality (0.081) - this node is a cross-community bridge._
+- **Why does `DirectorSessionViewModel` connect `DirectorSessionViewModel` to `DirectorStudioSettingsHubView`, `BroadcastStreamPublisher`, `FacebookSession`, `DirectorSessionView`, `Task`, `DiscoveredDevice`, `ProgramVideoEncoderPipeline`, `BroadcastMediaViewModel`, `DirectorMonitorQualitySettings`, `CameraSourceID`, `ProgramAudioEncoderPipeline`, `DirectorProgramVideoBusView`, `LiveProgramAirStore`, `TransitionPreferencesStore`, `.body`, `DirectorLiveOutputGuard`, `DirectorWorkspaceSession`, `Foundation`, `DiscoveryService`, `ProgramOutputSyncBridge`, `StreamDestination`, `CameraSwitcherAssignment`, `Sendable`, `ProgramFrameTrackTelemetry`, `DirectorStreamReceiver`, `VideoRendererSinkCategory`?**
   _High betweenness centrality (0.080) - this node is a cross-community bridge._
-- **Why does `Foundation` connect `Foundation` to `UIKit`, `ProgramCrossfadeHost`, `DirectorStudioSettingsTab`, `FacebookSession`, `ProgramOutputDisplayOption`, `PreviewMonitorSettings`, `Data`, `VideoEncoderConfiguration`, `BroadcastLogoAnimation`, `WebRTCVideoContentMode`, `DirectorMonitorQualitySettings`, `CameraSourceID`, `CameraLensKind`, `DirectorSidebarTab`, `ProgramPreviewVisibilityPolicy`, `.applySlot`, `FacebookConfiguration`, `LiveProgramAirStore`, `TransitionPreferencesStore`, `BroadcastResourceRepository`, `DirectorPreviewMonitorStore`, `FacebookPlatformAuth.swift`, `CaseIterable`, `Equatable`, `.matches`, `TeamIntercomPeer`, `BonjourServiceType`, `Testing`, `BroadcastPlaylist`, `WebRTC`, `ProgramFrameNativeCapabilities`, `StreamDestination`, `StreamConnectionState`, `CameraSwitcherAssignment`, `Sendable`, `FacebookWebLoginSession`, `ProgramFrameTrackTelemetry`, `BroadcastStreamSpec`, `Codable`, `AppRole`, `VideoRendererSinkCategory`, `BroadcastResourceKind`?**
-  _High betweenness centrality (0.078) - this node is a cross-community bridge._
 - **Are the 13 inferred relationships involving `DirectorSessionViewModel` (e.g. with `.programDisplayName` and `DirectorSessionView`) actually correct?**
   _`DirectorSessionViewModel` has 13 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `roleSelection`, `session`, `phone` to the rest of the system?**
   _593 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `EasyStreamCore` be split into smaller, more focused modules?**
-  _Cohesion score 0.04693069306930693 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04877425944841675 - nodes in this community are weakly interconnected._
 - **Should `BroadcastStreamPublisher` be split into smaller, more focused modules?**
   _Cohesion score 0.12333333333333334 - nodes in this community are weakly interconnected._
