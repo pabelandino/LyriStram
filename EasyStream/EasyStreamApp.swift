@@ -47,23 +47,11 @@ struct EasyStreamApp: App {
         }
         .defaultSize(width: 1280, height: 720)
 
-        Window("Calidad de video", id: "director-video-quality") {
-            DirectorVideoQualityWindowView()
+        Window("Ajustes del estudio", id: "director-studio-settings") {
+            DirectorStudioSettingsWindowView()
                 .broadcastStudioWindowStyle()
         }
-        .defaultSize(width: 480, height: 660)
-
-        Window("Ajustes", id: "director-settings") {
-            DirectorSettingsWindowView()
-                .broadcastStudioWindowStyle()
-        }
-        .defaultSize(width: 520, height: 720)
-
-        Window("Monitor multiview", id: "director-preview-monitor-settings") {
-            DirectorPreviewMonitorSettingsWindowView()
-                .broadcastStudioWindowStyle()
-        }
-        .defaultSize(width: 440, height: 520)
+        .defaultSize(width: 760, height: 680)
 
         Window("Destino RTMPS", id: "director-stream-settings") {
             DirectorStreamSettingsWindowView()

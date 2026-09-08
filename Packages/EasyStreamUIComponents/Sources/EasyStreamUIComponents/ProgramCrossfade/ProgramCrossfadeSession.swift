@@ -1,5 +1,6 @@
 import EasyStreamCore
 import WebRTC
+import EasyStreamVideoPipeline
 
 /// Single source of truth for the three-lane Metal program bus (program / outgoing / incoming).
 ///
@@ -22,10 +23,10 @@ final class ProgramBusController {
     }
 
     private struct Snapshot: Equatable {
-        let programTrackId: String?
-        let warmTrackId: String?
-        let outgoingTrackId: String?
-        let incomingTrackId: String?
+        let programTrackKey: String?
+        let warmTrackKey: String?
+        let outgoingTrackKey: String?
+        let incomingTrackKey: String?
         let isTransitioning: Bool
         let progressBucket: Int
         let kind: SwitchTransitionKind
@@ -51,10 +52,10 @@ final class ProgramBusController {
             : warmedPreviewTrack(program: programTrack, preview: incomingTrack)
 
         let snapshot = Snapshot(
-            programTrackId: trackId(programTrack),
-            warmTrackId: trackId(warmTrack),
-            outgoingTrackId: trackId(outgoingTrack),
-            incomingTrackId: trackId(incomingTrack),
+            programTrackKey: trackInstanceKey(programTrack),
+            warmTrackKey: trackInstanceKey(warmTrack),
+            outgoingTrackKey: trackInstanceKey(outgoingTrack),
+            incomingTrackKey: trackInstanceKey(incomingTrack),
             isTransitioning: isTransitioning,
             progressBucket: isTransitioning ? Self.progressBucket(progress) : 240,
             kind: kind
@@ -71,14 +72,14 @@ final class ProgramBusController {
             )
             if rebinding {
                 ProgramBusTrace.event(
-                    "controller refresh-only rebinding prog=\(ProgramBusTrace.shortTrackId(snapshot.programTrackId)) in=\(ProgramBusTrace.shortTrackId(snapshot.incomingTrackId))"
+                    "controller refresh-only rebinding prog=\(snapshot.programTrackKey ?? "nil") in=\(snapshot.incomingTrackKey ?? "nil")"
                 )
             }
             return
         }
 
         ProgramBusTrace.event(
-            "controller apply phase=\(phaseLabel) prog=\(ProgramBusTrace.shortTrackId(snapshot.programTrackId)) warm=\(ProgramBusTrace.shortTrackId(snapshot.warmTrackId)) in=\(ProgramBusTrace.shortTrackId(snapshot.incomingTrackId)) transitioning=\(isTransitioning)"
+            "controller apply phase=\(phaseLabel) prog=\(snapshot.programTrackKey ?? "nil") warm=\(snapshot.warmTrackKey ?? "nil") in=\(snapshot.incomingTrackKey ?? "nil") transitioning=\(isTransitioning)"
         )
 
         if isTransitioning, let outgoingTrack, let incomingTrack {
@@ -238,10 +239,14 @@ final class ProgramBusController {
         }
 
         ProgramBusTrace.event(
-            "controller performInstantCut trackId=\(ProgramBusTrace.shortTrackId(program.trackId))"
+            "controller performInstantCut trackId=\(ProgramBusTrace.shortTrackId(program.trackId)) promoteIncoming=\(ProgramFrameDisplayBus.shared.incomingMeetsProgramDisplayThreshold())"
         )
 
-        host.promoteIncomingFrameToProgram()
+        if ProgramFrameDisplayBus.shared.incomingMeetsProgramDisplayThreshold() {
+            host.promoteIncomingFrameToProgram()
+        } else {
+            host.clearProgramVideoFrame()
+        }
 
         attachedIncoming?.remove(host.incomingRenderer)
         if !tracksMatch(attachedProgram, program) {
@@ -320,11 +325,7 @@ final class ProgramBusController {
         Int((min(max(progress, 0), 1) * 240).rounded())
     }
 
-    private func trackId(_ track: RTCVideoTrack?) -> String? {
-        track?.trackId
-    }
-
-    /// Re-subscribes renderers when WebRTC replaces a track object with the same `trackId`.
+    /// Re-subscribes renderers when WebRTC replaces a track object on the same peer connection.
     @discardableResult
     private func refreshTrackReferences(
         on host: ProgramCrossfadeHost,
@@ -334,7 +335,7 @@ final class ProgramBusController {
         incomingTrack: RTCVideoTrack?
     ) -> Bool {
         var rebinding = false
-        if let programTrack, tracksMatch(attachedProgram, programTrack), attachedProgram !== programTrack {
+        if let programTrack, attachedProgram !== programTrack {
             rebinding = true
             ProgramCrossfadeRenderer.swapAttach(
                 programTrack,
@@ -342,7 +343,7 @@ final class ProgramBusController {
                 storage: &attachedProgram
             )
         }
-        if let outgoingTrack, tracksMatch(attachedOutgoing, outgoingTrack), attachedOutgoing !== outgoingTrack {
+        if let outgoingTrack, attachedOutgoing !== outgoingTrack {
             rebinding = true
             ProgramCrossfadeRenderer.swapAttach(
                 outgoingTrack,
@@ -351,7 +352,7 @@ final class ProgramBusController {
             )
         }
         let incomingHint = warmTrack ?? incomingTrack
-        if let incomingHint, tracksMatch(attachedIncoming, incomingHint), attachedIncoming !== incomingHint {
+        if let incomingHint, attachedIncoming !== incomingHint {
             rebinding = true
             ProgramCrossfadeRenderer.swapAttach(
                 incomingHint,
@@ -372,9 +373,13 @@ final class ProgramBusController {
     }
 
     private func tracksMatch(_ lhs: RTCVideoTrack?, _ rhs: RTCVideoTrack?) -> Bool {
-        guard let lhs, let rhs else { return lhs == nil && rhs == nil }
-        if lhs === rhs { return true }
-        return lhs.trackId == rhs.trackId
+        lhs === rhs
+    }
+
+    /// WebRTC reuses `trackId` across peer connections (`easystream-video`) — key by object identity.
+    private func trackInstanceKey(_ track: RTCVideoTrack?) -> String? {
+        guard let track else { return nil }
+        return String(ObjectIdentifier(track).hashValue)
     }
 }
 

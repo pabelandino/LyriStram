@@ -10,6 +10,8 @@ struct CameraSessionLandscapePreviewColumn: View {
     let layout: CameraSessionLayoutKind
     let displayName: String
     let statusMessage: String
+    let streamState: StreamConnectionState
+    let isReconnecting: Bool
     let assignment: CameraSwitcherAssignment
     let isMuted: Bool
     let previewSession: AVCaptureSession?
@@ -20,6 +22,8 @@ struct CameraSessionLandscapePreviewColumn: View {
             CameraSessionLandscapePreviewHeader(
                 displayName: displayName,
                 statusMessage: statusMessage,
+                streamState: streamState,
+                isReconnecting: isReconnecting,
                 assignment: assignment,
                 layout: layout,
                 showsControls: $showsControls

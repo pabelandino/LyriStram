@@ -14,8 +14,13 @@ final class DirectorWorkspaceSession {
     private(set) var previewMonitor: DirectorPreviewMonitorStore?
     var onOpenPreviewMonitor: (() -> Void)?
     var onConfigurePreviewMonitor: (() -> Void)?
+    var pendingStudioSettingsTab: DirectorStudioSettingsTab = .studio
 
     private init() {}
+
+    func requestStudioSettings(tab: DirectorStudioSettingsTab = .studio) {
+        pendingStudioSettingsTab = tab
+    }
 
     func bind(
         viewModel: DirectorSessionViewModel,

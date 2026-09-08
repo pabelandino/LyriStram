@@ -264,7 +264,13 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     func promoteIncomingFrameToProgram() {
         ProgramBusTrace.event("compositor promoteIncomingFrameToProgram")
         ProgramFrameDisplayBus.shared.promoteIncomingToOnAir()
-        lockProgramContentSizeFromProgramFrame(forFrames: 240)
+        if let sample = ProgramFrameDisplayBus.shared.displaySample(for: .programOnAir),
+           ProgramFrameQualityGate.acceptsOnAirFrame(
+               width: Int(sample.contentSize.x),
+               height: Int(sample.contentSize.y)
+           ) {
+            lockProgramContentSizeFromProgramFrame(forFrames: 240)
+        }
         setCompositorSuspended(false)
         requestDraw()
     }

@@ -17,4 +17,8 @@ enum BroadcastMetalDrawableLimits {
         height *= downscale
         return CGSize(width: width.rounded(), height: height.rounded())
     }
+
+    static func isSameDrawableSize(_ lhs: CGSize, _ rhs: CGSize) -> Bool {
+        abs(lhs.width - rhs.width) < 0.5 && abs(lhs.height - rhs.height) < 0.5
+    }
 }

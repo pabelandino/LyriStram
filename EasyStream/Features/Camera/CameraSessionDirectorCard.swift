@@ -24,6 +24,7 @@ struct CameraSessionDirectorCard: View {
                 connectedDirectorID: connectedDirectorID,
                 streamState: streamState,
                 statusMessage: statusMessage,
+                isReconnecting: isReconnecting,
                 onSelect: onSelectDirector
             )
 

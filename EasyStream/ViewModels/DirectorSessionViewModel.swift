@@ -303,6 +303,11 @@ final class DirectorSessionViewModel {
             await broadcastSwitcherAssignmentsNow()
             return
         }
+        // On-air source stays on the program bus — preview lane is for the next take target only.
+        guard sourceID != programSourceID else {
+            syncRemoteVideoTrackPolicy()
+            return
+        }
         if let event = await switcher.setPreview(sourceID) {
             applySwitcherEvent(event)
         } else {
@@ -447,6 +452,7 @@ final class DirectorSessionViewModel {
             isTransitioning = false
             let events = await switcher.take(to: target, transition: transition)
             applySwitcherEvents(events)
+            await broadcastSwitcherAssignmentsNow()
             ProgramBusTrace.event(
                 "director take cut end program=\(ProgramBusTrace.shortSourceID(programSourceID?.rawValue)) preview=\(ProgramBusTrace.shortSourceID(previewSourceID?.rawValue)) incomingTrack=\(ProgramBusTrace.shortTrackId(incoming.trackId))"
             )

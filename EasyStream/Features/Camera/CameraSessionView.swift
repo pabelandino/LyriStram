@@ -25,12 +25,22 @@ struct CameraSessionView: View {
         }
         .navigationTitle("Cámara")
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                ConnectionStatusBadge(
-                    isActive: viewModel.streamState == .connected,
-                    label: streamBadgeLabel
-                )
+#if os(iOS)
+            if #available(iOS 26.0, *) {
+                ToolbarItem(placement: .primaryAction) {
+                    connectionToolbarBadge
+                }
+                .sharedBackgroundVisibility(.hidden)
+            } else {
+                ToolbarItem(placement: .primaryAction) {
+                    connectionToolbarBadge
+                }
             }
+#else
+            ToolbarItem(placement: .primaryAction) {
+                connectionToolbarBadge
+            }
+#endif
         }
         .onAppear {
             viewModel.start(identity: identity)
@@ -57,6 +67,13 @@ struct CameraSessionView: View {
         case .connecting, .signaling: "Conectando"
         default: viewModel.isRunning ? "Visible" : "Detenido"
         }
+    }
+
+    private var connectionToolbarBadge: some View {
+        ConnectionStatusBadge(
+            isActive: viewModel.streamState == .connected,
+            label: streamBadgeLabel
+        )
     }
 
     private var cameraPermissionView: some View {

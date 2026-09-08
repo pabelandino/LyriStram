@@ -10,21 +10,24 @@ import UIKit
 struct CameraSessionLandscapePreviewHeader: View {
     let displayName: String
     let statusMessage: String
+    let streamState: StreamConnectionState
+    let isReconnecting: Bool
     let assignment: CameraSwitcherAssignment
     let layout: CameraSessionLayoutKind
     @Binding var showsControls: Bool
 
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
+        HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(displayName)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
-                Text(statusMessage)
-                    .font(.caption2)
-                    .foregroundStyle(BroadcastTheme.subtleText)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
+                BroadcastConnectionStatusLine(
+                    message: statusMessage,
+                    streamState: streamState,
+                    isReconnecting: isReconnecting,
+                    font: .caption2
+                )
             }
 
             Spacer(minLength: 4)

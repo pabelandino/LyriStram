@@ -7,6 +7,7 @@ public struct DirectorConnectionPanel: View {
     let connectedDirectorID: UUID?
     let streamState: StreamConnectionState
     let statusMessage: String
+    let isReconnecting: Bool
     let onSelect: (DiscoveredDevice) -> Void
 
     public init(
@@ -15,6 +16,7 @@ public struct DirectorConnectionPanel: View {
         connectedDirectorID: UUID?,
         streamState: StreamConnectionState,
         statusMessage: String,
+        isReconnecting: Bool = false,
         onSelect: @escaping (DiscoveredDevice) -> Void
     ) {
         self.directors = directors
@@ -22,14 +24,17 @@ public struct DirectorConnectionPanel: View {
         self.connectedDirectorID = connectedDirectorID
         self.streamState = streamState
         self.statusMessage = statusMessage
+        self.isReconnecting = isReconnecting
         self.onSelect = onSelect
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(statusMessage)
-                .font(.caption)
-                .foregroundStyle(BroadcastTheme.subtleText)
+            BroadcastConnectionStatusLine(
+                message: statusMessage,
+                streamState: streamState,
+                isReconnecting: isReconnecting
+            )
 
             if directors.isEmpty {
                 Text("Esperando un Director en la red local…")
