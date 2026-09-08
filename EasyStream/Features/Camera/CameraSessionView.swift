@@ -25,29 +25,22 @@ struct CameraSessionView: View {
         }
         .navigationTitle("Cámara")
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                VStack(alignment: .trailing, spacing: 5) {
-                    ConnectionStatusBadge(
-                        isActive: viewModel.streamState == .connected,
-                        label: streamBadgeLabel
-                    )
-                    if BroadcastConnectionLoadingIndicator.showsProgress(
-                        streamState: viewModel.streamState,
-                        statusMessage: viewModel.statusMessage,
-                        isReconnecting: viewModel.isReconnecting
-                    ) {
-                        BroadcastNeonProgressBar(
-                            tint: BroadcastConnectionLoadingIndicator.tint(
-                                streamState: viewModel.streamState,
-                                statusMessage: viewModel.statusMessage,
-                                isReconnecting: viewModel.isReconnecting
-                            ),
-                            height: 3
-                        )
-                        .frame(width: 88)
-                    }
+#if os(iOS)
+            if #available(iOS 26.0, *) {
+                ToolbarItem(placement: .primaryAction) {
+                    connectionToolbarBadge
+                }
+                .sharedBackgroundVisibility(.hidden)
+            } else {
+                ToolbarItem(placement: .primaryAction) {
+                    connectionToolbarBadge
                 }
             }
+#else
+            ToolbarItem(placement: .primaryAction) {
+                connectionToolbarBadge
+            }
+#endif
         }
         .onAppear {
             viewModel.start(identity: identity)
@@ -74,6 +67,13 @@ struct CameraSessionView: View {
         case .connecting, .signaling: "Conectando"
         default: viewModel.isRunning ? "Visible" : "Detenido"
         }
+    }
+
+    private var connectionToolbarBadge: some View {
+        ConnectionStatusBadge(
+            isActive: viewModel.streamState == .connected,
+            label: streamBadgeLabel
+        )
     }
 
     private var cameraPermissionView: some View {
