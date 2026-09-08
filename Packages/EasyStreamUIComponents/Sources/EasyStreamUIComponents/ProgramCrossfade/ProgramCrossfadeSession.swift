@@ -238,14 +238,14 @@ final class ProgramBusController {
             return
         }
 
+        let hasIncomingFrame = ProgramFrameDisplayBus.shared.displaySample(for: .programIncoming) != nil
         ProgramBusTrace.event(
-            "controller performInstantCut trackId=\(ProgramBusTrace.shortTrackId(program.trackId)) promoteIncoming=\(ProgramFrameDisplayBus.shared.incomingMeetsProgramDisplayThreshold())"
+            "controller performInstantCut trackId=\(ProgramBusTrace.shortTrackId(program.trackId)) hasIncomingFrame=\(hasIncomingFrame)"
         )
 
-        if ProgramFrameDisplayBus.shared.incomingMeetsProgramDisplayThreshold() {
-            host.promoteIncomingFrameToProgram()
-        } else {
-            host.clearProgramVideoFrame()
+        if hasIncomingFrame {
+            let allowPreviewTier = !ProgramFrameDisplayBus.shared.incomingMeetsProgramDisplayThreshold()
+            host.promoteIncomingFrameToProgram(allowPreviewTier: allowPreviewTier)
         }
 
         attachedIncoming?.remove(host.incomingRenderer)

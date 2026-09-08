@@ -566,7 +566,7 @@ final class CameraSessionViewModel {
 
     private func applyTransportProfile(for assignment: CameraSwitcherAssignment) async {
         let quality = CameraTransportProfile.directorQuality
-        let webRTCProfile = CameraTransportProfile.forAssignment(assignment)
+        let webRTCProfile = CameraTransportProfile.webRTCProfile(for: assignment)
         let pauseIdle = quality.pauseIdleCameraStreams
 
         // Keep sensor preset stable for every active role; WebRTC scales preview vs program on the wire.

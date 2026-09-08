@@ -287,9 +287,8 @@ final class BroadcastMetalProgramFeedContainerUIView: UIView, ProgramCrossfadeHo
         compositor.clearProgramVideoFrame()
     }
 
-    func promoteIncomingFrameToProgram() {
-        compositor.promoteIncomingFrameToProgram()
-        compositor.lockProgramContentSizeFromProgramFrame()
+    func promoteIncomingFrameToProgram(allowPreviewTier: Bool = false) {
+        compositor.promoteIncomingFrameToProgram(allowPreviewTier: allowPreviewTier)
     }
 }
 #endif
@@ -582,9 +581,8 @@ final class BroadcastMetalProgramFeedContainerNSView: NSView, ProgramCrossfadeHo
         compositor.clearProgramVideoFrame()
     }
 
-    func promoteIncomingFrameToProgram() {
-        compositor.promoteIncomingFrameToProgram()
-        compositor.lockProgramContentSizeFromProgramFrame()
+    func promoteIncomingFrameToProgram(allowPreviewTier: Bool = false) {
+        compositor.promoteIncomingFrameToProgram(allowPreviewTier: allowPreviewTier)
     }
 }
 #endif

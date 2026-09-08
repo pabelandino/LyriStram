@@ -300,7 +300,6 @@ final class DirectorSessionViewModel {
         inspectorSourceID = sourceID
         guard previewSourceID != sourceID else {
             syncRemoteVideoTrackPolicy()
-            await broadcastSwitcherAssignmentsNow()
             return
         }
         // On-air source stays on the program bus — preview lane is for the next take target only.
@@ -310,8 +309,6 @@ final class DirectorSessionViewModel {
         }
         if let event = await switcher.setPreview(sourceID) {
             applySwitcherEvent(event)
-        } else {
-            await broadcastSwitcherAssignmentsNow()
         }
         syncRemoteVideoTrackPolicy()
     }
@@ -319,7 +316,8 @@ final class DirectorSessionViewModel {
     func takeToProgram() {
         guard !isTransitioning else { return }
         guard takeHandoffSourceID == nil else { return }
-        enqueueSwitcherOperation {
+        switcherQueueTail?.cancel()
+        switcherQueueTail = Task { @MainActor in
             await self.performTakeToProgram()
         }
     }
@@ -433,7 +431,6 @@ final class DirectorSessionViewModel {
         guard let target = previewSourceID else { return }
         if let programSourceID, target == programSourceID { return }
 
-        broadcastSwitcherAssignments()
         guard let incoming = await waitForVideoTrack(sourceID: target) else {
             lastError = "La cámara en preview aún no tiene señal de video."
             statusMessage = "Espera a que la cámara conecte antes de llevarla al aire."
@@ -450,6 +447,20 @@ final class DirectorSessionViewModel {
             outgoingProgramSourceID = nil
             transitionProgress = 1
             isTransitioning = false
+
+            ProgramFrameDisplayBus.shared.beginSubHDOnAirGracePeriod()
+            await preRampTakeTargetToProgram(target)
+
+            if effectiveMonitorQuality.prefetchTakeTarget {
+                let ready = await ProgramFrameDisplayBus.shared.waitForIncomingProgramThreshold(
+                    maxAttempts: 45,
+                    intervalMs: 16
+                )
+                ProgramBusTrace.event(
+                    "director take cut prewarm ready=\(ready) incomingHD=\(ProgramFrameDisplayBus.shared.incomingMeetsProgramDisplayThreshold())"
+                )
+            }
+
             let events = await switcher.take(to: target, transition: transition)
             applySwitcherEvents(events)
             await broadcastSwitcherAssignmentsNow()
@@ -500,11 +511,25 @@ final class DirectorSessionViewModel {
                 return track
             }
             if attempt == 0 {
-                await broadcastSwitcherAssignmentsNow()
+                broadcastSwitcherAssignments()
             }
             try? await Task.sleep(for: .milliseconds(100))
         }
         return track(for: sourceID)
+    }
+
+    /// Starts program-tier encode on the take target before the switcher flips state.
+    private func preRampTakeTargetToProgram(_ target: CameraSourceID) async {
+        let assignment = CameraSwitcherAssignment.program
+        guard lastBroadcastAssignments[target] != assignment else { return }
+        lastBroadcastAssignments[target] = assignment
+        ProgramBusTrace.event(
+            "director pre-ramp take target=\(ProgramBusTrace.shortSourceID(target.rawValue)) -> program"
+        )
+        try? await streamReceiver.sendControl(
+            to: target,
+            command: .setSwitcherAssignment(assignment)
+        )
     }
 
     func setProgramAudioSource(_ sourceID: CameraSourceID) {
