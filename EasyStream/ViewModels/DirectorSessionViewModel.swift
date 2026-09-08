@@ -303,6 +303,11 @@ final class DirectorSessionViewModel {
             await broadcastSwitcherAssignmentsNow()
             return
         }
+        // On-air source stays on the program bus — preview lane is for the next take target only.
+        guard sourceID != programSourceID else {
+            syncRemoteVideoTrackPolicy()
+            return
+        }
         if let event = await switcher.setPreview(sourceID) {
             applySwitcherEvent(event)
         } else {

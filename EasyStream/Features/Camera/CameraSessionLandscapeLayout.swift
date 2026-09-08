@@ -31,6 +31,8 @@ struct CameraSessionLandscapeLayout: View {
                         layout: layoutKind,
                         displayName: identity.displayName,
                         statusMessage: viewModel.statusMessage,
+                        streamState: viewModel.streamState,
+                        isReconnecting: viewModel.isReconnecting,
                         assignment: viewModel.switcherAssignment,
                         isMuted: viewModel.isMuted,
                         previewSession: viewModel.localPreviewSession,

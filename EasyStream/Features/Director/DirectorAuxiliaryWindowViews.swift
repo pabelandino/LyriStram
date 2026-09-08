@@ -4,7 +4,7 @@ import EasyStreamUIComponents
 import EasyStreamTransport
 
 #if os(macOS)
-struct DirectorSettingsWindowView: View {
+struct DirectorStudioSettingsWindowView: View {
     @Bindable private var session = DirectorWorkspaceSession.shared
     @Environment(\.dismissWindow) private var dismissWindow
 
@@ -14,16 +14,17 @@ struct DirectorSettingsWindowView: View {
                let mediaViewModel = session.mediaViewModel,
                let intercomService = session.intercomService,
                let previewMonitor = session.previewMonitor {
-                DirectorSettingsSheet(
+                DirectorStudioSettingsHubView(
                     viewModel: viewModel,
                     mediaViewModel: mediaViewModel,
                     previewMonitor: previewMonitor,
                     intercomService: intercomService,
+                    initialTab: session.pendingStudioSettingsTab,
                     onOpenPreviewMonitor: {
                         session.onOpenPreviewMonitor?()
                     },
-                    onConfigurePreviewMonitor: {
-                        session.onConfigurePreviewMonitor?()
+                    onDone: {
+                        dismissWindow(id: "director-studio-settings")
                     }
                 )
             } else {
@@ -31,29 +32,6 @@ struct DirectorSettingsWindowView: View {
                     "Director no activo",
                     systemImage: "video.slash",
                     description: Text("Abre una sesión de director para ver los ajustes.")
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(BroadcastTheme.panelBackground)
-            }
-        }
-    }
-}
-
-struct DirectorPreviewMonitorSettingsWindowView: View {
-    @Bindable private var session = DirectorWorkspaceSession.shared
-
-    var body: some View {
-        Group {
-            if let previewMonitor = session.previewMonitor {
-                DirectorPreviewMonitorSettingsWindowContent(
-                    previewMonitor: previewMonitor,
-                    onOpenMonitor: { session.onOpenPreviewMonitor?() }
-                )
-            } else {
-                ContentUnavailableView(
-                    "Director no activo",
-                    systemImage: "display.2",
-                    description: Text("Abre una sesión de director para configurar el monitor.")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(BroadcastTheme.panelBackground)

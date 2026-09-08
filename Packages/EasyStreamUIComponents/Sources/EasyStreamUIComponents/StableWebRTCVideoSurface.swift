@@ -23,7 +23,7 @@ public struct StableWebRTCVideoSurface: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black)
             .clipped()
-            .animation(nil, value: track?.trackId)
+            .animation(nil, value: track.map { ObjectIdentifier($0) })
     }
 }
 

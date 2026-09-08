@@ -26,10 +26,27 @@ struct CameraSessionView: View {
         .navigationTitle("Cámara")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                ConnectionStatusBadge(
-                    isActive: viewModel.streamState == .connected,
-                    label: streamBadgeLabel
-                )
+                VStack(alignment: .trailing, spacing: 5) {
+                    ConnectionStatusBadge(
+                        isActive: viewModel.streamState == .connected,
+                        label: streamBadgeLabel
+                    )
+                    if BroadcastConnectionLoadingIndicator.showsProgress(
+                        streamState: viewModel.streamState,
+                        statusMessage: viewModel.statusMessage,
+                        isReconnecting: viewModel.isReconnecting
+                    ) {
+                        BroadcastNeonProgressBar(
+                            tint: BroadcastConnectionLoadingIndicator.tint(
+                                streamState: viewModel.streamState,
+                                statusMessage: viewModel.statusMessage,
+                                isReconnecting: viewModel.isReconnecting
+                            ),
+                            height: 3
+                        )
+                        .frame(width: 88)
+                    }
+                }
             }
         }
         .onAppear {

@@ -14,50 +14,17 @@ public struct SwitchTransitionControls: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(BroadcastTheme.primaryText)
 
-            Menu {
-                ForEach(SwitchTransitionKind.allCases) { kind in
-                    Button {
-                        transition.kind = kind
-                        if kind == .cut {
-                            transition.duration = 0
-                        } else if transition.duration <= 0 {
-                            transition.duration = SwitchTransition.defaultDuration(for: kind)
-                        }
-                    } label: {
-                        if kind == transition.kind {
-                            Label(kind.displayName, systemImage: "checkmark")
-                        } else {
-                            Text(kind.displayName)
-                        }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(SwitchTransitionKind.allCases) { kind in
+                        transitionChip(for: kind)
                     }
                 }
-            } label: {
-                HStack(spacing: 8) {
-                    Text(transition.kind.displayName)
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(BroadcastTheme.primaryText)
-
-                    Spacer(minLength: 0)
-
-                    Image(systemName: "chevron.down")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(BroadcastTheme.subtleText)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(BroadcastTheme.panelBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(BroadcastTheme.panelBorder, lineWidth: 1)
-                }
+                .padding(.vertical, 2)
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .buttonStyle(.plain)
 
             if transition.kind != .cut {
-                HStack {
+                HStack(spacing: 10) {
                     Text("Duración")
                         .font(.caption)
                         .foregroundStyle(BroadcastTheme.subtleText)
@@ -70,5 +37,57 @@ public struct SwitchTransitionControls: View {
                 }
             }
         }
+    }
+
+    private func transitionChip(for kind: SwitchTransitionKind) -> some View {
+        let isSelected = transition.kind == kind
+
+        return Button {
+            transition.kind = kind
+            if kind == .cut {
+                transition.duration = 0
+            } else if transition.duration <= 0 {
+                transition.duration = SwitchTransition.defaultDuration(for: kind)
+            }
+        } label: {
+            Text(kind.displayName)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .foregroundStyle(isSelected ? Color.white : BroadcastTheme.primaryText.opacity(0.82))
+                .background {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(
+                            isSelected
+                                ? LinearGradient(
+                                    colors: [
+                                        BroadcastTheme.studioAccent.opacity(0.95),
+                                        BroadcastTheme.controlAccent.opacity(0.78)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                                : LinearGradient(
+                                    colors: [
+                                        BroadcastTheme.panelBackground,
+                                        BroadcastTheme.panelBackground
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                        )
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(
+                            isSelected ? BroadcastTheme.controlAccent.opacity(0.55) : BroadcastTheme.panelBorder,
+                            lineWidth: 1
+                        )
+                }
+                .shadow(color: isSelected ? BroadcastTheme.studioAccent.opacity(0.35) : .clear, radius: 8, y: 2)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

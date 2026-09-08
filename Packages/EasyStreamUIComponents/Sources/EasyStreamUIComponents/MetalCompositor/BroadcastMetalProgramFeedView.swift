@@ -72,6 +72,18 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
         private let session = ProgramCrossfadeSession()
         private let overlayProvider = BroadcastMetalSwiftUIOverlayProvider()
         private weak var container: BroadcastMetalProgramFeedContainerUIView?
+        private var lastSyncKey: CoordinatorSyncKey?
+
+        private struct CoordinatorSyncKey: Equatable {
+            let programTrackKey: String?
+            let outgoingTrackKey: String?
+            let incomingTrackKey: String?
+            let isTransitioning: Bool
+            let progressBucket: Int
+            let kind: SwitchTransitionKind
+            let embedsOverlays: Bool
+            let overlayRevision: String
+        }
 
         func attach(to container: BroadcastMetalProgramFeedContainerUIView) {
             self.container = container
@@ -91,6 +103,27 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
             embedsOverlays: Bool
         ) {
             guard let container else { return }
+
+            let overlayRevision = embedsOverlays
+                ? overlayRevisionToken(
+                    widgetLayers: widgetLayers,
+                    fullScreenResource: fullScreenResource,
+                    fullScreenIsLive: fullScreenIsLive
+                )
+                : "none"
+
+            let syncKey = CoordinatorSyncKey(
+                programTrackKey: Self.trackInstanceKey(programTrack),
+                outgoingTrackKey: Self.trackInstanceKey(outgoingTrack),
+                incomingTrackKey: Self.trackInstanceKey(incomingTrack),
+                isTransitioning: isTransitioning,
+                progressBucket: isTransitioning ? Int(progress * 50) : -1,
+                kind: kind,
+                embedsOverlays: embedsOverlays,
+                overlayRevision: overlayRevision
+            )
+            guard syncKey != lastSyncKey else { return }
+            lastSyncKey = syncKey
 
             if embedsOverlays {
                 overlayProvider.widgetLayers = widgetLayers
@@ -117,12 +150,34 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
         func setAutoDismissHandler(_ handler: ((UUID) -> Void)?) {
             overlayProvider.onWidgetLiveAutoDismiss = handler
         }
+
+        private func overlayRevisionToken(
+            widgetLayers: [ProgramFeedWidgetLayer],
+            fullScreenResource: BroadcastResource?,
+            fullScreenIsLive: Bool
+        ) -> String {
+            let layerToken = widgetLayers
+                .map { "\($0.id.uuidString)-\($0.isLive)" }
+                .joined(separator: "|")
+            return [
+                layerToken,
+                fullScreenResource?.id.uuidString ?? "none",
+                fullScreenIsLive ? "live" : "idle"
+            ].joined(separator: ";")
+        }
+
+        /// All camera tracks share `trackId` (`easystream-video`) — distinguish by object identity.
+        private static func trackInstanceKey(_ track: RTCVideoTrack?) -> String? {
+            guard let track else { return nil }
+            return String(ObjectIdentifier(track).hashValue)
+        }
     }
 }
 
 final class BroadcastMetalProgramFeedContainerUIView: UIView, ProgramCrossfadeHost {
     let compositor = BroadcastMetalCompositor()
     private let compositorView = MTKView(frame: .zero, device: nil)
+    private var lastAppliedDrawableSize = CGSize.zero
 
     var outgoingRenderer: RTCVideoRenderer { compositor.outgoingRenderer }
     var incomingRenderer: RTCVideoRenderer { compositor.incomingRenderer }
@@ -159,10 +214,13 @@ final class BroadcastMetalProgramFeedContainerUIView: UIView, ProgramCrossfadeHo
         super.layoutSubviews()
         guard bounds.width > 0, bounds.height > 0 else { return }
         let scale = window?.screen.scale ?? traitCollection.displayScale
-        compositorView.drawableSize = BroadcastMetalDrawableLimits.cappedDrawableSize(
+        let newSize = BroadcastMetalDrawableLimits.cappedDrawableSize(
             bounds: bounds.size,
             scale: scale
         )
+        guard !BroadcastMetalDrawableLimits.isSameDrawableSize(newSize, lastAppliedDrawableSize) else { return }
+        lastAppliedDrawableSize = newSize
+        compositorView.drawableSize = newSize
         compositor.invalidateDisplay()
     }
 
@@ -309,6 +367,18 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
         private let session = ProgramCrossfadeSession()
         private let overlayProvider = BroadcastMetalSwiftUIOverlayProvider()
         private weak var container: BroadcastMetalProgramFeedContainerNSView?
+        private var lastSyncKey: CoordinatorSyncKey?
+
+        private struct CoordinatorSyncKey: Equatable {
+            let programTrackKey: String?
+            let outgoingTrackKey: String?
+            let incomingTrackKey: String?
+            let isTransitioning: Bool
+            let progressBucket: Int
+            let kind: SwitchTransitionKind
+            let embedsOverlays: Bool
+            let overlayRevision: String
+        }
 
         func attach(to container: BroadcastMetalProgramFeedContainerNSView) {
             self.container = container
@@ -328,6 +398,27 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
             embedsOverlays: Bool
         ) {
             guard let container else { return }
+
+            let overlayRevision = embedsOverlays
+                ? overlayRevisionToken(
+                    widgetLayers: widgetLayers,
+                    fullScreenResource: fullScreenResource,
+                    fullScreenIsLive: fullScreenIsLive
+                )
+                : "none"
+
+            let syncKey = CoordinatorSyncKey(
+                programTrackKey: Self.trackInstanceKey(programTrack),
+                outgoingTrackKey: Self.trackInstanceKey(outgoingTrack),
+                incomingTrackKey: Self.trackInstanceKey(incomingTrack),
+                isTransitioning: isTransitioning,
+                progressBucket: isTransitioning ? Int(progress * 50) : -1,
+                kind: kind,
+                embedsOverlays: embedsOverlays,
+                overlayRevision: overlayRevision
+            )
+            guard syncKey != lastSyncKey else { return }
+            lastSyncKey = syncKey
 
             if embedsOverlays {
                 overlayProvider.widgetLayers = widgetLayers
@@ -354,12 +445,34 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
         func setAutoDismissHandler(_ handler: ((UUID) -> Void)?) {
             overlayProvider.onWidgetLiveAutoDismiss = handler
         }
+
+        private func overlayRevisionToken(
+            widgetLayers: [ProgramFeedWidgetLayer],
+            fullScreenResource: BroadcastResource?,
+            fullScreenIsLive: Bool
+        ) -> String {
+            let layerToken = widgetLayers
+                .map { "\($0.id.uuidString)-\($0.isLive)" }
+                .joined(separator: "|")
+            return [
+                layerToken,
+                fullScreenResource?.id.uuidString ?? "none",
+                fullScreenIsLive ? "live" : "idle"
+            ].joined(separator: ";")
+        }
+
+        /// All camera tracks share `trackId` (`easystream-video`) — distinguish by object identity.
+        private static func trackInstanceKey(_ track: RTCVideoTrack?) -> String? {
+            guard let track else { return nil }
+            return String(ObjectIdentifier(track).hashValue)
+        }
     }
 }
 
 final class BroadcastMetalProgramFeedContainerNSView: NSView, ProgramCrossfadeHost {
     let compositor = BroadcastMetalCompositor()
     private let compositorView = MTKView(frame: .zero, device: nil)
+    private var lastAppliedDrawableSize = CGSize.zero
 
     var outgoingRenderer: RTCVideoRenderer { compositor.outgoingRenderer }
     var incomingRenderer: RTCVideoRenderer { compositor.incomingRenderer }
@@ -396,10 +509,13 @@ final class BroadcastMetalProgramFeedContainerNSView: NSView, ProgramCrossfadeHo
         super.layout()
         guard bounds.width > 0, bounds.height > 0 else { return }
         let scale = window?.backingScaleFactor ?? 2
-        compositorView.drawableSize = BroadcastMetalDrawableLimits.cappedDrawableSize(
+        let newSize = BroadcastMetalDrawableLimits.cappedDrawableSize(
             bounds: bounds.size,
             scale: scale
         )
+        guard !BroadcastMetalDrawableLimits.isSameDrawableSize(newSize, lastAppliedDrawableSize) else { return }
+        lastAppliedDrawableSize = newSize
+        compositorView.drawableSize = newSize
         compositor.invalidateDisplay()
     }
 
