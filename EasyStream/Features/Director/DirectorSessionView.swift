@@ -22,6 +22,7 @@ struct DirectorSessionView: View {
     @State var isStreamSettingsPresented = false
     @State var isStudioSettingsPresented = false
     @State var studioSettingsInitialTab: DirectorStudioSettingsTab = .studio
+    @State var shouldPrewarmStudioSettings = false
 
     enum WorkspaceMetrics {
         static let sidebarWidth: CGFloat = 260
@@ -65,6 +66,7 @@ struct DirectorSessionView: View {
                 mediaViewModel.removeWidgetFromLive(id, closeStudioIfEditing: false)
             }
             platformDirectorSessionDidAppear()
+            scheduleStudioSettingsPrewarm()
         }
         .onDisappear {
             DirectorWorkspaceSession.shared.unbind()
@@ -74,6 +76,16 @@ struct DirectorSessionView: View {
         }
         .background {
             ProgramOutputSyncBridge(viewModel: viewModel)
+        }
+        .background {
+            if shouldPrewarmStudioSettings {
+                DirectorStudioSettingsPrewarmShell(
+                    viewModel: viewModel,
+                    mediaViewModel: mediaViewModel,
+                    previewMonitor: previewMonitor,
+                    intercomService: intercomService
+                )
+            }
         }
         .onChange(of: mediaViewModel.isWidgetStudioOpen) { _, isOpen in
             if isOpen {
@@ -139,6 +151,20 @@ struct DirectorSessionView: View {
             liveProgramAir: liveProgramAir,
             onOpenSettings: { openStudioSettings() }
         )
+    }
+
+    func scheduleStudioSettingsPrewarm() {
+        guard !DirectorWorkspaceSession.shared.hasPrewarmedSettingsUI else {
+            shouldPrewarmStudioSettings = true
+            return
+        }
+
+        Task { @MainActor in
+            await DirectorModalPresentation.deferHeavyUI()
+            shouldPrewarmStudioSettings = true
+            DirectorWorkspaceSession.shared.markSettingsUIPrewarmed()
+            platformPrewarmStudioSettingsWindowIfNeeded()
+        }
     }
 }
 

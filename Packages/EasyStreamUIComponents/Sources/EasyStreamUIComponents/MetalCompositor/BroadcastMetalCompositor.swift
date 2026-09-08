@@ -261,15 +261,18 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         contentSizeLock.unlock()
     }
 
-    func promoteIncomingFrameToProgram() {
-        ProgramBusTrace.event("compositor promoteIncomingFrameToProgram")
-        ProgramFrameDisplayBus.shared.promoteIncomingToOnAir()
-        if let sample = ProgramFrameDisplayBus.shared.displaySample(for: .programOnAir),
-           ProgramFrameQualityGate.acceptsOnAirFrame(
-               width: Int(sample.contentSize.x),
-               height: Int(sample.contentSize.y)
-           ) {
-            lockProgramContentSizeFromProgramFrame(forFrames: 240)
+    func promoteIncomingFrameToProgram(allowPreviewTier: Bool = false) {
+        ProgramBusTrace.event("compositor promoteIncomingFrameToProgram previewTier=\(allowPreviewTier)")
+        ProgramFrameDisplayBus.shared.promoteIncomingToOnAir(allowPreviewTier: allowPreviewTier)
+        if let sample = ProgramFrameDisplayBus.shared.displaySample(for: .programOnAir) {
+            if ProgramFrameQualityGate.acceptsOnAirFrame(
+                width: Int(sample.contentSize.x),
+                height: Int(sample.contentSize.y)
+            ) {
+                lockProgramContentSizeFromProgramFrame(forFrames: 240)
+            } else if allowPreviewTier {
+                lockProgramContentSizeFromProgramFrame(forFrames: 12)
+            }
         }
         setCompositorSuspended(false)
         requestDraw()

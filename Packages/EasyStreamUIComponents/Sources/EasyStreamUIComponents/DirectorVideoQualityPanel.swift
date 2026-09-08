@@ -125,7 +125,7 @@ public struct DirectorVideoQualityPanel: View {
 
             BroadcastSettingsToggleRow(
                 title: "Precalentar corte",
-                subtitle: "Solo al estar al aire: decodifica la preview en el bus Metal antes del take. Off-air la preview ya se ve en los tiles.",
+                subtitle: "La cámara en preview envía video a resolución PROG y el bus incoming lo decodifica antes del take — cortes instantáneos en HD.",
                 systemImage: "bolt.fill",
                 isOn: $settings.prefetchTakeTarget
             )

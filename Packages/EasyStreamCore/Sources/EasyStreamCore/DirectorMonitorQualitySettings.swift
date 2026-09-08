@@ -7,7 +7,7 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
     public var outputPreset: StreamOutputPreset
     /// Master switch — applies conservative LAN + GPU defaults for laptops and iPads.
     public var energySaverMode: Bool
-    /// Pre-decode the take target on the director bus before Aire (smoother cuts, higher CPU).
+    /// Pre-encode + pre-decode the take target at PROG resolution before Aire (instant HD cuts).
     public var prefetchTakeTarget: Bool
     /// When true, idle cameras stop sending video — keeps director CPU flat as N grows.
     public var pauseIdleCameraStreams: Bool
@@ -17,7 +17,7 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
         previewPreset: PreviewTilePreset = .minimal,
         outputPreset: StreamOutputPreset = .youtube1080p30,
         energySaverMode: Bool = true,
-        prefetchTakeTarget: Bool = false,
+        prefetchTakeTarget: Bool = true,
         pauseIdleCameraStreams: Bool = true
     ) {
         self.progPreset = progPreset
@@ -50,7 +50,7 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        prefetchTakeTarget = try container.decodeIfPresent(Bool.self, forKey: .prefetchTakeTarget) ?? false
+        prefetchTakeTarget = try container.decodeIfPresent(Bool.self, forKey: .prefetchTakeTarget) ?? true
         pauseIdleCameraStreams = try container.decodeIfPresent(Bool.self, forKey: .pauseIdleCameraStreams) ?? true
         energySaverMode = try container.decodeIfPresent(Bool.self, forKey: .energySaverMode) ?? false
 
@@ -92,7 +92,6 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
     public func effectiveSettings() -> DirectorMonitorQualitySettings {
         guard energySaverMode else { return self }
         var copy = self
-        copy.prefetchTakeTarget = false
         copy.pauseIdleCameraStreams = true
         if copy.previewPreset == .standard {
             copy.previewPreset = .economy
