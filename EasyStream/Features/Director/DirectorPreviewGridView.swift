@@ -80,13 +80,16 @@ private struct DirectorPreviewTileCell: View {
         ) {
             CameraSourceTile(
                 name: source.displayName,
-                track: DirectorPreviewTileTrackPolicy.liveTileTrack(
-                    for: source.id,
-                    track: source.videoTrack,
-                    previewSourceID: viewModel.previewSourceID,
-                    programSourceID: viewModel.programSourceID
-                ),
-                hasVideoSignal: source.videoTrack != nil,
+                sourceID: source.id,
+                track: source.connectionState == .connected
+                    ? DirectorPreviewTileTrackPolicy.liveTileTrack(
+                        for: source.id,
+                        track: source.videoTrack,
+                        previewSourceID: viewModel.previewSourceID,
+                        programSourceID: viewModel.programSourceID
+                    )
+                    : nil,
+                hasVideoSignal: source.connectionState == .connected && source.videoTrack != nil,
                 connectionState: source.connectionState,
                 isPreview: source.id == viewModel.previewSourceID,
                 isProgram: source.id == viewModel.programSourceID,

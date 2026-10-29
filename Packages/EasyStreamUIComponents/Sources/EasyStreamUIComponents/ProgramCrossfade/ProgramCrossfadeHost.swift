@@ -38,7 +38,7 @@ extension ProgramCrossfadeHost {
 
     func resetProgramLetterboxStabilization() {}
 
-    func promoteIncomingFrameToProgram() {}
+    func promoteIncomingFrameToProgram(allowPreviewTier: Bool = false) {}
 
     func applyTransitionFrame(_ frame: ProgramTransitionFrame, incomingOnProgram: Bool) {
         applyCrossfadeSlots(

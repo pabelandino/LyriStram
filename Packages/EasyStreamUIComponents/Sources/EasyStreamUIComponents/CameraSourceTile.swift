@@ -1,9 +1,15 @@
 import SwiftUI
 import EasyStreamCore
 import WebRTC
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 public struct CameraSourceTile: View {
     let name: String
+    let sourceID: CameraSourceID?
     let track: RTCVideoTrack?
     let hasVideoSignal: Bool
     let connectionState: StreamConnectionState
@@ -11,10 +17,9 @@ public struct CameraSourceTile: View {
     let isProgram: Bool
     let onSelect: () -> Void
 
-    @Bindable private var streamSizes = LiveVideoStreamSizeStore.shared
-
     public init(
         name: String,
+        sourceID: CameraSourceID? = nil,
         track: RTCVideoTrack?,
         hasVideoSignal: Bool = true,
         connectionState: StreamConnectionState,
@@ -23,6 +28,7 @@ public struct CameraSourceTile: View {
         onSelect: @escaping () -> Void
     ) {
         self.name = name
+        self.sourceID = sourceID
         self.track = track
         self.hasVideoSignal = hasVideoSignal
         self.connectionState = connectionState
@@ -42,6 +48,7 @@ public struct CameraSourceTile: View {
     ) {
         self.init(
             name: name,
+            sourceID: nil,
             track: track,
             hasVideoSignal: track != nil,
             connectionState: isConnected ? .connected : .disconnected,
@@ -85,8 +92,8 @@ public struct CameraSourceTile: View {
                 .padding(8)
 
                 if let track {
-                    BroadcastLiveStreamSizeBadge(
-                        streamSizes.label(forTrackId: track.trackId),
+                    TileStreamSizeBadge(
+                        trackId: track.trackId,
                         tint: isPreview ? BroadcastTheme.previewGreen : BroadcastTheme.subtleText
                     )
                     .padding(8)
@@ -104,6 +111,7 @@ public struct CameraSourceTile: View {
 
     private var accessibilityLabel: String {
         var parts = [name]
+        if showsDisconnectedState { parts.append(disconnectedMessage) }
         if isProgram { parts.append(BroadcastTerminology.programName) }
         if isPreview { parts.append(BroadcastTerminology.previewName) }
         return parts.joined(separator: ", ")
@@ -118,8 +126,12 @@ public struct CameraSourceTile: View {
 
     @ViewBuilder
     private var videoContent: some View {
-        if let track {
+        if showsDisconnectedState {
+            disconnectedPlaceholder
+        } else if let track, connectionState == .connected {
             DirectorCameraTileVideoSurface(track: track)
+        } else if showsTileSnapshot, let sourceID {
+            DirectorTileThumbnailView(sourceID: sourceID)
         } else {
             ZStack {
                 Color.black.opacity(0.85)
@@ -127,10 +139,70 @@ public struct CameraSourceTile: View {
                     Image(systemName: placeholderSymbolName)
                     Text(placeholderMessage)
                         .font(.caption2)
+                    if showsConnectionProgress {
+                        BroadcastConnectionProgressBar(
+                            progress: BroadcastConnectionProgress.fraction(streamState: connectionState),
+                            tint: BroadcastConnectionProgress.tint(streamState: connectionState),
+                            height: 3
+                        )
+                        .frame(maxWidth: 96)
+                        .padding(.top, 2)
+                    }
                 }
                 .foregroundStyle(.white.opacity(0.6))
             }
         }
+    }
+
+    private var showsDisconnectedState: Bool {
+        connectionState == .disconnected || connectionState == .failed
+    }
+
+    private var disconnectedPlaceholder: some View {
+        ZStack {
+            Color.black.opacity(0.92)
+            VStack(spacing: 8) {
+                Image(systemName: disconnectedSymbolName)
+                    .font(.title3.weight(.semibold))
+                    .symbolRenderingMode(.hierarchical)
+                Text(disconnectedMessage)
+                    .font(.caption2.weight(.semibold))
+                    .multilineTextAlignment(.center)
+            }
+            .foregroundStyle(disconnectedForeground)
+            .padding(.horizontal, 8)
+        }
+    }
+
+    private var disconnectedSymbolName: String {
+        switch connectionState {
+        case .failed: "exclamationmark.triangle.fill"
+        default: "video.slash.fill"
+        }
+    }
+
+    private var disconnectedMessage: String {
+        switch connectionState {
+        case .failed: "Conexión fallida"
+        default: "Cámara desconectada"
+        }
+    }
+
+    private var disconnectedForeground: Color {
+        switch connectionState {
+        case .failed: Color.orange.opacity(0.85)
+        default: Color.white.opacity(0.62)
+        }
+    }
+
+    private var showsConnectionProgress: Bool {
+        connectionState == .connecting || connectionState == .signaling
+    }
+
+    /// Idle tiles only — preview/program use live decoders.
+    private var showsTileSnapshot: Bool {
+        guard let sourceID, connectionState == .connected, !isPreview, !isProgram else { return false }
+        return DirectorTileThumbnailView.hasThumbnail(for: sourceID)
     }
 
     private var placeholderSymbolName: String {
@@ -150,9 +222,6 @@ public struct CameraSourceTile: View {
             if isProgram, hasVideoSignal {
                 return "Al aire en PROG"
             }
-            if hasVideoSignal, !isPreview {
-                return "Toca para preview"
-            }
             return "En espera"
         case .connecting, .signaling:
             return "Conectando…"
@@ -165,5 +234,20 @@ public struct CameraSourceTile: View {
         if isProgram { BroadcastTheme.programRed }
         else if isPreview { BroadcastTheme.previewGreen }
         else { BroadcastTheme.panelBorder }
+    }
+}
+
+/// Isolated decode-size badge — avoids observing the global store from every tile.
+private struct TileStreamSizeBadge: View {
+    let trackId: String
+    let tint: Color
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 2.0)) { _ in
+            BroadcastLiveStreamSizeBadge(
+                LiveVideoStreamSizeStore.shared.label(forTrackId: trackId),
+                tint: tint
+            )
+        }
     }
 }

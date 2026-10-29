@@ -315,13 +315,17 @@ final class BroadcastMediaViewModel {
             }
         }
 #else
-        isWidgetLogoImporterPresented = true
+        DirectorModalPresentation.afterYield { [self] in
+            isWidgetLogoImporterPresented = true
+        }
 #endif
     }
 
     func requestWidgetLogoImportFromPhotoLibrary() {
 #if os(iOS)
-        isWidgetLogoPhotoPickerPresented = true
+        DirectorModalPresentation.afterYield { [self] in
+            isWidgetLogoPhotoPickerPresented = true
+        }
 #else
         requestWidgetLogoImport()
 #endif
@@ -329,17 +333,7 @@ final class BroadcastMediaViewModel {
 
     func importWidgetLogoData(_ data: Data) {
         do {
-#if os(iOS)
-            let normalized: Data
-            if let image = UIImage(data: data), let png = image.pngData() {
-                normalized = png
-            } else {
-                normalized = data
-            }
-            try applyLogoData(normalized)
-#else
-            try applyLogoData(data)
-#endif
+            try applyLogoData(normalizedLogoPNGData(from: data) ?? data)
         } catch {
             lastError = error.localizedDescription
         }
@@ -378,11 +372,22 @@ final class BroadcastMediaViewModel {
             let accessed = url.startAccessingSecurityScopedResource()
             defer { if accessed { url.stopAccessingSecurityScopedResource() } }
             let data = try Data(contentsOf: url)
-            try applyLogoData(data)
+            try applyLogoData(normalizedLogoPNGData(from: data) ?? data)
         } catch {
             lastError = error.localizedDescription
         }
     }
+
+#if os(iOS)
+    private func normalizedLogoPNGData(from data: Data) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        return image.pngData()
+    }
+#else
+    private func normalizedLogoPNGData(from data: Data) -> Data? {
+        nil
+    }
+#endif
 
     private func applyLogoData(_ data: Data) throws {
         if editingWidgetResource == nil {
@@ -657,6 +662,7 @@ final class BroadcastMediaViewModel {
 
 #if os(macOS)
 enum BroadcastMacFilePicker {
+    /// Non-blocking sheet — `runModal()` froze PROG Metal and auxiliary window scrolling.
     static func pickFile(allowedTypes: [UTType], onPick: @escaping (URL?) -> Void) {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = allowedTypes
@@ -665,10 +671,10 @@ enum BroadcastMacFilePicker {
         panel.canChooseFiles = true
         panel.title = "Importar archivo"
         panel.prompt = "Importar"
-        if panel.runModal() == .OK {
-            onPick(panel.url)
-        } else {
-            onPick(nil)
+        panel.begin { response in
+            Task { @MainActor in
+                onPick(response == .OK ? panel.url : nil)
+            }
         }
     }
 }

@@ -7,6 +7,7 @@ public struct DirectorSourceListRow: View {
     let isProgram: Bool
     let isAudio: Bool
     let isConnected: Bool
+    let connectionState: StreamConnectionState
     let isSelected: Bool
     let onSelect: () -> Void
     let onReconnect: (() -> Void)?
@@ -17,6 +18,7 @@ public struct DirectorSourceListRow: View {
         isProgram: Bool,
         isAudio: Bool,
         isConnected: Bool,
+        connectionState: StreamConnectionState = .connected,
         isSelected: Bool,
         onSelect: @escaping () -> Void,
         onReconnect: (() -> Void)? = nil
@@ -26,6 +28,7 @@ public struct DirectorSourceListRow: View {
         self.isProgram = isProgram
         self.isAudio = isAudio
         self.isConnected = isConnected
+        self.connectionState = connectionState
         self.isSelected = isSelected
         self.onSelect = onSelect
         self.onReconnect = onReconnect
@@ -56,6 +59,14 @@ public struct DirectorSourceListRow: View {
                             BroadcastTallyPill(BroadcastTerminology.audioShort, color: BroadcastTheme.audioGold)
                         }
                     }
+
+                    if showsConnectionProgress {
+                        BroadcastConnectionProgressBar(
+                            progress: BroadcastConnectionProgress.fraction(streamState: connectionState),
+                            tint: BroadcastConnectionProgress.tint(streamState: connectionState),
+                            height: 3
+                        )
+                    }
                 }
 
                 Spacer(minLength: 0)
@@ -84,6 +95,10 @@ public struct DirectorSourceListRow: View {
             }
         }
         .buttonStyle(.plain)
+    }
+
+    private var showsConnectionProgress: Bool {
+        connectionState == .connecting || connectionState == .signaling
     }
 
     private var accentBarColor: Color {

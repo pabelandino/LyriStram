@@ -33,6 +33,8 @@ final class CameraSessionViewModel {
     private var lastAppliedTransportAssignment: CameraSwitcherAssignment?
     private var lastAppliedWebRTCStreamSpec: BroadcastStreamSpec?
     private var lastAppliedCaptureStreamSpec: BroadcastStreamSpec?
+    private var idleTileSnapshotTask: Task<Void, Never>?
+    private var transportApplyTask: Task<Void, Never>?
     var canReconnect: Bool {
         isRunning && !isReconnecting && streamState != .connecting && streamState != .signaling
     }
@@ -242,10 +244,10 @@ final class CameraSessionViewModel {
                 await streamClient.setAudioMuted(muted)
             case .setSwitcherAssignment(let assignment):
                 switcherAssignment = assignment
-                await applyTransportProfile(for: assignment)
+                scheduleApplyTransportProfile(for: assignment)
             case .setDirectorMonitorQuality(let quality):
                 CameraTransportProfile.directorQuality = quality
-                await applyTransportProfile(for: switcherAssignment)
+                scheduleApplyTransportProfile(for: switcherAssignment)
             case .reconnectStream:
                 await reconnectStreamToDirector()
             default:
@@ -564,9 +566,21 @@ final class CameraSessionViewModel {
         }
     }
 
+    private func scheduleApplyTransportProfile(for assignment: CameraSwitcherAssignment) {
+        transportApplyTask?.cancel()
+        transportApplyTask = Task {
+            // Debounce downgrade to idle — avoids sensor flash when hopping preview across tiles.
+            if !assignment.isActive {
+                try? await Task.sleep(for: .milliseconds(450))
+                guard !Task.isCancelled, switcherAssignment == assignment else { return }
+            }
+            await applyTransportProfile(for: assignment)
+        }
+    }
+
     private func applyTransportProfile(for assignment: CameraSwitcherAssignment) async {
         let quality = CameraTransportProfile.directorQuality
-        let webRTCProfile = CameraTransportProfile.forAssignment(assignment)
+        let webRTCProfile = CameraTransportProfile.webRTCProfile(for: assignment)
         let pauseIdle = quality.pauseIdleCameraStreams
 
         // Keep sensor preset stable for every active role; WebRTC scales preview vs program on the wire.
@@ -586,21 +600,84 @@ final class CameraSessionViewModel {
         lastAppliedCaptureStreamSpec = captureStreamSpec
 
         ProgramBusTrace.event(
-            "camera transport apply assignment=\(assignment.rawValue) webrtc=\(webRTCProfile.width)x\(webRTCProfile.height)@\(webRTCProfile.frameRate) capture=\(captureStreamSpec.width)x\(captureStreamSpec.height)@\(captureStreamSpec.frameRate) tier=\(captureTierLabel(for: assignment))"
+            "camera transport apply assignment=\(assignment.rawValue) webrtc=\(webRTCProfile.width)x\(webRTCProfile.height)@\(webRTCProfile.frameRate) capture=\(captureStreamSpec.width)x\(captureStreamSpec.height)@\(captureStreamSpec.frameRate) tier=\(captureTierLabel(for: assignment)) pauseIdle=\(pauseIdle)"
         )
 
         if assignment.isActive {
+            stopIdleTileSnapshotPublisher()
             capture.setStreamingDeliveryEnabled(true)
             await streamClient.updateTransportProfile(webRTCProfile)
             capture.applyCaptureLoadTier(captureTier, streamSpec: captureStreamSpec)
         } else if pauseIdle {
             capture.setStreamingDeliveryEnabled(false)
             capture.applyCaptureLoadTier(.idle, streamSpec: CameraTransportProfile.standby.streamSpec)
+            startIdleTileSnapshotPublisherIfNeeded()
+            Task { await sendIdleTileSnapshotImmediately() }
         } else {
+            stopIdleTileSnapshotPublisher()
             capture.setStreamingDeliveryEnabled(true)
             capture.applyCaptureLoadTier(.idle, streamSpec: CameraTransportProfile.standby.streamSpec)
             await streamClient.updateTransportProfile(.standby)
         }
+    }
+
+    private static let idleTileSnapshotSendIntervalSeconds: TimeInterval = 3.5
+
+    private func startIdleTileSnapshotPublisherIfNeeded() {
+        guard idleTileSnapshotTask == nil else { return }
+        guard shouldContinueIdleTileSnapshots() else { return }
+
+        idleTileSnapshotTask = Task { [deviceID] in
+            var sequence: UInt64 = 0
+            try? await Task.sleep(for: .milliseconds(800))
+            while !Task.isCancelled {
+                guard self.shouldContinueIdleTileSnapshots() else { break }
+                sequence &+= 1
+                if let jpeg = await self.capture.captureIdleTileSnapshotJPEG(),
+                   let channel = self.signalingChannel {
+                    let payload = SignalingMessage.tileSnapshot(
+                        deviceID: deviceID,
+                        sequence: sequence,
+                        jpegBase64: jpeg.base64EncodedString()
+                    )
+                    try? await channel.send(payload)
+                    TileThumbnailTrace.eventThrottled(
+                        "camera-jpeg-\(deviceID.uuidString.prefix(8))",
+                        intervalMs: 4_000,
+                        "camera idle jpeg sent bytes=\(jpeg.count) seq=\(sequence)"
+                    )
+                }
+                try? await Task.sleep(for: .seconds(Self.idleTileSnapshotSendIntervalSeconds))
+            }
+        }
+    }
+
+    private func stopIdleTileSnapshotPublisher() {
+        idleTileSnapshotTask?.cancel()
+        idleTileSnapshotTask = nil
+    }
+
+    private func sendIdleTileSnapshotImmediately() async {
+        guard shouldContinueIdleTileSnapshots() else { return }
+        guard let jpeg = await capture.captureIdleTileSnapshotJPEG(),
+              let channel = signalingChannel else {
+            return
+        }
+        let payload = SignalingMessage.tileSnapshot(
+            deviceID: deviceID,
+            sequence: UInt64(Date().timeIntervalSince1970 * 1000),
+            jpegBase64: jpeg.base64EncodedString()
+        )
+        try? await channel.send(payload)
+    }
+
+    private func shouldContinueIdleTileSnapshots() -> Bool {
+        let quality = CameraTransportProfile.directorQuality
+        return quality.idleTileSnapshotsEnabled
+            && switcherAssignment == .idle
+            && quality.pauseIdleCameraStreams
+            && streamState == .connected
+            && signalingChannel != nil
     }
 
     private func captureTierLabel(for assignment: CameraSwitcherAssignment) -> String {
@@ -626,6 +703,7 @@ final class CameraSessionViewModel {
                             ? "Transmitiendo al Director"
                             : "Conectada · en espera (bajo consumo)"
                     case .disconnected, .failed, .idle:
+                        stopIdleTileSnapshotPublisher()
                         capture.setStreamingDeliveryEnabled(false)
                     default:
                         break

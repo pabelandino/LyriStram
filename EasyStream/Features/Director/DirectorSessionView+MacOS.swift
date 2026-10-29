@@ -57,6 +57,17 @@ extension DirectorSessionView {
         programOutputStore.resetExternalOutputForLaunch()
     }
 
+    func platformPrewarmStudioSettingsWindowIfNeeded() {
+        guard !programOutputStore.isWindowOpen, !viewModel.isPublishing else { return }
+
+        openWindow(id: "director-studio-settings")
+        Task { @MainActor in
+            await DirectorModalPresentation.deferHeavyUI()
+            await DirectorModalPresentation.deferHeavyUI()
+            dismissWindow(id: "director-studio-settings")
+        }
+    }
+
     func openStudioSettings(tab: DirectorStudioSettingsTab = .studio) {
         DirectorWorkspaceSession.shared.requestStudioSettings(tab: tab)
         DirectorModalPresentation.afterYield {

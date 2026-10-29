@@ -22,10 +22,11 @@ struct ProgramOutputSyncBridge: View {
     }
 
     /// Source/transition kind only — progress is polled during transitions to avoid task churn every frame.
+    /// Program bus only — preview hops must not re-sync external output windows.
     private var stableVideoToken: String {
         [
             viewModel.programSourceID?.rawValue.uuidString ?? "none",
-            viewModel.previewSourceID?.rawValue.uuidString ?? "none",
+            viewModel.incomingWarmPreviewSourceID?.rawValue.uuidString ?? "none",
             viewModel.takeHandoffSourceID?.rawValue.uuidString ?? "none",
             String(viewModel.isTransitioning),
             viewModel.selectedTransition.kind.rawValue

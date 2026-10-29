@@ -64,20 +64,11 @@ public enum BroadcastConnectionLoadingIndicator {
         statusMessage: String,
         isReconnecting: Bool
     ) -> Bool {
-        if isReconnecting { return true }
-        switch streamState {
-        case .connecting, .signaling:
-            return true
-        case .idle:
-            let normalized = statusMessage.lowercased()
-            return normalized.contains("buscando")
-                || normalized.contains("esperando")
-                || normalized.contains("conectando")
-                || normalized.contains("negociando")
-                || normalized.contains("reconectando")
-        default:
-            return false
-        }
+        BroadcastConnectionProgress.isInProgress(
+            streamState: streamState,
+            statusMessage: statusMessage,
+            isReconnecting: isReconnecting
+        )
     }
 
     public static func tint(
@@ -85,39 +76,38 @@ public enum BroadcastConnectionLoadingIndicator {
         statusMessage: String,
         isReconnecting: Bool
     ) -> Color {
-        if isReconnecting { return BroadcastTheme.liveAmber }
-        let normalized = statusMessage.lowercased()
-        if streamState == .signaling || normalized.contains("negociando") {
-            return BroadcastTheme.liveAmber
-        }
-        if streamState == .connecting || normalized.contains("conectando") {
-            return BroadcastTheme.controlAccent
-        }
-        return BroadcastTheme.studioAccent
+        BroadcastConnectionProgress.tint(
+            streamState: streamState,
+            statusMessage: statusMessage,
+            isReconnecting: isReconnecting
+        )
     }
 }
 
-/// Status copy + optional neon bar for camera / director connection panels.
+/// Status copy + optional determinate progress bar for connection panels.
 public struct BroadcastConnectionStatusLine: View {
     let message: String
     let streamState: StreamConnectionState
     let isReconnecting: Bool
     let font: Font
+    let showsProgressBar: Bool
 
     public init(
         message: String,
         streamState: StreamConnectionState,
         isReconnecting: Bool = false,
-        font: Font = .caption
+        font: Font = .caption,
+        showsProgressBar: Bool = false
     ) {
         self.message = message
         self.streamState = streamState
         self.isReconnecting = isReconnecting
         self.font = font
+        self.showsProgressBar = showsProgressBar
     }
 
     private var showsBar: Bool {
-        BroadcastConnectionLoadingIndicator.showsProgress(
+        showsProgressBar && BroadcastConnectionLoadingIndicator.showsProgress(
             streamState: streamState,
             statusMessage: message,
             isReconnecting: isReconnecting
@@ -134,7 +124,12 @@ public struct BroadcastConnectionStatusLine: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             if showsBar {
-                BroadcastNeonProgressBar(
+                BroadcastConnectionProgressBar(
+                    progress: BroadcastConnectionProgress.fraction(
+                        streamState: streamState,
+                        statusMessage: message,
+                        isReconnecting: isReconnecting
+                    ),
                     tint: BroadcastConnectionLoadingIndicator.tint(
                         streamState: streamState,
                         statusMessage: message,

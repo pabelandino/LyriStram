@@ -53,6 +53,12 @@ struct EasyStreamApp: App {
         }
         .defaultSize(width: 760, height: 680)
 
+        Window("Widget Studio", id: "director-widget-studio") {
+            DirectorWidgetStudioWindowView()
+                .broadcastStudioWindowStyle()
+        }
+        .defaultSize(width: 720, height: 780)
+
         Window("Destino RTMPS", id: "director-stream-settings") {
             DirectorStreamSettingsWindowView()
                 .broadcastStudioWindowStyle()

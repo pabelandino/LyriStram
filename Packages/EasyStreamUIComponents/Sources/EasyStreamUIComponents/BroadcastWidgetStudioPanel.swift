@@ -203,8 +203,8 @@ public struct BroadcastWidgetStudioPanel: View {
             }
 
             Text(isEditingPlacement
-                 ? "Modo posicionar: arrastra y redimensiona en el monitor."
-                 : "Modo play: animaciones activas, sin agarraderos.")
+                 ? "Modo posicionar: arrastra y redimensiona en la vista previa."
+                 : "Modo play: sin agarraderos. Usa «Preview» para ver animaciones en PROG.")
                 .font(.caption2)
                 .foregroundStyle(BroadcastTheme.subtleText)
         }

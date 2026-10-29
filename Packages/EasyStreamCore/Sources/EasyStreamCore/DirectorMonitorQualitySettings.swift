@@ -2,23 +2,35 @@ import Foundation
 
 /// Director video quality — local PROG monitor vs network stream output.
 public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
+    /// macOS director multiview — idle JPEG snapshots on by default; iOS stays opt-in for battery.
+    public static var defaultIdleTileSnapshotsEnabled: Bool {
+#if os(macOS)
+        true
+#else
+        false
+#endif
+    }
+
     public var progPreset: ProgramMonitorPreset
     public var previewPreset: PreviewTilePreset
     public var outputPreset: StreamOutputPreset
     /// Master switch — applies conservative LAN + GPU defaults for laptops and iPads.
     public var energySaverMode: Bool
-    /// Pre-decode the take target on the director bus before Aire (smoother cuts, higher CPU).
+    /// Pre-encode + pre-decode the take target at PROG resolution before Aire (instant HD cuts).
     public var prefetchTakeTarget: Bool
     /// When true, idle cameras stop sending video — keeps director CPU flat as N grows.
     public var pauseIdleCameraStreams: Bool
+    /// Opt-in JPEG snapshots on idle cameras (~3.5 s). Off by default — high CPU on devices.
+    public var idleTileSnapshotsEnabled: Bool
 
     public init(
-        progPreset: ProgramMonitorPreset = .light360,
+        progPreset: ProgramMonitorPreset = .balanced720,
         previewPreset: PreviewTilePreset = .minimal,
         outputPreset: StreamOutputPreset = .youtube1080p30,
         energySaverMode: Bool = true,
-        prefetchTakeTarget: Bool = false,
-        pauseIdleCameraStreams: Bool = true
+        prefetchTakeTarget: Bool = true,
+        pauseIdleCameraStreams: Bool = true,
+        idleTileSnapshotsEnabled: Bool = Self.defaultIdleTileSnapshotsEnabled
     ) {
         self.progPreset = progPreset
         self.previewPreset = previewPreset
@@ -26,6 +38,7 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
         self.energySaverMode = energySaverMode
         self.prefetchTakeTarget = prefetchTakeTarget
         self.pauseIdleCameraStreams = pauseIdleCameraStreams
+        self.idleTileSnapshotsEnabled = idleTileSnapshotsEnabled
     }
 
     public var outputEncoderConfiguration: VideoEncoderConfiguration {
@@ -38,6 +51,7 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
         case outputPreset
         case prefetchTakeTarget
         case pauseIdleCameraStreams
+        case idleTileSnapshotsEnabled
         case energySaverMode
         case tier
     }
@@ -50,12 +64,14 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        prefetchTakeTarget = try container.decodeIfPresent(Bool.self, forKey: .prefetchTakeTarget) ?? false
+        prefetchTakeTarget = try container.decodeIfPresent(Bool.self, forKey: .prefetchTakeTarget) ?? true
         pauseIdleCameraStreams = try container.decodeIfPresent(Bool.self, forKey: .pauseIdleCameraStreams) ?? true
+        idleTileSnapshotsEnabled = try container.decodeIfPresent(Bool.self, forKey: .idleTileSnapshotsEnabled)
+            ?? Self.defaultIdleTileSnapshotsEnabled
         energySaverMode = try container.decodeIfPresent(Bool.self, forKey: .energySaverMode) ?? false
 
         if let prog = try container.decodeIfPresent(ProgramMonitorPreset.self, forKey: .progPreset) {
-            progPreset = prog
+            progPreset = prog.normalizedForDirectorSettings()
             previewPreset = try container.decodeIfPresent(PreviewTilePreset.self, forKey: .previewPreset) ?? .economy
             outputPreset = try container.decodeIfPresent(StreamOutputPreset.self, forKey: .outputPreset) ?? .youtube1080p30
             return
@@ -64,7 +80,7 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
         let legacyTier = try container.decodeIfPresent(LegacyTier.self, forKey: .tier) ?? .balanced
         switch legacyTier {
         case .economy:
-            progPreset = .economy540
+            progPreset = .balanced720
             previewPreset = .economy
             outputPreset = .stream540p30
         case .balanced:
@@ -85,6 +101,7 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
         try container.encode(outputPreset, forKey: .outputPreset)
         try container.encode(prefetchTakeTarget, forKey: .prefetchTakeTarget)
         try container.encode(pauseIdleCameraStreams, forKey: .pauseIdleCameraStreams)
+        try container.encode(idleTileSnapshotsEnabled, forKey: .idleTileSnapshotsEnabled)
         try container.encode(energySaverMode, forKey: .energySaverMode)
     }
 
@@ -92,7 +109,6 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
     public func effectiveSettings() -> DirectorMonitorQualitySettings {
         guard energySaverMode else { return self }
         var copy = self
-        copy.prefetchTakeTarget = false
         copy.pauseIdleCameraStreams = true
         if copy.previewPreset == .standard {
             copy.previewPreset = .economy
@@ -104,6 +120,8 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
 public enum DirectorMonitorQualityPreferencesStore {
     private static let key = "com.easystream.directorMonitorQuality"
 
+    private static let macIdleSnapshotsMigrationKey = "com.easystream.migratedMacIdleSnapshotsDefault"
+
     public static func load() -> DirectorMonitorQualitySettings {
         guard
             let data = UserDefaults.standard.data(forKey: key),
@@ -111,7 +129,15 @@ public enum DirectorMonitorQualityPreferencesStore {
         else {
             return DirectorMonitorQualitySettings()
         }
-        return settings
+        var normalized = settings
+        normalized.progPreset = settings.progPreset.normalizedForDirectorSettings()
+#if os(macOS)
+        if !UserDefaults.standard.bool(forKey: macIdleSnapshotsMigrationKey), !normalized.idleTileSnapshotsEnabled {
+            normalized.idleTileSnapshotsEnabled = true
+            UserDefaults.standard.set(true, forKey: macIdleSnapshotsMigrationKey)
+        }
+#endif
+        return normalized
     }
 
     public static func save(_ settings: DirectorMonitorQualitySettings) {

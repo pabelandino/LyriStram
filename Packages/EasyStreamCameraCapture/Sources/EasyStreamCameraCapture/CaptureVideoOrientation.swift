@@ -9,9 +9,16 @@ public enum CaptureVideoOrientation {
         .landscapeRight
     }
 
-    /// Preferred on the main thread; falls back to device orientation off-main.
+    /// Matches the active landscape side (both orientations supported while locked to landscape).
     public static func current() -> AVCaptureVideoOrientation {
-        preferredCameraLandscape()
+        if let interface = interfaceOrientation() {
+            switch interface {
+            case .landscapeLeft: return .landscapeLeft
+            case .landscapeRight: return .landscapeRight
+            default: break
+            }
+        }
+        return landscapeFromDeviceOrientation() ?? preferredCameraLandscape()
     }
 
     /// Safe to call from capture session queues — hops to the main thread when needed.
@@ -23,18 +30,21 @@ public enum CaptureVideoOrientation {
     }
 
     public static func currentFromDevice() -> AVCaptureVideoOrientation {
+        if let landscape = landscapeFromDeviceOrientation() {
+            return landscape
+        }
+        if let interface = interfaceOrientation() {
+            return interface
+        }
+        return .portrait
+    }
+
+    /// UIDevice landscape is inverted relative to `AVCaptureVideoOrientation` (Apple AVFoundation guidance).
+    private static func landscapeFromDeviceOrientation() -> AVCaptureVideoOrientation? {
         switch UIDevice.current.orientation {
-        case .portrait: return .portrait
-        case .portraitUpsideDown: return .portraitUpsideDown
-        case .landscapeLeft: return .landscapeLeft
-        case .landscapeRight: return .landscapeRight
-        case .unknown, .faceUp, .faceDown:
-            if let interface = interfaceOrientation() {
-                return interface
-            }
-            return .portrait
-        @unknown default:
-            return interfaceOrientation() ?? .portrait
+        case .landscapeLeft: return .landscapeRight
+        case .landscapeRight: return .landscapeLeft
+        default: return nil
         }
     }
 

@@ -67,6 +67,17 @@ public enum ProgramMonitorPreset: String, Codable, CaseIterable, Identifiable, S
     public var detail: String {
         "Monitor PROG · \(streamSpec.displayLabel)"
     }
+
+    /// Presets shown in director settings (equilibrado + completo only).
+    public static let directorSettingsOptions: [ProgramMonitorPreset] = [.balanced720, .full1080]
+
+    /// Maps retired presets to the nearest supported option when loading saved settings.
+    public func normalizedForDirectorSettings() -> ProgramMonitorPreset {
+        switch self {
+        case .light360, .economy540: .balanced720
+        case .balanced720, .full1080: self
+        }
+    }
 }
 
 /// Preview tile LAN quality — always lower than program to save CPU.

@@ -13,11 +13,17 @@ public enum CameraTransportProfile: Sendable, Equatable {
     nonisolated(unsafe) public static var directorQuality: DirectorMonitorQualitySettings = .init()
 
     public static func forAssignment(_ assignment: CameraSwitcherAssignment) -> CameraTransportProfile {
+        webRTCProfile(for: assignment)
+    }
+
+    /// LAN encode tier for a switcher role. Preview can prewarm to program resolution while warming the take target.
+    public static func webRTCProfile(for assignment: CameraSwitcherAssignment) -> CameraTransportProfile {
+        let quality = Self.directorQuality.effectiveSettings()
         switch assignment {
         case .idle:
             return .standby
         case .preview:
-            return .preview
+            return quality.prefetchTakeTarget ? .program : .preview
         case .program, .previewAndProgram:
             return .program
         }

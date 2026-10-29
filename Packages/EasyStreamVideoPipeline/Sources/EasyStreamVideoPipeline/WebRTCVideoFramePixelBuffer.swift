@@ -1,8 +1,8 @@
 import CoreVideo
 import WebRTC
 
-enum WebRTCVideoFramePixelBuffer {
-    static func extract(from frame: RTCVideoFrame) -> CVPixelBuffer? {
+public enum WebRTCVideoFramePixelBuffer {
+    public static func extract(from frame: RTCVideoFrame) -> CVPixelBuffer? {
         if let cvBuffer = frame.buffer as? RTCCVPixelBuffer {
             return cvBuffer.pixelBuffer
         }

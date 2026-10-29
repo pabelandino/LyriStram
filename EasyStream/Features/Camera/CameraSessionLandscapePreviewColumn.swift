@@ -55,6 +55,39 @@ struct CameraSessionLandscapePreviewColumn: View {
                         placement: .contentFrame(cornerRadius: 14)
                     )
                 }
+                .overlay(alignment: .bottom) {
+                    if BroadcastConnectionProgress.isInProgress(
+                        streamState: streamState,
+                        statusMessage: statusMessage,
+                        isReconnecting: isReconnecting
+                    ) {
+                        VStack(spacing: 6) {
+                            BroadcastConnectionProgressBar(
+                                progress: BroadcastConnectionProgress.fraction(
+                                    streamState: streamState,
+                                    statusMessage: statusMessage,
+                                    isReconnecting: isReconnecting
+                                ),
+                                tint: BroadcastConnectionProgress.tint(
+                                    streamState: streamState,
+                                    statusMessage: statusMessage,
+                                    isReconnecting: isReconnecting
+                                ),
+                                height: 6
+                            )
+                            Text(statusMessage)
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(.white.opacity(0.88))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(.black.opacity(0.62), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .padding(10)
+                    }
+                }
 
                 if isMuted {
                     Label("Silenciado", systemImage: "mic.slash.fill")

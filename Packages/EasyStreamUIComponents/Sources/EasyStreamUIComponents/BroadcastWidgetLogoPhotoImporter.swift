@@ -1,6 +1,27 @@
 #if os(iOS)
 import PhotosUI
 import SwiftUI
+import UniformTypeIdentifiers
+
+/// Loads photo-library images (JPEG/HEIC/PNG) for widget logo import.
+struct WidgetLogoImageImport: Transferable {
+    let data: Data
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(importedContentType: .image) { data in
+            WidgetLogoImageImport(data: data)
+        }
+        DataRepresentation(importedContentType: .png) { data in
+            WidgetLogoImageImport(data: data)
+        }
+        DataRepresentation(importedContentType: .jpeg) { data in
+            WidgetLogoImageImport(data: data)
+        }
+        DataRepresentation(importedContentType: .heic) { data in
+            WidgetLogoImageImport(data: data)
+        }
+    }
+}
 
 public struct BroadcastWidgetLogoPhotoImporter: ViewModifier {
     @Binding var isPresented: Bool
@@ -18,12 +39,15 @@ public struct BroadcastWidgetLogoPhotoImporter: ViewModifier {
             )
             .onChange(of: selection) { _, newValue in
                 guard let item = newValue.first else { return }
-                Task {
-                    if let data = try? await item.loadTransferable(type: Data.self) {
-                        onImport(data)
+                Task { @MainActor in
+                    defer {
+                        selection = []
+                        isPresented = false
                     }
-                    selection = []
-                    isPresented = false
+                    guard let imported = try? await item.loadTransferable(type: WidgetLogoImageImport.self) else {
+                        return
+                    }
+                    onImport(imported.data)
                 }
             }
     }

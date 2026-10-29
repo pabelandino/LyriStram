@@ -9,6 +9,7 @@ public struct TransitionProgramView: View {
     let isTransitioning: Bool
     let progress: Double
     let kind: SwitchTransitionKind
+    let offAirPreviewVisibleOnProgramMonitor: Bool
 
     public init(
         programTrack: RTCVideoTrack?,
@@ -16,7 +17,8 @@ public struct TransitionProgramView: View {
         previewTrack: RTCVideoTrack?,
         isTransitioning: Bool,
         progress: Double,
-        kind: SwitchTransitionKind
+        kind: SwitchTransitionKind,
+        offAirPreviewVisibleOnProgramMonitor: Bool = false
     ) {
         self.programTrack = programTrack
         self.outgoingTrack = outgoingTrack
@@ -24,6 +26,7 @@ public struct TransitionProgramView: View {
         self.isTransitioning = isTransitioning
         self.progress = progress
         self.kind = kind
+        self.offAirPreviewVisibleOnProgramMonitor = offAirPreviewVisibleOnProgramMonitor
     }
 
     /// Backward-compatible entry point for simple two-track wiring.
@@ -52,7 +55,8 @@ public struct TransitionProgramView: View {
                     incomingTrack: previewTrack,
                     isTransitioning: isTransitioning,
                     progress: progress,
-                    kind: kind
+                    kind: kind,
+                    offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
                 )
             } else {
                 Color.black

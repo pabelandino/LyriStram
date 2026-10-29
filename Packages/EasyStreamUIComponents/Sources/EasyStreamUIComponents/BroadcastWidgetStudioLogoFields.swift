@@ -21,7 +21,7 @@ struct BroadcastWidgetStudioLogoFields: View {
                 }
             }
 #if os(macOS)
-            .pickerStyle(.menu)
+            .pickerStyle(.radioGroup)
 #endif
 
             BroadcastWidgetStudioPlacementSizeControls(configuration: $configuration)

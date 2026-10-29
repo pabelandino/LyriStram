@@ -36,6 +36,9 @@ public struct PreviewMonitorSettingsForm: View {
             }
 
             Section("Pantalla") {
+#if os(iOS)
+                externalDisplayStatusRows
+#endif
                 Toggle("Abrir en segunda pantalla", isOn: $settings.openOnExternalDisplay)
                 Toggle("Paginar automáticamente", isOn: $settings.autoPaginate)
 
@@ -94,6 +97,41 @@ public struct PreviewMonitorSettingsForm: View {
         .formStyle(.grouped)
 #endif
     }
+
+#if os(iOS)
+    @ViewBuilder
+    private var externalDisplayStatusRows: some View {
+        if ProgramOutputDisplayDiscovery.hasExternalDisplay {
+            ForEach(ProgramOutputDisplayDiscovery.availableScreens().filter { !$0.isBuiltIn }) { screen in
+                LabeledContent(screen.name) {
+                    Text("\(screen.width)×\(screen.height)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if ProgramOutputDisplayDiscovery.isExternalDisplayMirroring {
+                Label {
+                    Text("Duplicación activa: el monitor no será independiente. En Ajustes del iPad → Pantalla, elige «Extender».")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+            }
+        } else {
+            Text("Conecta un monitor por USB-C o HDMI. Si no aparece, revisa el cable o el adaptador.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+
+        Text("Para un monitor multiview independiente, usa «Extender pantalla» (no «Duplicar») en Ajustes del iPad.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .listRowBackground(Color.clear)
+    }
+#endif
 
     private func overlayToggle(_ title: String, keyPath: WritableKeyPath<PreviewMonitorOverlayOptions, Bool>) -> some View {
         Toggle(title, isOn: Binding(

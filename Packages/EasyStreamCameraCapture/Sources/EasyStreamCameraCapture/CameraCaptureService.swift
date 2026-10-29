@@ -26,6 +26,11 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
     private var isConfigured = false
     private var isStreamingDeliveryEnabled = false
     private var activeLoadTier: CameraCaptureLoadTier?
+    private let photoOutput = AVCapturePhotoOutput()
+    private var isPhotoOutputConfigured = false
+    private var idlePhotoContinuation: CheckedContinuation<Data?, Never>?
+    private var idlePhotoEncodeMaxWidth = 128
+    private var idlePhotoEncodeQuality: CGFloat = 0.5
 #if os(iOS)
     private var orientationObserver: NSObjectProtocol?
     private var sceneActivationObserver: NSObjectProtocol?
@@ -93,16 +98,12 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         session
     }
 
-    /// When false, `AVCaptureVideoDataOutput` delegate is detached — preview layer only (saves CPU while idle).
+    /// When false, frames are not published to WebRTC — preview layer may still run.
     public func setStreamingDeliveryEnabled(_ enabled: Bool) {
         sessionQueue.async {
             guard self.isStreamingDeliveryEnabled != enabled else { return }
             self.isStreamingDeliveryEnabled = enabled
-            if enabled {
-                self.videoOutput.setSampleBufferDelegate(self, queue: self.sessionQueue)
-            } else {
-                self.videoOutput.setSampleBufferDelegate(nil, queue: nil)
-            }
+            self.syncVideoOutputDelegate()
 #if os(iOS)
             DispatchQueue.main.async {
                 if enabled {
@@ -113,6 +114,71 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
             }
 #endif
         }
+    }
+
+    /// One-shot still for idle tile JPEG lane — no video delegate (matches baseline CPU while idle).
+    public func captureIdleTileSnapshotJPEG(maxWidth: Int = 128, quality: CGFloat = 0.5) async -> Data? {
+        await withCheckedContinuation { continuation in
+            sessionQueue.async {
+                guard self.session.isRunning else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                self.ensurePhotoOutputIfNeeded()
+                guard self.isPhotoOutputConfigured else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                if let pending = self.idlePhotoContinuation {
+                    self.idlePhotoContinuation = nil
+                    pending.resume(returning: nil)
+                }
+                self.idlePhotoContinuation = continuation
+                self.idlePhotoEncodeMaxWidth = maxWidth
+                self.idlePhotoEncodeQuality = quality
+#if os(iOS)
+                self.photoOutput.connection(with: .video)?
+                    .applyVideoOrientation(CaptureVideoOrientation.resolvedOnMainThread())
+#endif
+
+                let settings: AVCapturePhotoSettings
+                if self.photoOutput.availablePhotoCodecTypes.contains(.jpeg) {
+                    settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+                } else {
+                    settings = AVCapturePhotoSettings()
+                }
+                settings.photoQualityPrioritization = .speed
+                self.photoOutput.capturePhoto(with: settings, delegate: self)
+            }
+        }
+    }
+
+    private func syncVideoOutputDelegate() {
+        if isStreamingDeliveryEnabled {
+            videoOutput.setSampleBufferDelegate(self, queue: sessionQueue)
+        } else {
+            videoOutput.setSampleBufferDelegate(nil, queue: nil)
+        }
+    }
+
+    private func ensurePhotoOutputIfNeeded() {
+        guard !isPhotoOutputConfigured else { return }
+        session.beginConfiguration()
+        if session.canAddOutput(photoOutput) {
+            session.addOutput(photoOutput)
+            isPhotoOutputConfigured = true
+#if os(iOS)
+            photoOutput.connection(with: .video)?
+                .applyVideoOrientation(CaptureVideoOrientation.resolvedOnMainThread())
+#endif
+        }
+        session.commitConfiguration()
+    }
+
+    private func finishIdlePhotoCapture(with data: Data?) {
+        let continuation = idlePhotoContinuation
+        idlePhotoContinuation = nil
+        continuation?.resume(returning: data)
     }
 
     /// Adjusts sensor preset + fps to match switcher role (major CPU/heat win on iPhone/iPad).
@@ -143,14 +209,50 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
 
     private func applyTargetFrameRate(_ frameRate: Int32) {
         guard let device = videoInput?.device else { return }
-        let fps = max(1, frameRate)
+        applyTargetFrameRate(frameRate, to: device)
+    }
+
+    /// Clamps to `videoSupportedFrameRateRanges` — raw 8 fps on CIF/idle preset traps in AVFoundation.
+    private func applyTargetFrameRate(_ frameRate: Int32, to device: AVCaptureDevice) {
+        guard device.isConnected else { return }
+        let clamped = Self.clampedFrameRate(Double(max(1, frameRate)), for: device)
+        let timescale = CMTimeScale(max(1, min(120, Int32(clamped.rounded()))))
+        let duration = CMTime(value: 1, timescale: timescale)
+
         do {
             try device.lockForConfiguration()
-            device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: fps)
-            device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: fps)
-            device.unlockForConfiguration()
+            defer { device.unlockForConfiguration() }
+            guard Self.format(device.activeFormat, supportsFrameDuration: duration) else { return }
+            device.activeVideoMinFrameDuration = duration
+            device.activeVideoMaxFrameDuration = duration
         } catch {
             return
+        }
+    }
+
+    private static func clampedFrameRate(_ requested: Double, for device: AVCaptureDevice) -> Double {
+        let ranges = device.activeFormat.videoSupportedFrameRateRanges
+        guard !ranges.isEmpty else { return min(requested, 30) }
+        if ranges.contains(where: { requested >= $0.minFrameRate && requested <= $0.maxFrameRate }) {
+            return requested
+        }
+        var best = ranges[0].minFrameRate
+        var bestDistance = abs(requested - best)
+        for range in ranges {
+            let candidate = min(max(requested, range.minFrameRate), range.maxFrameRate)
+            let distance = abs(requested - candidate)
+            if distance < bestDistance {
+                bestDistance = distance
+                best = candidate
+            }
+        }
+        return best
+    }
+
+    private static func format(_ format: AVCaptureDevice.Format, supportsFrameDuration duration: CMTime) -> Bool {
+        let fps = Double(duration.timescale) / Double(max(1, duration.value))
+        return format.videoSupportedFrameRateRanges.contains {
+            fps >= $0.minFrameRate && fps <= $0.maxFrameRate
         }
     }
 
@@ -266,11 +368,7 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         activeLens = lens
 
 #if os(iOS)
-        try device.lockForConfiguration()
-        let fps = CameraStreamConfiguration.targetFrameRate
-        device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: fps)
-        device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: fps)
-        device.unlockForConfiguration()
+        applyTargetFrameRate(CameraStreamConfiguration.targetFrameRate, to: device)
 #endif
 
         if session.outputs.isEmpty {
@@ -317,11 +415,7 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         videoInput = newInput
         activeLens = lens
 #if os(iOS)
-        try device.lockForConfiguration()
-        let fps = CameraStreamConfiguration.targetFrameRate
-        device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: fps)
-        device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: fps)
-        device.unlockForConfiguration()
+        applyTargetFrameRate(CameraStreamConfiguration.targetFrameRate, to: device)
         videoOutput.connection(with: .video)?
             .applyVideoOrientation(CaptureVideoOrientation.resolvedOnMainThread())
 #endif
@@ -385,7 +479,9 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
     private func applyVideoOrientation() {
         let orientation = CaptureVideoOrientation.current()
         sessionQueue.async { [weak self] in
-            self?.videoOutput.connection(with: .video)?.applyVideoOrientation(orientation)
+            guard let self else { return }
+            self.videoOutput.connection(with: .video)?.applyVideoOrientation(orientation)
+            self.photoOutput.connection(with: .video)?.applyVideoOrientation(orientation)
         }
     }
 #endif
@@ -499,6 +595,29 @@ extension CameraCaptureService: AVCaptureVideoDataOutputSampleBufferDelegate {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         onVideoFrame?(pixelBuffer, timestamp)
+    }
+}
+
+extension CameraCaptureService: AVCapturePhotoCaptureDelegate {
+    public func photoOutput(
+        _ output: AVCapturePhotoOutput,
+        didFinishProcessingPhoto photo: AVCapturePhoto,
+        error: Error?
+    ) {
+        guard error == nil else {
+            finishIdlePhotoCapture(with: nil)
+            return
+        }
+        guard let rawJPEG = photo.fileDataRepresentation() else {
+            finishIdlePhotoCapture(with: nil)
+            return
+        }
+        let jpeg = TileSnapshotJPEGEncoder.recompress(
+            jpegData: rawJPEG,
+            maxWidth: idlePhotoEncodeMaxWidth,
+            quality: idlePhotoEncodeQuality
+        ) ?? rawJPEG
+        finishIdlePhotoCapture(with: jpeg)
     }
 }
 

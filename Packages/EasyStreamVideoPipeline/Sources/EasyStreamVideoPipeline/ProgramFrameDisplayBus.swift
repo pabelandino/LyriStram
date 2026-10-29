@@ -20,11 +20,21 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
     }
 
     public var onDisplayRefreshRequested: (@Sendable () -> Void)?
+    /// Compositor releases letterbox lock when PROG preset changes during live output.
+    public var onProgramMonitorPresetChanged: (@Sendable () -> Void)?
+
+    public func notifyProgramMonitorPresetChanged() {
+        onProgramMonitorPresetChanged?()
+    }
 
     private let processingQueue = DispatchQueue(
         label: "com.easystream.program-frame-bus.processing",
         qos: .userInitiated
     )
+
+    private let rampGraceLock = NSLock()
+    /// After a preview-tier promote, accept live sub-HD frames on the on-air lane until HD lands.
+    private var subHDOnAirGraceDeadline: DispatchTime?
 
     private init() {}
 
@@ -47,8 +57,7 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
     public func publish(pixelBuffer: CVPixelBuffer, lane: ProgramFrameBusSlot) {
         let width = CVPixelBufferGetWidth(pixelBuffer)
         let height = CVPixelBufferGetHeight(pixelBuffer)
-        if lane == .programOnAir,
-           !ProgramFrameQualityGate.acceptsOnAirFrame(width: width, height: height) {
+        if lane == .programOnAir, !allowsOnAirPublish(width: width, height: height) {
             ProgramBusTrace.eventThrottled(
                 "bus-drop-onair-subhd",
                 intervalMs: 500,
@@ -112,26 +121,83 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
 
     public func incomingMeetsProgramDisplayThreshold() -> Bool {
         guard let incoming = displaySample(for: .programIncoming) else { return false }
-        return ProgramFrameQualityGate.acceptsOnAirFrame(
+        return ProgramFrameQualityGate.meetsConfiguredProgramPreset(
             width: Int(incoming.contentSize.x),
             height: Int(incoming.contentSize.y)
         )
     }
 
-    public func promoteIncomingToOnAir() {
+    /// Waits briefly for incoming lane to reach program display threshold (prewarmed preview encode).
+    public func waitForIncomingProgramThreshold(maxAttempts: Int = 45, intervalMs: UInt64 = 16) async -> Bool {
+        for attempt in 0..<maxAttempts {
+            if incomingMeetsProgramDisplayThreshold() {
+                return true
+            }
+            if attempt + 1 < maxAttempts {
+                try? await Task.sleep(for: .milliseconds(intervalMs))
+            }
+        }
+        return incomingMeetsProgramDisplayThreshold()
+    }
+
+    public func promoteIncomingToOnAir(allowPreviewTier: Bool = false) {
         let incoming = displaySample(for: .programIncoming)
-        guard incomingMeetsProgramDisplayThreshold() else {
+        guard let incoming else {
+            ProgramBusTrace.event("bus promote skipped no incoming frame")
+            return
+        }
+        if !allowPreviewTier,
+           !ProgramFrameQualityGate.meetsConfiguredProgramPreset(
+               width: Int(incoming.contentSize.x),
+               height: Int(incoming.contentSize.y)
+           ) {
             ProgramBusTrace.event(
-                "bus promote skipped incoming=\(sizeLabel(incoming)) below program threshold"
+                "bus promote skipped incoming=\(sizeLabel(incoming)) below program preset"
             )
             return
+        }
+        if allowPreviewTier {
+            beginSubHDOnAirGracePeriod()
         }
         let programBefore = displaySample(for: .programOnAir)
         NativeProgramFrameBus.promoteIncomingToOnAir()
         let programAfter = displaySample(for: .programOnAir)
         ProgramBusTrace.event(
-            "bus promote incoming=\(sizeLabel(incoming)) programBefore=\(sizeLabel(programBefore)) programAfter=\(sizeLabel(programAfter))"
+            "bus promote incoming=\(sizeLabel(incoming)) previewTier=\(allowPreviewTier) programBefore=\(sizeLabel(programBefore)) programAfter=\(sizeLabel(programAfter))"
         )
+    }
+
+    /// Keeps the on-air lane live with sub-HD frames while the camera encoder ramps to program tier.
+    public func beginSubHDOnAirGracePeriod(milliseconds: Int = 3_000) {
+        rampGraceLock.lock()
+        subHDOnAirGraceDeadline = .now() + .milliseconds(milliseconds)
+        rampGraceLock.unlock()
+        ProgramBusTrace.event("bus on-air sub-HD grace \(milliseconds)ms")
+    }
+
+    private func allowsOnAirPublish(width: Int, height: Int) -> Bool {
+        if ProgramFrameQualityGate.meetsConfiguredProgramPreset(width: width, height: height) {
+            endSubHDOnAirGraceIfActive(reason: "program preset frame")
+            return true
+        }
+
+        rampGraceLock.lock()
+        let inGrace = subHDOnAirGraceDeadline.map { DispatchTime.now() < $0 } ?? false
+        rampGraceLock.unlock()
+
+        if inGrace {
+            return ProgramFrameQualityGate.acceptsRampHoldFrame(width: width, height: height)
+        }
+
+        return ProgramFrameQualityGate.acceptsOnAirFrame(width: width, height: height)
+    }
+
+    private func endSubHDOnAirGraceIfActive(reason: String) {
+        rampGraceLock.lock()
+        defer { rampGraceLock.unlock() }
+        guard subHDOnAirGraceDeadline != nil else { return }
+        subHDOnAirGraceDeadline = nil
+        ProgramBusTrace.event("bus on-air sub-HD grace ended (\(reason))")
     }
 
     private func sizeLabel(_ sample: Sample?) -> String {

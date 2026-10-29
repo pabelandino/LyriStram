@@ -8,6 +8,7 @@ struct DirectorSessionCompactView: View {
     @Bindable var mediaViewModel: BroadcastMediaViewModel
     @Bindable var liveProgramAir: LiveProgramAirStore
     let onOpenSettings: () -> Void
+    let onCreateWidget: () -> Void
 
     var body: some View {
         List {
@@ -25,13 +26,16 @@ struct DirectorSessionCompactView: View {
                 ForEach(viewModel.sources) { source in
                     CameraSourceTile(
                         name: source.displayName,
-                        track: DirectorPreviewTileTrackPolicy.liveTileTrack(
-                            for: source.id,
-                            track: source.videoTrack,
-                            previewSourceID: viewModel.previewSourceID,
-                            programSourceID: viewModel.programSourceID
-                        ),
-                        hasVideoSignal: source.videoTrack != nil,
+                        sourceID: source.id,
+                        track: source.connectionState == .connected
+                            ? DirectorPreviewTileTrackPolicy.liveTileTrack(
+                                for: source.id,
+                                track: source.videoTrack,
+                                previewSourceID: viewModel.previewSourceID,
+                                programSourceID: viewModel.programSourceID
+                            )
+                            : nil,
+                        hasVideoSignal: source.connectionState == .connected && source.videoTrack != nil,
                         connectionState: source.connectionState,
                         isPreview: source.id == viewModel.previewSourceID,
                         isProgram: source.id == viewModel.programSourceID,
@@ -54,7 +58,10 @@ struct DirectorSessionCompactView: View {
             DirectorSessionCompactDestinationSections(viewModel: viewModel)
 
             Section("Biblioteca") {
-                DirectorLibraryRailView(mediaViewModel: mediaViewModel)
+                DirectorLibraryRailView(
+                    mediaViewModel: mediaViewModel,
+                    onCreateWidget: onCreateWidget
+                )
                     .listRowInsets(EdgeInsets())
             }
 

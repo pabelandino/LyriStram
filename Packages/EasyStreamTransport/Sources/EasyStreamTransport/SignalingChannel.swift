@@ -133,6 +133,8 @@ enum SignalingCodec {
             guard !line.isEmpty else { continue }
             if let message = try? decoder.decode(SignalingMessage.self, from: Data(line)) {
                 messages.append(message)
+            } else if let preview = String(data: Data(line.prefix(120)), encoding: .utf8) {
+                EasyStreamLog.transport.debug("Signaling decode skipped line prefix=\(preview, privacy: .public)")
             }
         }
 
