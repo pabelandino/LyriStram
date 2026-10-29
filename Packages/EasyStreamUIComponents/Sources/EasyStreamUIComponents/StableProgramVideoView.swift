@@ -13,6 +13,7 @@ public struct StableProgramVideoView: View {
     let emptyStatusMessage: String
     let showsEmptyWhenNoGraphics: Bool
     let hasAirGraphics: Bool
+    let offAirPreviewVisibleOnProgramMonitor: Bool
 
     public init(
         programDisplayTrack: RTCVideoTrack?,
@@ -23,7 +24,8 @@ public struct StableProgramVideoView: View {
         transitionKind: SwitchTransitionKind,
         emptyStatusMessage: String,
         showsEmptyWhenNoGraphics: Bool = true,
-        hasAirGraphics: Bool = false
+        hasAirGraphics: Bool = false,
+        offAirPreviewVisibleOnProgramMonitor: Bool = false
     ) {
         self.programDisplayTrack = programDisplayTrack
         self.outgoingProgramTrack = outgoingProgramTrack
@@ -34,6 +36,7 @@ public struct StableProgramVideoView: View {
         self.emptyStatusMessage = emptyStatusMessage
         self.showsEmptyWhenNoGraphics = showsEmptyWhenNoGraphics
         self.hasAirGraphics = hasAirGraphics
+        self.offAirPreviewVisibleOnProgramMonitor = offAirPreviewVisibleOnProgramMonitor
     }
 
     public var body: some View {
@@ -46,7 +49,8 @@ public struct StableProgramVideoView: View {
                 previewTrack: incomingProgramTrack,
                 isTransitioning: isTransitioning,
                 progress: transitionProgress,
-                kind: transitionKind
+                kind: transitionKind,
+                offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
             )
             .id("director-program-video-bus")
             .frame(maxWidth: .infinity, maxHeight: .infinity)

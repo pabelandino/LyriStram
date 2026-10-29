@@ -10,7 +10,7 @@ import EasyStreamVideoPipeline
 ///
 /// Phases:
 /// - **empty** — no tracks attached
-/// - **offAirWarm** — preview decoded on incoming (hidden); PROG monitor stays black until take
+/// - **offAirWarm** — preview decoded on incoming; PROG monitor mirrors preview until first take
 /// - **onAir** — program on program lane; next preview warming on incoming (hidden)
 /// - **transitioning** — outgoing + incoming lanes; compositor blend mode
 @MainActor
@@ -30,6 +30,7 @@ final class ProgramBusController {
         let isTransitioning: Bool
         let progressBucket: Int
         let kind: SwitchTransitionKind
+        let offAirPreviewVisibleOnProgramMonitor: Bool
     }
 
     private var phase: Phase = .empty
@@ -45,7 +46,8 @@ final class ProgramBusController {
         incomingTrack: RTCVideoTrack?,
         isTransitioning: Bool,
         progress: Double,
-        kind: SwitchTransitionKind
+        kind: SwitchTransitionKind,
+        offAirPreviewVisibleOnProgramMonitor: Bool = false
     ) {
         let warmTrack = isTransitioning
             ? nil
@@ -58,7 +60,8 @@ final class ProgramBusController {
             incomingTrackKey: trackInstanceKey(incomingTrack),
             isTransitioning: isTransitioning,
             progressBucket: isTransitioning ? Self.progressBucket(progress) : 240,
-            kind: kind
+            kind: kind,
+            offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
         )
 
         let leavingTransition = phase == .transitioning && !isTransitioning
@@ -116,7 +119,11 @@ final class ProgramBusController {
             )
             phase = .onAir
         } else if let warmTrack {
-            applyOffAir(on: host, warm: warmTrack)
+            applyOffAir(
+                on: host,
+                warm: warmTrack,
+                visibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
+            )
             phase = .offAirWarm
         } else {
             applyEmpty(on: host)
@@ -168,7 +175,7 @@ final class ProgramBusController {
             attachWarmTrack(warmTrack, program: programTrack, on: host)
             host.enterIdleProgramMode(preservingProgramPresentation: false, warmingTake: false)
         } else if let warmTrack {
-            applyOffAir(on: host, warm: warmTrack)
+            applyOffAir(on: host, warm: warmTrack, visibleOnProgramMonitor: false)
         } else {
             applyEmpty(on: host)
         }
@@ -203,9 +210,13 @@ final class ProgramBusController {
         attachTrack(incomingHint, to: host.incomingRenderer, storage: &attachedIncoming)
     }
 
-    // MARK: - Off-air warm (incoming decodes hidden; PROG monitor stays black until take)
+    // MARK: - Off-air warm (iOS: hidden until take; Android Expo: optional PROG mirror)
 
-    private func applyOffAir(on host: ProgramCrossfadeHost, warm: RTCVideoTrack) {
+    private func applyOffAir(
+        on host: ProgramCrossfadeHost,
+        warm: RTCVideoTrack,
+        visibleOnProgramMonitor: Bool
+    ) {
         if phase == .onAir {
             detachTrack(&attachedProgram, from: host.programRenderer)
             host.clearProgramVideoFrame()
@@ -213,7 +224,7 @@ final class ProgramBusController {
         detachTrack(&attachedOutgoing, from: host.outgoingRenderer)
 
         attachTrack(warm, to: host.incomingRenderer, storage: &attachedIncoming)
-        host.enterIdleProgramMode(preservingProgramPresentation: false, warmingTake: false)
+        host.enterIdleProgramMode(preservingProgramPresentation: false, warmingTake: visibleOnProgramMonitor)
     }
 
     // MARK: - Empty

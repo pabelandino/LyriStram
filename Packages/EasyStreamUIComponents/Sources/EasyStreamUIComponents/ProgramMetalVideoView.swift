@@ -10,6 +10,7 @@ public struct ProgramMetalVideoView: View {
     let isTransitioning: Bool
     let progress: Double
     let kind: SwitchTransitionKind
+    let offAirPreviewVisibleOnProgramMonitor: Bool
 
     public init(
         programTrack: RTCVideoTrack?,
@@ -17,7 +18,8 @@ public struct ProgramMetalVideoView: View {
         incomingTrack: RTCVideoTrack?,
         isTransitioning: Bool,
         progress: Double,
-        kind: SwitchTransitionKind
+        kind: SwitchTransitionKind,
+        offAirPreviewVisibleOnProgramMonitor: Bool = false
     ) {
         self.programTrack = programTrack
         self.outgoingTrack = outgoingTrack
@@ -25,6 +27,7 @@ public struct ProgramMetalVideoView: View {
         self.isTransitioning = isTransitioning
         self.progress = progress
         self.kind = kind
+        self.offAirPreviewVisibleOnProgramMonitor = offAirPreviewVisibleOnProgramMonitor
     }
 
     public var body: some View {
@@ -47,7 +50,8 @@ public struct ProgramMetalVideoView: View {
             fullScreenFileURL: nil,
             fullScreenIsLive: false,
             embedsOverlays: false,
-            onWidgetLiveAutoDismiss: nil
+            onWidgetLiveAutoDismiss: nil,
+            offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
         )
     }
 }

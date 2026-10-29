@@ -18,6 +18,7 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
     let fullScreenIsLive: Bool
     let embedsOverlays: Bool
     let onWidgetLiveAutoDismiss: ((UUID) -> Void)?
+    var offAirPreviewVisibleOnProgramMonitor: Bool = false
 
     func makeUIView(context: Context) -> BroadcastMetalProgramFeedContainerUIView {
         let view = BroadcastMetalProgramFeedContainerUIView()
@@ -34,7 +35,8 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
             fullScreenResource: fullScreenResource,
             fullScreenFileURL: fullScreenFileURL,
             fullScreenIsLive: fullScreenIsLive,
-            embedsOverlays: embedsOverlays
+            embedsOverlays: embedsOverlays,
+            offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
         )
         return view
     }
@@ -53,7 +55,8 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
             fullScreenResource: fullScreenResource,
             fullScreenFileURL: fullScreenFileURL,
             fullScreenIsLive: fullScreenIsLive,
-            embedsOverlays: embedsOverlays
+            embedsOverlays: embedsOverlays,
+            offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
         )
     }
 
@@ -83,6 +86,7 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
             let kind: SwitchTransitionKind
             let embedsOverlays: Bool
             let overlayRevision: String
+            let offAirPreviewVisibleOnProgramMonitor: Bool
         }
 
         func attach(to container: BroadcastMetalProgramFeedContainerUIView) {
@@ -100,7 +104,8 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
             fullScreenResource: BroadcastResource?,
             fullScreenFileURL: URL?,
             fullScreenIsLive: Bool,
-            embedsOverlays: Bool
+            embedsOverlays: Bool,
+            offAirPreviewVisibleOnProgramMonitor: Bool
         ) {
             guard let container else { return }
 
@@ -120,7 +125,8 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
                 progressBucket: isTransitioning ? Int(progress * 50) : -1,
                 kind: kind,
                 embedsOverlays: embedsOverlays,
-                overlayRevision: overlayRevision
+                overlayRevision: overlayRevision,
+                offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
             )
             guard syncKey != lastSyncKey else { return }
             lastSyncKey = syncKey
@@ -143,7 +149,8 @@ struct BroadcastMetalProgramFeedPlatformView: UIViewRepresentable {
                 incomingTrack: incomingTrack,
                 isTransitioning: isTransitioning,
                 progress: progress,
-                kind: kind
+                kind: kind,
+                offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
             )
         }
 
@@ -316,6 +323,7 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
     let fullScreenIsLive: Bool
     let embedsOverlays: Bool
     let onWidgetLiveAutoDismiss: ((UUID) -> Void)?
+    var offAirPreviewVisibleOnProgramMonitor: Bool = false
 
     func makeNSView(context: Context) -> BroadcastMetalProgramFeedContainerNSView {
         let view = BroadcastMetalProgramFeedContainerNSView()
@@ -332,7 +340,8 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
             fullScreenResource: fullScreenResource,
             fullScreenFileURL: fullScreenFileURL,
             fullScreenIsLive: fullScreenIsLive,
-            embedsOverlays: embedsOverlays
+            embedsOverlays: embedsOverlays,
+            offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
         )
         return view
     }
@@ -351,7 +360,8 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
             fullScreenResource: fullScreenResource,
             fullScreenFileURL: fullScreenFileURL,
             fullScreenIsLive: fullScreenIsLive,
-            embedsOverlays: embedsOverlays
+            embedsOverlays: embedsOverlays,
+            offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
         )
     }
 
@@ -381,6 +391,7 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
             let kind: SwitchTransitionKind
             let embedsOverlays: Bool
             let overlayRevision: String
+            let offAirPreviewVisibleOnProgramMonitor: Bool
         }
 
         func attach(to container: BroadcastMetalProgramFeedContainerNSView) {
@@ -398,7 +409,8 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
             fullScreenResource: BroadcastResource?,
             fullScreenFileURL: URL?,
             fullScreenIsLive: Bool,
-            embedsOverlays: Bool
+            embedsOverlays: Bool,
+            offAirPreviewVisibleOnProgramMonitor: Bool
         ) {
             guard let container else { return }
 
@@ -418,7 +430,8 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
                 progressBucket: isTransitioning ? Int(progress * 50) : -1,
                 kind: kind,
                 embedsOverlays: embedsOverlays,
-                overlayRevision: overlayRevision
+                overlayRevision: overlayRevision,
+                offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
             )
             guard syncKey != lastSyncKey else { return }
             lastSyncKey = syncKey
@@ -441,7 +454,8 @@ struct BroadcastMetalProgramFeedPlatformView: NSViewRepresentable {
                 incomingTrack: incomingTrack,
                 isTransitioning: isTransitioning,
                 progress: progress,
-                kind: kind
+                kind: kind,
+                offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
             )
         }
 

@@ -18,6 +18,7 @@ struct ConnectedCameraSource: Identifiable, Equatable {
     var audioTrack: RTCAudioTrack?
     var connectionState: StreamConnectionState
     var remoteSettings: RemoteCameraSettings
+    var platform: DevicePlatform = .unknown
     var connectionStateUpdatedAt: Date = Date()
 
     static func == (lhs: ConnectedCameraSource, rhs: ConnectedCameraSource) -> Bool {
@@ -25,6 +26,7 @@ struct ConnectedCameraSource: Identifiable, Equatable {
             && lhs.displayName == rhs.displayName
             && lhs.connectionState == rhs.connectionState
             && lhs.remoteSettings == rhs.remoteSettings
+            && lhs.platform == rhs.platform
             && lhs.videoTrack === rhs.videoTrack
             && lhs.audioTrack === rhs.audioTrack
     }
@@ -172,7 +174,15 @@ final class DirectorSessionViewModel {
         if let takeHandoffSourceID {
             return track(for: takeHandoffSourceID)
         }
-        guard programSourceID != nil, monitorQuality.prefetchTakeTarget else { return nil }
+        guard let previewSourceID,
+              previewSourceID != programSourceID else { return nil }
+
+        // Expo Android cameras: mirror PREV on the large PROG monitor before first take (iOS native unchanged).
+        if programSourceID == nil, showsAndroidOffAirPreviewOnProgramMonitor {
+            return track(for: previewSourceID)
+        }
+
+        guard monitorQuality.prefetchTakeTarget else { return nil }
         guard let warmID = incomingWarmPreviewSourceID, warmID != programSourceID else { return nil }
         return track(for: warmID)
     }
@@ -183,6 +193,12 @@ final class DirectorSessionViewModel {
             return outgoingProgramVideoTrack ?? programVideoTrack
         }
         return programVideoTrack
+    }
+
+    /// When preview is an Android Expo camera and nothing is on-air yet, show PREV on the PROG monitor.
+    var showsAndroidOffAirPreviewOnProgramMonitor: Bool {
+        guard programSourceID == nil, let previewSourceID else { return false }
+        return platform(for: previewSourceID) == .android
     }
 
     var activeStreamingSourceCount: Int {
@@ -678,6 +694,7 @@ final class DirectorSessionViewModel {
         switch event {
         case .sourceConnected(let sourceID, let displayName):
             enqueueSwitcherOperation {
+                await self.refreshDevices()
                 let saved = await self.settingsStore.settings(for: sourceID)
                 self.upsertSource(sourceID, displayName: displayName, connectionState: .connecting, remoteSettings: saved)
                 _ = await self.switcher.registerSource(sourceID)
@@ -768,6 +785,10 @@ final class DirectorSessionViewModel {
                 source.connectionState = connectionState
             }
             if let remoteSettings { source.remoteSettings = remoteSettings }
+            let resolvedPlatform = platform(for: sourceID)
+            if resolvedPlatform != .unknown {
+                source.platform = resolvedPlatform
+            }
             sources[index] = source
         } else {
             sources.append(ConnectedCameraSource(
@@ -777,6 +798,7 @@ final class DirectorSessionViewModel {
                 audioTrack: audioTrack,
                 connectionState: connectionState ?? .connecting,
                 remoteSettings: remoteSettings ?? RemoteCameraSettings(),
+                platform: platform(for: sourceID),
                 connectionStateUpdatedAt: Date()
             ))
         }
@@ -965,6 +987,13 @@ final class DirectorSessionViewModel {
     private func track(for sourceID: CameraSourceID?) -> RTCVideoTrack? {
         guard let sourceID else { return nil }
         return sources.first { $0.id == sourceID }?.videoTrack
+    }
+
+    private func platform(for sourceID: CameraSourceID) -> DevicePlatform {
+        if let source = sources.first(where: { $0.id == sourceID }), source.platform != .unknown {
+            return source.platform
+        }
+        return devices.first(where: { $0.id == sourceID.rawValue })?.platform ?? .unknown
     }
 
     private func refreshDevices() async {

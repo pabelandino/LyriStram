@@ -1,7 +1,7 @@
 {
   "EasyStream/EasyStreamApp.swift": {
-    "mtime": 1788988825.9670596,
-    "seen": 1788992306.95366,
+    "mtime": 1793295918.408143,
+    "seen": 1793296052.814823,
     "ast_hash": "7153482c7743f50264dfb95780ee99ed",
     "semantic_hash": ""
   },
@@ -36,14 +36,14 @@
     "semantic_hash": ""
   },
   "EasyStream/Features/Camera/CameraSessionView.swift": {
-    "mtime": 1788900896.9358737,
-    "seen": 1788992306.953675,
+    "mtime": 1793295918.4128833,
+    "seen": 1793296052.814837,
     "ast_hash": "5f9a9e9258e0ca45876c2bd36af49ff2",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSessionView.swift": {
-    "mtime": 1788991574.2367947,
-    "seen": 1788992306.953697,
+    "mtime": 1793295917.8790855,
+    "seen": 1793296052.814864,
     "ast_hash": "1719e15af9f17f2bc2b2aa475157a7e3",
     "semantic_hash": ""
   },
@@ -54,32 +54,32 @@
     "semantic_hash": ""
   },
   "EasyStream/ViewModels/CameraSessionViewModel.swift": {
-    "mtime": 1788987191.0018108,
-    "seen": 1788992306.953718,
+    "mtime": 1793295917.87911,
+    "seen": 1793296052.8148868,
     "ast_hash": "d0552047beb00f9799f5c35dd4c4e78f",
     "semantic_hash": ""
   },
   "EasyStream/ViewModels/DirectorSessionViewModel.swift": {
-    "mtime": 1788990586.1295054,
-    "seen": 1788992306.9537191,
-    "ast_hash": "4278f7f7024f9da168ac695eba1cca45",
+    "mtime": 1793298662.2906647,
+    "seen": 1793298749.435196,
+    "ast_hash": "fcbd1d7102c0c07b0382c22c2358c569",
     "semantic_hash": ""
   },
   "EasyStream/ViewModels/DiscoveryViewModel.swift": {
-    "mtime": 1788255173.2675183,
-    "seen": 1788992306.95372,
+    "mtime": 1793295918.0857804,
+    "seen": 1793296052.814889,
     "ast_hash": "ebf278c6be216ade29a4db1ffe75741f",
     "semantic_hash": "ebf278c6be216ade29a4db1ffe75741f"
   },
   "Packages/EasyStreamAudioPipeline/Package.swift": {
-    "mtime": 1788255173.277114,
-    "seen": 1788992306.953723,
+    "mtime": 1793295918.412293,
+    "seen": 1793296052.8148952,
     "ast_hash": "fde0f405027bac89144493e406e41068",
     "semantic_hash": "fde0f405027bac89144493e406e41068"
   },
   "Packages/EasyStreamAudioPipeline/Sources/EasyStreamAudioPipeline/AACAudioEncoder.swift": {
-    "mtime": 1788255173.2770445,
-    "seen": 1788992306.953724,
+    "mtime": 1793295918.412193,
+    "seen": 1793296052.814896,
     "ast_hash": "fc2b23aaefaa8acfb0d420f57b1bbf01",
     "semantic_hash": "fc2b23aaefaa8acfb0d420f57b1bbf01"
   },
@@ -90,38 +90,38 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamAudioPipeline/Tests/EasyStreamAudioPipelineTests/AudioEncoderConfigurationTests.swift": {
-    "mtime": 1788255173.2770667,
-    "seen": 1788992306.953726,
+    "mtime": 1793295918.4122267,
+    "seen": 1793296052.814898,
     "ast_hash": "e802a9aed4b95fb954bda33c6de00612",
     "semantic_hash": "e802a9aed4b95fb954bda33c6de00612"
   },
   "Packages/EasyStreamCameraCapture/Package.swift": {
-    "mtime": 1788255173.267221,
-    "seen": 1788992306.953726,
+    "mtime": 1793295917.8775434,
+    "seen": 1793296052.814899,
     "ast_hash": "78e04e6ea603370c51add97e11bee506",
     "semantic_hash": "78e04e6ea603370c51add97e11bee506"
   },
   "Packages/EasyStreamCameraCapture/Sources/EasyStreamCameraCapture/CameraCaptureService.swift": {
-    "mtime": 1788990917.634557,
-    "seen": 1788992306.953728,
+    "mtime": 1793295917.8776405,
+    "seen": 1793296052.814902,
     "ast_hash": "8b0cab9d7149660242658cec9b37f2eb",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCameraCapture/Sources/EasyStreamCameraCapture/CameraLensTypes.swift": {
-    "mtime": 1788255173.278244,
-    "seen": 1788992306.953729,
+    "mtime": 1793295918.4130313,
+    "seen": 1793296052.814902,
     "ast_hash": "7bec3131a0a9fb13e7d0f39bcc6a78ea",
     "semantic_hash": "7bec3131a0a9fb13e7d0f39bcc6a78ea"
   },
   "Packages/EasyStreamCameraCapture/Sources/EasyStreamCameraCapture/RemoteCameraCommandHandler.swift": {
-    "mtime": 1788900896.8731656,
-    "seen": 1788992306.953732,
+    "mtime": 1793295918.412815,
+    "seen": 1793296052.8149061,
     "ast_hash": "cd796dabe6fb7652ea4cc0c39bd9fe45",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Package.swift": {
-    "mtime": 1788255173.2782593,
-    "seen": 1788992306.953734,
+    "mtime": 1793295918.4130511,
+    "seen": 1793296052.8149078,
     "ast_hash": "299334015c4463a9e912f07585baef0b",
     "semantic_hash": "299334015c4463a9e912f07585baef0b"
   },
@@ -132,8 +132,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/AudioEncoderTypes.swift": {
-    "mtime": 1788255173.2771242,
-    "seen": 1788992306.9537358,
+    "mtime": 1793295918.4122982,
+    "seen": 1793296052.81491,
     "ast_hash": "b30cb3fe57e82c06568338ee4c7c535e",
     "semantic_hash": "b30cb3fe57e82c06568338ee4c7c535e"
   },
@@ -144,20 +144,20 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/BroadcastTerminology.swift": {
-    "mtime": 1788255173.2770777,
-    "seen": 1788992306.953742,
+    "mtime": 1793295918.4122732,
+    "seen": 1793296052.8149178,
     "ast_hash": "bfdcd0256d1bd129250f67d3e784a608",
     "semantic_hash": "bfdcd0256d1bd129250f67d3e784a608"
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/DeviceIdentity.swift": {
-    "mtime": 1788255173.2675524,
-    "seen": 1788992306.9537458,
-    "ast_hash": "81968c06a3a901ea353231b192e81f85",
-    "semantic_hash": "81968c06a3a901ea353231b192e81f85"
+    "mtime": 1793297801.3464475,
+    "seen": 1793298749.4352372,
+    "ast_hash": "76001322eb3feef0d91de50ad472a2df",
+    "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/DiscoveredDevice.swift": {
-    "mtime": 1788255173.2671654,
-    "seen": 1788992306.953748,
+    "mtime": 1793295917.8772547,
+    "seen": 1793296052.8149261,
     "ast_hash": "94c641927b6faa0d111378d7fb22d95f",
     "semantic_hash": "94c641927b6faa0d111378d7fb22d95f"
   },
@@ -168,8 +168,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/RemoteCameraSettings.swift": {
-    "mtime": 1788900896.8533604,
-    "seen": 1788992306.95376,
+    "mtime": 1793295918.4121435,
+    "seen": 1793296052.814941,
     "ast_hash": "31f048a411f5fc1370cf6d7e6916e33a",
     "semantic_hash": ""
   },
@@ -180,26 +180,26 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/StreamDestination.swift": {
-    "mtime": 1788255173.2672374,
-    "seen": 1788992306.953762,
+    "mtime": 1793295917.8776724,
+    "seen": 1793296052.814943,
     "ast_hash": "a26f4d100c063c447c3a94c0d1add155",
     "semantic_hash": "a26f4d100c063c447c3a94c0d1add155"
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/StreamingStrategy.swift": {
-    "mtime": 1788255173.2755888,
-    "seen": 1788992306.953762,
+    "mtime": 1793295918.4081872,
+    "seen": 1793296052.814944,
     "ast_hash": "4a59c7791e9cdc9e055ce7878fff8a14",
     "semantic_hash": "4a59c7791e9cdc9e055ce7878fff8a14"
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/SwitcherTypes.swift": {
-    "mtime": 1788255173.2675717,
-    "seen": 1788992306.953763,
+    "mtime": 1793295918.143791,
+    "seen": 1793296052.814945,
     "ast_hash": "05d21201e0174406eac006f4a39a39c3",
     "semantic_hash": "05d21201e0174406eac006f4a39a39c3"
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/TransitionPreferencesStore.swift": {
-    "mtime": 1788255173.267565,
-    "seen": 1788992306.9537642,
+    "mtime": 1793295918.0908852,
+    "seen": 1793296052.814946,
     "ast_hash": "01df2b9fff579a804d593100ec390558",
     "semantic_hash": "01df2b9fff579a804d593100ec390558"
   },
@@ -216,14 +216,14 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamDiscovery/Package.swift": {
-    "mtime": 1788255173.2674692,
-    "seen": 1788992306.9537668,
+    "mtime": 1793295917.8786507,
+    "seen": 1793296052.81495,
     "ast_hash": "f60b5fd2b715c3531218135295ddfe6b",
     "semantic_hash": "f60b5fd2b715c3531218135295ddfe6b"
   },
   "Packages/EasyStreamDiscovery/Sources/EasyStreamDiscovery/BonjourTXTCodec.swift": {
-    "mtime": 1788255173.2676494,
-    "seen": 1788992306.953768,
+    "mtime": 1793295918.3884094,
+    "seen": 1793296052.814951,
     "ast_hash": "79789efb9af0bb044d8c9b0c5eecab1f",
     "semantic_hash": "79789efb9af0bb044d8c9b0c5eecab1f"
   },
@@ -234,140 +234,140 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamDiscovery/Tests/EasyStreamDiscoveryTests/DiscoveryServiceTests.swift": {
-    "mtime": 1788255173.2675788,
-    "seen": 1788992306.953771,
+    "mtime": 1793295918.1975195,
+    "seen": 1793296052.814954,
     "ast_hash": "d066fed78de6487fb4a62b39f650de05",
     "semantic_hash": "d066fed78de6487fb4a62b39f650de05"
   },
   "Packages/EasyStreamFacebook/Package.swift": {
-    "mtime": 1788255173.2672875,
-    "seen": 1788992306.953772,
+    "mtime": 1793295917.877693,
+    "seen": 1793296052.814955,
     "ast_hash": "53c18b49b114894dde2512bb905a1ad2",
     "semantic_hash": "53c18b49b114894dde2512bb905a1ad2"
   },
   "Packages/EasyStreamFacebook/Sources/EasyStreamFacebook/FacebookAuthService.swift": {
-    "mtime": 1788255173.2672117,
-    "seen": 1788992306.953772,
+    "mtime": 1793295917.8775847,
+    "seen": 1793296052.8149571,
     "ast_hash": "69235a614760201baaf91bc85254b964",
     "semantic_hash": "69235a614760201baaf91bc85254b964"
   },
   "Packages/EasyStreamFacebook/Sources/EasyStreamFacebook/FacebookConfiguration.swift": {
-    "mtime": 1788255173.2671857,
-    "seen": 1788992306.953773,
+    "mtime": 1793295917.8773904,
+    "seen": 1793296052.814958,
     "ast_hash": "936a52e13da5d531be910b40055f0e6f",
     "semantic_hash": "936a52e13da5d531be910b40055f0e6f"
   },
   "Packages/EasyStreamFacebook/Sources/EasyStreamFacebook/FacebookGraphClient.swift": {
-    "mtime": 1788255173.2671773,
-    "seen": 1788992306.953774,
+    "mtime": 1793295917.8773634,
+    "seen": 1793296052.814958,
     "ast_hash": "8171d60602ea7ebc8f0c050e21ce8800",
     "semantic_hash": "8171d60602ea7ebc8f0c050e21ce8800"
   },
   "Packages/EasyStreamFacebook/Sources/EasyStreamFacebook/FacebookLiveService.swift": {
-    "mtime": 1788255173.277196,
-    "seen": 1788992306.9537752,
+    "mtime": 1793295918.4121974,
+    "seen": 1793296052.814959,
     "ast_hash": "5a2c2988f28fb713eaae1516ef99cca9",
     "semantic_hash": "5a2c2988f28fb713eaae1516ef99cca9"
   },
   "Packages/EasyStreamFacebook/Sources/EasyStreamFacebook/FacebookModels.swift": {
-    "mtime": 1788255173.2772026,
-    "seen": 1788992306.9537752,
+    "mtime": 1793295918.4126823,
+    "seen": 1793296052.8149602,
     "ast_hash": "8da558d46c872541f44fac66fea82111",
     "semantic_hash": "8da558d46c872541f44fac66fea82111"
   },
   "Packages/EasyStreamFacebook/Sources/EasyStreamFacebook/FacebookNativeAuthBridge.swift": {
-    "mtime": 1788255173.2756302,
-    "seen": 1788992306.9537761,
+    "mtime": 1793295918.4120734,
+    "seen": 1793296052.814961,
     "ast_hash": "b2e0c3717674f719741769ab1cb344bc",
     "semantic_hash": "b2e0c3717674f719741769ab1cb344bc"
   },
   "Packages/EasyStreamFacebook/Sources/EasyStreamFacebook/FacebookSessionStore.swift": {
-    "mtime": 1788255173.27561,
-    "seen": 1788992306.9537768,
+    "mtime": 1793295918.412027,
+    "seen": 1793296052.814962,
     "ast_hash": "833ff8d086407c95adfc50193926dee2",
     "semantic_hash": "833ff8d086407c95adfc50193926dee2"
   },
   "Packages/EasyStreamFacebook/Sources/EasyStreamFacebook/StreamDestinationFacebookParsing.swift": {
-    "mtime": 1788255173.2780318,
-    "seen": 1788992306.953778,
+    "mtime": 1793295918.4129107,
+    "seen": 1793296052.8149629,
     "ast_hash": "cd635a17aa159c7406d7ceb60fa14ce8",
     "semantic_hash": "cd635a17aa159c7406d7ceb60fa14ce8"
   },
   "Packages/EasyStreamFacebook/Tests/EasyStreamFacebookTests/FacebookStreamURLTests.swift": {
-    "mtime": 1788255173.2674382,
-    "seen": 1788992306.953779,
+    "mtime": 1793295917.8771992,
+    "seen": 1793296052.814964,
     "ast_hash": "a8dcf5e9196f3e82dfacb3a705e3ef7e",
     "semantic_hash": "a8dcf5e9196f3e82dfacb3a705e3ef7e"
   },
   "Packages/EasyStreamFacebookLogin/Package.swift": {
-    "mtime": 1788255173.2675116,
-    "seen": 1788992306.953779,
+    "mtime": 1793295918.0857265,
+    "seen": 1793296052.814965,
     "ast_hash": "9f3232a4b8bda9fff6f26030ebaa7d69",
     "semantic_hash": "9f3232a4b8bda9fff6f26030ebaa7d69"
   },
   "Packages/EasyStreamFacebookLogin/Sources/EasyStreamFacebookLogin/FacebookPlatformAuth.swift": {
-    "mtime": 1788255173.2673523,
-    "seen": 1788992306.95378,
+    "mtime": 1793295917.8783882,
+    "seen": 1793296052.814966,
     "ast_hash": "dc569f9f9fc14f81e3b060e508acfeaf",
     "semantic_hash": "dc569f9f9fc14f81e3b060e508acfeaf"
   },
   "Packages/EasyStreamFacebookLogin/Sources/EasyStreamFacebookLogin/FacebookSDKBootstrap.swift": {
-    "mtime": 1788255173.277187,
-    "seen": 1788992306.953781,
+    "mtime": 1793295918.412545,
+    "seen": 1793296052.8149672,
     "ast_hash": "3aa6116d3f46230010b6cfb770b274b9",
     "semantic_hash": "3aa6116d3f46230010b6cfb770b274b9"
   },
   "Packages/EasyStreamStreaming/Package.swift": {
-    "mtime": 1788255173.2676835,
-    "seen": 1788992306.953782,
+    "mtime": 1793295918.4077442,
+    "seen": 1793296052.814968,
     "ast_hash": "48c42719ec2b156ea0e58917dc4cca95",
     "semantic_hash": "48c42719ec2b156ea0e58917dc4cca95"
   },
   "Packages/EasyStreamStreaming/Sources/EasyStreamStreaming/BroadcastStreamPublisher.swift": {
-    "mtime": 1788255173.2756186,
-    "seen": 1788992306.953783,
+    "mtime": 1793295918.412082,
+    "seen": 1793296052.814969,
     "ast_hash": "6fc464a4bfe2b888688e563d1459092e",
     "semantic_hash": "6fc464a4bfe2b888688e563d1459092e"
   },
   "Packages/EasyStreamStreaming/Sources/EasyStreamStreaming/FLVBuilder.swift": {
-    "mtime": 1788255173.2783089,
-    "seen": 1788992306.953783,
+    "mtime": 1793295918.4130995,
+    "seen": 1793296052.81497,
     "ast_hash": "90912448f7b8be18ec0bde98b93fd9cc",
     "semantic_hash": "90912448f7b8be18ec0bde98b93fd9cc"
   },
   "Packages/EasyStreamStreaming/Sources/EasyStreamStreaming/RTMPProtocol.swift": {
-    "mtime": 1788255173.275549,
-    "seen": 1788992306.953784,
+    "mtime": 1793295918.4080007,
+    "seen": 1793296052.814971,
     "ast_hash": "14412102ab27743ec536104d017f1850",
     "semantic_hash": "14412102ab27743ec536104d017f1850"
   },
   "Packages/EasyStreamStreaming/Sources/EasyStreamStreaming/RTMPPublisher.swift": {
-    "mtime": 1788255173.2671463,
-    "seen": 1788992306.9537852,
+    "mtime": 1793295917.8773115,
+    "seen": 1793296052.814972,
     "ast_hash": "311c2f5e9c845da655d8ed0bd7a24054",
     "semantic_hash": "311c2f5e9c845da655d8ed0bd7a24054"
   },
   "Packages/EasyStreamStreaming/Tests/EasyStreamStreamingTests/StreamDestinationParsingTests.swift": {
-    "mtime": 1788255173.277057,
-    "seen": 1788992306.9537861,
+    "mtime": 1793295918.0861855,
+    "seen": 1793296052.8149729,
     "ast_hash": "6c7f880e655eee179307a21ee2ecf0d8",
     "semantic_hash": "6c7f880e655eee179307a21ee2ecf0d8"
   },
   "Packages/EasyStreamSwitcher/Package.swift": {
-    "mtime": 1788255173.2673926,
-    "seen": 1788992306.9537868,
+    "mtime": 1793295917.878459,
+    "seen": 1793296052.814974,
     "ast_hash": "c60f3b3ea6f41bfd45782dcca5cfff90",
     "semantic_hash": "c60f3b3ea6f41bfd45782dcca5cfff90"
   },
   "Packages/EasyStreamSwitcher/Sources/EasyStreamSwitcher/SwitcherEngine.swift": {
-    "mtime": 1788900897.9914296,
-    "seen": 1788992306.9537868,
+    "mtime": 1793295917.8776505,
+    "seen": 1793296052.814975,
     "ast_hash": "144890dae3f6096d3c7edf2496c2205f",
     "semantic_hash": ""
   },
   "Packages/EasyStreamSwitcher/Tests/EasyStreamSwitcherTests/SwitcherEngineTests.swift": {
-    "mtime": 1788900898.0133383,
-    "seen": 1788992306.9537878,
+    "mtime": 1793295918.4119074,
+    "seen": 1793296052.814976,
     "ast_hash": "8c39c834df8237c5e063d8279aff0bf2",
     "semantic_hash": ""
   },
@@ -378,26 +378,26 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamTransport/Sources/EasyStreamTransport/CameraStreamClient.swift": {
-    "mtime": 1788900897.221711,
-    "seen": 1788992306.95379,
+    "mtime": 1793295917.8776236,
+    "seen": 1793296052.8149781,
     "ast_hash": "002605e8c1e6b8595800715230d7fc79",
     "semantic_hash": ""
   },
   "Packages/EasyStreamTransport/Sources/EasyStreamTransport/DirectorStreamReceiver.swift": {
-    "mtime": 1788900970.0024638,
-    "seen": 1788992306.953791,
+    "mtime": 1793295918.337251,
+    "seen": 1793296052.814979,
     "ast_hash": "47dc1075b7e3d0c39d1e75dc23a7bdf3",
     "semantic_hash": ""
   },
   "Packages/EasyStreamTransport/Sources/EasyStreamTransport/PlayoutTapAudioDevice.swift": {
-    "mtime": 1788255173.2778103,
-    "seen": 1788992306.953793,
+    "mtime": 1793295918.4129148,
+    "seen": 1793296052.814982,
     "ast_hash": "2691ba33e6f5690940d83d1ec72d7364",
     "semantic_hash": "2691ba33e6f5690940d83d1ec72d7364"
   },
   "Packages/EasyStreamTransport/Sources/EasyStreamTransport/SignalingChannel.swift": {
-    "mtime": 1788900970.0032327,
-    "seen": 1788992306.953794,
+    "mtime": 1793295917.8785968,
+    "seen": 1793296052.814983,
     "ast_hash": "bdb8c17fda1041364f4d95f607b7e554",
     "semantic_hash": ""
   },
@@ -414,14 +414,14 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/CameraClientControlsView.swift": {
-    "mtime": 1788900896.9576867,
-    "seen": 1788992306.9538581,
+    "mtime": 1793295918.4131286,
+    "seen": 1793296052.815061,
     "ast_hash": "3f543ba734f97335cb2e9f3d4151efa2",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/FacebookLivePanel.swift": {
-    "mtime": 1788900896.9998386,
-    "seen": 1788992306.953886,
+    "mtime": 1793295917.8785484,
+    "seen": 1793296052.8150961,
     "ast_hash": "10e156a96b44cf2da26d1825d8cd9f2f",
     "semantic_hash": ""
   },
@@ -432,14 +432,14 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/StreamDestinationPanel.swift": {
-    "mtime": 1788900896.9785957,
-    "seen": 1788992306.953946,
+    "mtime": 1793295917.8773437,
+    "seen": 1793296052.8152351,
     "ast_hash": "38481b25a6ef55fd99732de97895bb05",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/VideoPreviewViews.swift": {
-    "mtime": 1788900896.693409,
-    "seen": 1788992306.953954,
+    "mtime": 1793295917.8790355,
+    "seen": 1793296052.815246,
     "ast_hash": "e6ec9ba70b9fa4e4553e308118585ca0",
     "semantic_hash": ""
   },
@@ -450,8 +450,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoPipeline/Sources/EasyStreamVideoPipeline/H264VideoEncoder.swift": {
-    "mtime": 1788255173.267505,
-    "seen": 1788992306.953969,
+    "mtime": 1793295917.8791904,
+    "seen": 1793296052.815267,
     "ast_hash": "7c0d968a4e3df9083b294516bbb705a6",
     "semantic_hash": "7c0d968a4e3df9083b294516bbb705a6"
   },
@@ -468,14 +468,14 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoPipeline/Tests/EasyStreamVideoPipelineTests/VideoEncoderConfigurationTests.swift": {
-    "mtime": 1788255173.2772112,
-    "seen": 1788992306.9539762,
+    "mtime": 1793295918.4126742,
+    "seen": 1793296052.8152761,
     "ast_hash": "7a90496edb877873abd2d86f4eb7ff12",
     "semantic_hash": "7a90496edb877873abd2d86f4eb7ff12"
   },
   "Packages/EasyStreamCameraCapture/Sources/EasyStreamCameraCapture/CaptureVideoOrientation.swift": {
-    "mtime": 1788984728.2373183,
-    "seen": 1788992306.953731,
+    "mtime": 1793295918.0860481,
+    "seen": 1793296052.8149052,
     "ast_hash": "176e18dae55cd2ea955e9dbec6ef3796",
     "semantic_hash": ""
   },
@@ -486,20 +486,20 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BoundedWebRTCVideoView.swift": {
-    "mtime": 1788900896.7751808,
-    "seen": 1788992306.953799,
+    "mtime": 1793295918.4079163,
+    "seen": 1793296052.81499,
     "ast_hash": "24f36939befe28b64d9cc35d4172a6cf",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorPreviewMonitorStore.swift": {
-    "mtime": 1788988819.5575624,
-    "seen": 1788992306.953683,
+    "mtime": 1793297380.3829653,
+    "seen": 1793298749.4351501,
     "ast_hash": "1ad6402b6e71c7f929cf8bb72d1f89ca",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorPreviewMonitorWindowView.swift": {
-    "mtime": 1788988819.5588543,
-    "seen": 1788992306.9536839,
+    "mtime": 1793297380.3955007,
+    "seen": 1793298749.435151,
     "ast_hash": "a0c02590e56a3e52e6cdcc35dc80f2ad",
     "semantic_hash": ""
   },
@@ -522,20 +522,20 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastTheme.swift": {
-    "mtime": 1788900896.892722,
-    "seen": 1788992306.953832,
+    "mtime": 1793295918.0859487,
+    "seen": 1793296052.8150342,
     "ast_hash": "9dad1d9b808556cba98456ba7f40e75d",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/CameraTallyGlowOverlay.swift": {
-    "mtime": 1788900896.9157557,
-    "seen": 1788992306.9538612,
+    "mtime": 1793295917.8774734,
+    "seen": 1793296052.8150651,
     "ast_hash": "85b6beda5eb28353cc26941145aad7a2",
     "semantic_hash": ""
   },
   "EasyStream/ViewModels/BroadcastMediaViewModel.swift": {
-    "mtime": 1788992289.0683432,
-    "seen": 1788992306.953717,
+    "mtime": 1793295918.4118698,
+    "seen": 1793296052.8148859,
     "ast_hash": "471c4b0cdcff95487fac69d1449ee38c",
     "semantic_hash": ""
   },
@@ -588,8 +588,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastMediaLibraryPanel.swift": {
-    "mtime": 1788900897.0205343,
-    "seen": 1788992306.9538162,
+    "mtime": 1793295918.4082477,
+    "seen": 1793296052.8150132,
     "ast_hash": "ab9569f34776a97072ba36a8708076a5",
     "semantic_hash": ""
   },
@@ -600,8 +600,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastWidgetStudioPanel.swift": {
-    "mtime": 1788989642.098275,
-    "seen": 1788992306.953851,
+    "mtime": 1793295918.4124618,
+    "seen": 1793296052.815053,
     "ast_hash": "4dba151ab26ee5b2df55e3fee88d4111",
     "semantic_hash": ""
   },
@@ -624,8 +624,8 @@
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/ProgramOutputSyncBridge.swift": {
-    "mtime": 1788987195.8417115,
-    "seen": 1788992306.9537148,
+    "mtime": 1793295917.8783937,
+    "seen": 1793296052.8148842,
     "ast_hash": "f66ec4d36c94895d16f6d93fbdaa7a32",
     "semantic_hash": ""
   },
@@ -636,33 +636,33 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramFeedView.swift": {
-    "mtime": 1788900897.0892851,
-    "seen": 1788992306.9539258,
+    "mtime": 1793295918.4128084,
+    "seen": 1793296052.815213,
     "ast_hash": "1097f297e9a8a6f3d92e9245971faa25",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramOutputDestinationPanel.swift": {
-    "mtime": 1788991591.693901,
-    "seen": 1788992306.953929,
+    "mtime": 1793297380.4099393,
+    "seen": 1793298749.435471,
     "ast_hash": "6766bfcc066e12d8afbe4fe6439fab57",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorProgramMonitorView.swift": {
-    "mtime": 1788900897.177834,
-    "seen": 1788992306.953687,
+    "mtime": 1793295917.8772564,
+    "seen": 1793296052.814852,
     "ast_hash": "9d4b38ea38eec6ec309bdc336a64cb52",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/LiveProgramAirStore.swift": {
-    "mtime": 1788900897.1338115,
-    "seen": 1788992306.953714,
+    "mtime": 1793295918.4120426,
+    "seen": 1793296052.814882,
     "ast_hash": "065b69a073c6f03c3c7c3046b7e3d457",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/StableProgramVideoView.swift": {
-    "mtime": 1788900897.155402,
-    "seen": 1788992306.953944,
-    "ast_hash": "1100e05d913c9ddb7152a59aa7981351",
+    "mtime": 1793298672.810391,
+    "seen": 1793298749.435485,
+    "ast_hash": "271d7d6cbf4c0a21fd31bdab559e39dc",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastTransmissionMenu.swift": {
@@ -672,20 +672,20 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamTransport/Sources/EasyStreamTransport/WebRTCVideoFramePublisher.swift": {
-    "mtime": 1788900897.1998842,
-    "seen": 1788992306.953797,
+    "mtime": 1793295917.8774924,
+    "seen": 1793296052.814986,
     "ast_hash": "0a71e8817ca29cbb20283931abb013bc",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSourceSidebarView.swift": {
-    "mtime": 1788900897.2639503,
-    "seen": 1788992306.953701,
+    "mtime": 1793295918.4122467,
+    "seen": 1793296052.814869,
     "ast_hash": "0774bbccaa589a0755d9f11e1e87ae0b",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSwitcherColumnView.swift": {
-    "mtime": 1788900897.243118,
-    "seen": 1788992306.9537091,
+    "mtime": 1793295918.4130647,
+    "seen": 1793296052.814878,
     "ast_hash": "da35a21bed9e3aaaf392fbc9c99cd6f4",
     "semantic_hash": ""
   },
@@ -708,14 +708,14 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastGlassStyles.swift": {
-    "mtime": 1788900897.3163805,
-    "seen": 1788992306.953812,
+    "mtime": 1793295918.2933419,
+    "seen": 1793296052.815007,
     "ast_hash": "9fd334d3e26e86dc193d5ffea107655d",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastBarlessWindowConfigurator.swift": {
-    "mtime": 1788900897.3420122,
-    "seen": 1788992306.953801,
+    "mtime": 1793295918.4129732,
+    "seen": 1793296052.814993,
     "ast_hash": "660e7b5caa68ed7deb0f8c305ccc0412",
     "semantic_hash": ""
   },
@@ -733,241 +733,241 @@
   },
   "LyrioraStreamIcon.icon/icon.json": {
     "mtime": 1788278710.116113,
-    "seen": 1788895097.091886,
-    "ast_hash": "",
+    "seen": 1793296052.814894,
+    "ast_hash": "dbb73e55d4083829c98e938a1aa251a3",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramCrossfadeVideoView.swift": {
-    "mtime": 1788900897.363464,
-    "seen": 1788992306.9539258,
+    "mtime": 1793295917.8773546,
+    "seen": 1793296052.815212,
     "ast_hash": "360a5125f4dbd6317337f0456efb585d",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramTransition/ProgramTransitionEffect.swift": {
-    "mtime": 1788900897.433764,
-    "seen": 1788992306.9539351,
+    "mtime": 1793295918.4079654,
+    "seen": 1793296052.815219,
     "ast_hash": "e3f187a2bc491bb47c5070acc43498c4",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramTransition/ProgramTransitionEngine.swift": {
-    "mtime": 1788900897.45454,
-    "seen": 1788992306.9539359,
+    "mtime": 1793295918.238191,
+    "seen": 1793296052.8152199,
     "ast_hash": "0a966c9f5ad2bdc5d225917b2488b852",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramTransition/ProgramTransitionFrame.swift": {
-    "mtime": 1788900897.4093158,
-    "seen": 1788992306.9539359,
+    "mtime": 1793295918.408044,
+    "seen": 1793296052.815221,
     "ast_hash": "b02628a37eb9460be207c9d13684420f",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramTransition/ProgramTransitionTiming.swift": {
-    "mtime": 1788900897.3852801,
-    "seen": 1788992306.953941,
+    "mtime": 1793295918.412838,
+    "seen": 1793296052.8152268,
     "ast_hash": "83457db22fadb978021cdd311052905b",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramCrossfade/ProgramCrossfadeContainer+AppKit.swift": {
-    "mtime": 1788900897.6166358,
-    "seen": 1788992306.953918,
+    "mtime": 1793295917.8772535,
+    "seen": 1793296052.815201,
     "ast_hash": "8ed037bece262db39c091e0a352b5850",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramCrossfade/ProgramCrossfadeContainer+UIKit.swift": {
-    "mtime": 1788900897.597126,
-    "seen": 1788992306.953918,
+    "mtime": 1793295918.407821,
+    "seen": 1793296052.815202,
     "ast_hash": "52e4ff0df14df8f180786949b0c9e621",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramCrossfade/ProgramCrossfadeHost.swift": {
-    "mtime": 1788900897.5569959,
-    "seen": 1788992306.953919,
+    "mtime": 1793295917.8776078,
+    "seen": 1793296052.8152032,
     "ast_hash": "7d8630e0d0fdcb74c8278fd9b4793a29",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramCrossfade/ProgramCrossfadeLayout.swift": {
-    "mtime": 1788900897.6749504,
-    "seen": 1788992306.95392,
+    "mtime": 1793295918.413098,
+    "seen": 1793296052.815205,
     "ast_hash": "65b66d49ad54b957504ad33c2e9de1fa",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramCrossfade/ProgramCrossfadeRenderer.swift": {
-    "mtime": 1788900897.514385,
-    "seen": 1788992306.953922,
+    "mtime": 1793295917.8790617,
+    "seen": 1793296052.815207,
     "ast_hash": "a1be19820b3c1463614ddedad618f9f4",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramCrossfade/ProgramCrossfadeRepresentable+AppKit.swift": {
-    "mtime": 1788900897.65521,
-    "seen": 1788992306.953923,
+    "mtime": 1793295918.0861077,
+    "seen": 1793296052.815208,
     "ast_hash": "1f5ed917a2519a029aa1dd4f2f1a289e",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramCrossfade/ProgramCrossfadeRepresentable+UIKit.swift": {
-    "mtime": 1788901087.1745691,
-    "seen": 1788992306.9539242,
+    "mtime": 1793295918.0775213,
+    "seen": 1793296052.8152099,
     "ast_hash": "e4590f0ff9e0f60f55c91de1c5d0caf7",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramCrossfade/ProgramCrossfadeSession.swift": {
-    "mtime": 1788900897.5766768,
-    "seen": 1788992306.9539251,
-    "ast_hash": "2c9bace7b6a4f9dcf5847ff85bc7d449",
+    "mtime": 1793298718.0710511,
+    "seen": 1793298749.4354649,
+    "ast_hash": "7132097a775ff1eea33bc9f265e313c3",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramTransition/ProgramTransitionSlotView+AppKit.swift": {
-    "mtime": 1788900897.4744408,
-    "seen": 1788992306.953938,
+    "mtime": 1793295917.8776734,
+    "seen": 1793296052.8152242,
     "ast_hash": "0b589421d2821a62e2c11a64c8760ff8",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramTransition/ProgramTransitionSlotView+UIKit.swift": {
-    "mtime": 1788900897.4941149,
-    "seen": 1788992306.953939,
+    "mtime": 1793295918.4126368,
+    "seen": 1793296052.8152251,
     "ast_hash": "5562a278f2e2916ae3f2d3e507066012",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramTransition/ProgramTransitionSlotView.swift": {
-    "mtime": 1788900897.535262,
-    "seen": 1788992306.95394,
+    "mtime": 1793295918.4124107,
+    "seen": 1793296052.815226,
     "ast_hash": "43b396573f2067db209c4258b4cba0c1",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorPreviewTileTrackPolicy.swift": {
-    "mtime": 1788988231.9667158,
-    "seen": 1788992306.953872,
+    "mtime": 1793295918.0860417,
+    "seen": 1793296052.815079,
     "ast_hash": "f59bec5429099a3866faaafd6e8ffa85",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramTransition/ProgramTransitionRevealMask.swift": {
-    "mtime": 1788900897.7150955,
-    "seen": 1788992306.9539368,
+    "mtime": 1793295917.8786197,
+    "seen": 1793296052.815222,
     "ast_hash": "82ae8107c5f9853b72bcf23c74deac08",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalCompositor.swift": {
-    "mtime": 1788900897.8164172,
-    "seen": 1788992306.9538932,
+    "mtime": 1793295918.4125004,
+    "seen": 1793296052.815104,
     "ast_hash": "7ad482207e6020f142e372b10a4e679e",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalOverlayProvider.swift": {
-    "mtime": 1788900897.7361588,
-    "seen": 1788992306.9538949,
+    "mtime": 1793295918.4121068,
+    "seen": 1793296052.815108,
     "ast_hash": "9d9a7549b0bc9fa82353faaa4121c7b1",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalProgramFeedView+Public.swift": {
-    "mtime": 1788900897.8994572,
-    "seen": 1788992306.953896,
+    "mtime": 1793295918.4078832,
+    "seen": 1793296052.815109,
     "ast_hash": "61bf1cbd04dcd57640397754665e5a2e",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalProgramFeedView.swift": {
-    "mtime": 1788900897.8772876,
-    "seen": 1788992306.953897,
-    "ast_hash": "951427ecc208290a27430646b4408b2a",
+    "mtime": 1793298713.8860123,
+    "seen": 1793298749.435432,
+    "ast_hash": "765c09c54f316fcc28b77975c42aebff",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalShaders.metal": {
-    "mtime": 1788900897.7766178,
-    "seen": 1788992306.953898,
+    "mtime": 1793295918.412121,
+    "seen": 1793296052.815111,
     "ast_hash": "f1ad94926483b210184b61a2e2e5a957",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalSwiftUIOverlayProvider.swift": {
-    "mtime": 1788900897.856514,
-    "seen": 1788992306.953899,
+    "mtime": 1793295918.0861602,
+    "seen": 1793296052.8151119,
     "ast_hash": "33aee5953cf3ad1afbcdd4f1775c8dd4",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalTextureUploader.swift": {
-    "mtime": 1788900897.7567205,
-    "seen": 1788992306.953901,
+    "mtime": 1793295918.412123,
+    "seen": 1793296052.815114,
     "ast_hash": "39811867ac2c778a94b880601c32263c",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalVideoSink.swift": {
-    "mtime": 1788900897.7963362,
-    "seen": 1788992306.953902,
+    "mtime": 1793295918.4122207,
+    "seen": 1793296052.815115,
     "ast_hash": "9c6cfd3250c92e59ebd66a9bc974ec87",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalWidgetOverlayContent.swift": {
-    "mtime": 1788900897.8364642,
-    "seen": 1788992306.9539032,
+    "mtime": 1793295918.4131868,
+    "seen": 1793296052.815116,
     "ast_hash": "784fe4ca5609fe0bf2b797e7efa33890",
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoPipeline/Sources/EasyStreamVideoPipeline/WebRTCVideoFramePixelBuffer.swift": {
-    "mtime": 1788900897.92097,
-    "seen": 1788992306.953975,
+    "mtime": 1793295918.4123652,
+    "seen": 1793296052.815275,
     "ast_hash": "c5cc8f781d764ec833a65d6090da69e3",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/CameraTransportProfile.swift": {
-    "mtime": 1788900897.94493,
-    "seen": 1788992306.953745,
+    "mtime": 1793295918.086464,
+    "seen": 1793296052.814922,
     "ast_hash": "3ebac8eedbcbac3994f1ba6602265e82",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramCrossfade/ProgramCrossfadeLetterboxCalculator.swift": {
-    "mtime": 1788900897.9674253,
-    "seen": 1788992306.953921,
+    "mtime": 1793295918.0860245,
+    "seen": 1793296052.8152058,
     "ast_hash": "ed39a37c54c5dbeeb87ec1f80d5b3d1d",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/VideoRendererSinkRegistry.swift": {
-    "mtime": 1788900898.0380058,
-    "seen": 1788992306.9537659,
+    "mtime": 1793295918.4129863,
+    "seen": 1793296052.814948,
     "ast_hash": "9e82155d1f5a3afbdfb82f6b578d3429",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramTransition/ProgramTransitionDisplayLink.swift": {
-    "mtime": 1788900898.0574715,
-    "seen": 1788992306.95393,
+    "mtime": 1793295918.4078841,
+    "seen": 1793296052.815218,
     "ast_hash": "1a5e3ceaaf0d1937b4eb9cdc5e97b6c2",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramMetalVideoView.swift": {
-    "mtime": 1788900898.0983446,
-    "seen": 1788992306.9539268,
-    "ast_hash": "7631f422d120c3e909dd5f515794f4dc",
+    "mtime": 1793298677.8212411,
+    "seen": 1793298749.4354692,
+    "ast_hash": "28b7c22a781503404135a24155125a44",
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoPipeline/Sources/EasyStreamVideoPipeline/ProgramFrameBus.swift": {
-    "mtime": 1788900898.0774925,
-    "seen": 1788992306.95397,
+    "mtime": 1793295918.377143,
+    "seen": 1793296052.815268,
     "ast_hash": "e105757fbb0493bf54d562efbc25a17c",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/Program/ProgramFrameTelemetryPort.swift": {
-    "mtime": 1788900898.118244,
-    "seen": 1788992306.953755,
+    "mtime": 1793295918.3941793,
+    "seen": 1793296052.8149362,
     "ast_hash": "8657534979fe4838e4a08a9eebc84608",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/Program/ProgramPreviewVisibilityPolicy.swift": {
-    "mtime": 1788988819.5588586,
-    "seen": 1788992306.9537568,
+    "mtime": 1793295918.4123337,
+    "seen": 1793296052.814937,
     "ast_hash": "ef5d73d10573906ef3e5277b1f407ca2",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/Program/ProgramRenderBackend.swift": {
-    "mtime": 1788900898.1581728,
-    "seen": 1788992306.953758,
+    "mtime": 1793295918.4080687,
+    "seen": 1793296052.814938,
     "ast_hash": "43a21dcaddd3986d52f40071c644c5e4",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramMonitorViewFactory.swift": {
-    "mtime": 1788900898.237832,
-    "seen": 1788992306.953928,
-    "ast_hash": "371dcd3ff6554b8855097521bc86b63e",
+    "mtime": 1793298675.8715467,
+    "seen": 1793298749.43547,
+    "ast_hash": "7b439bd357cd98cec8fb06a2dbe1a00d",
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoBusNative/Package.swift": {
-    "mtime": 1788900898.178604,
-    "seen": 1788992306.953959,
+    "mtime": 1793295918.4033208,
+    "seen": 1793296052.815252,
     "ast_hash": "22c173a706b108dddc84b6090a9a7a2c",
     "semantic_hash": ""
   },
@@ -978,8 +978,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoBusNative/Sources/ESVBNativeCore/ProgramFrameRingBufferBridge.mm": {
-    "mtime": 1788900899.6218348,
-    "seen": 1788992306.953962,
+    "mtime": 1793295918.412093,
+    "seen": 1793296052.815256,
     "ast_hash": "920c03275af3126f1ec3e1a6791e4de0",
     "semantic_hash": ""
   },
@@ -990,273 +990,273 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoBusNative/Sources/ESVBNativeCore/include/ProgramFrameRingBufferBridge.h": {
-    "mtime": 1788900899.601937,
-    "seen": 1788992306.953964,
+    "mtime": 1793295918.4129994,
+    "seen": 1793296052.81526,
     "ast_hash": "7d9fde6cf5a7f65f4404b65a39189d42",
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoBusNative/Sources/EasyStreamVideoBusNative/ProgramFrameNativeCapabilities.swift": {
-    "mtime": 1788900898.198184,
-    "seen": 1788992306.9539661,
+    "mtime": 1793295918.4032545,
+    "seen": 1793296052.8152618,
     "ast_hash": "28b46bf445ec324b9aabc233204e3aa8",
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoPipeline/Sources/EasyStreamVideoPipeline/ProgramFrameNativeStatus.swift": {
-    "mtime": 1788900898.2578733,
-    "seen": 1788992306.9539719,
+    "mtime": 1793295918.4123926,
+    "seen": 1793296052.81527,
     "ast_hash": "e4f61cad835e0686a0b7c775d165082d",
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoPipeline/Sources/EasyStreamVideoPipeline/ProgramInfrastructureBootstrap.swift": {
-    "mtime": 1788900898.218092,
-    "seen": 1788992306.953973,
+    "mtime": 1793295918.2667713,
+    "seen": 1793296052.815271,
     "ast_hash": "ed1bfa847c3569cefb1bb57261d2d698",
     "semantic_hash": ""
   },
   "EasyStream/AppOrientationPolicy.swift": {
-    "mtime": 1788900898.2985413,
-    "seen": 1788992306.9536588,
+    "mtime": 1793295918.1671789,
+    "seen": 1793296052.814822,
     "ast_hash": "296e5c60ddead8bdb9ec2efe294bb30f",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/DirectorMonitorQualitySettings.swift": {
-    "mtime": 1788990622.1255786,
-    "seen": 1788992306.953747,
+    "mtime": 1793295917.8791168,
+    "seen": 1793296052.814925,
     "ast_hash": "7be8a07a0e5e3d2f0b8951dc8d81d9f2",
     "semantic_hash": ""
   },
   "EasyStream/Features/Camera/CameraSessionView+IOS.swift": {
-    "mtime": 1788900898.3827155,
-    "seen": 1788992306.953674,
+    "mtime": 1793295918.4124343,
+    "seen": 1793296052.8148339,
     "ast_hash": "c5d6a06ac5a2df9b14608d7f79d9efce",
     "semantic_hash": ""
   },
   "EasyStream/Features/Camera/CameraSessionView+MacOS.swift": {
-    "mtime": 1788900898.4028616,
-    "seen": 1788992306.953674,
+    "mtime": 1793295918.4077175,
+    "seen": 1793296052.8148348,
     "ast_hash": "aceef6d9095b3aa4a04373e57477fb09",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/VideoPreviewLayout.swift": {
-    "mtime": 1788900898.318842,
-    "seen": 1788992306.953951,
+    "mtime": 1793295918.412472,
+    "seen": 1793296052.815242,
     "ast_hash": "033e8f426f9f1a08e370cddf117db239",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/VideoPreviewViews+AppKit.swift": {
-    "mtime": 1788900898.360865,
-    "seen": 1788992306.953952,
+    "mtime": 1793295917.877192,
+    "seen": 1793296052.815243,
     "ast_hash": "069906d6c0a3df2c4b3986e4179be79f",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/VideoPreviewViews+UIKit.swift": {
-    "mtime": 1788900898.3392515,
-    "seen": 1788992306.953953,
+    "mtime": 1793295917.8775795,
+    "seen": 1793296052.815244,
     "ast_hash": "a72387938843b1d1470f20d44afc0aa7",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/BroadcastVideoQualityPresets.swift": {
-    "mtime": 1788900898.4244783,
-    "seen": 1788992306.9537432,
+    "mtime": 1793295918.412245,
+    "seen": 1793296052.814919,
     "ast_hash": "f66744baaed9b6427c9d45e2cbb0aab6",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorVideoQualityPanel.swift": {
-    "mtime": 1788990589.0266016,
-    "seen": 1788992306.953884,
+    "mtime": 1793295918.3771021,
+    "seen": 1793296052.815093,
     "ast_hash": "1db1760021d1dbcdf23b9bd3d680950b",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorLibraryRailView.swift": {
-    "mtime": 1788988831.9393919,
-    "seen": 1788992306.9536781,
+    "mtime": 1793295918.086116,
+    "seen": 1793296052.81484,
     "ast_hash": "7193ca56224bfe3973833c56d0885e77",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/LiveVideoStreamSizeStore.swift": {
-    "mtime": 1788900898.4868486,
-    "seen": 1788992306.953749,
+    "mtime": 1793295918.4124382,
+    "seen": 1793296052.8149278,
     "ast_hash": "ebed4e9bc358b93997db47f1ce3bbff6",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastLiveStreamSizeBadge.swift": {
-    "mtime": 1788900898.507361,
-    "seen": 1788992306.953815,
+    "mtime": 1793295917.8774328,
+    "seen": 1793296052.815012,
     "ast_hash": "8895e33ec9bd3749a19f6ea93ba2fafb",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCameraCapture/Sources/EasyStreamCameraCapture/CameraCaptureLoadTier.swift": {
-    "mtime": 1788900898.5478163,
-    "seen": 1788992306.953727,
+    "mtime": 1793295918.4080768,
+    "seen": 1793296052.8149,
     "ast_hash": "c060b641b0c24d019a1b6cf87d02957d",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalDrawableLimits.swift": {
-    "mtime": 1788900898.5281997,
-    "seen": 1788992306.9538949,
+    "mtime": 1793295918.4124,
+    "seen": 1793296052.815107,
     "ast_hash": "5d9a89c44e7d7433dea127fda4797cc1",
     "semantic_hash": ""
   },
   "EasyStream/Features/Camera/CameraSessionLandscapeLayout.swift": {
-    "mtime": 1788900898.5676246,
-    "seen": 1788992306.9536672,
+    "mtime": 1793295918.1437185,
+    "seen": 1793296052.81483,
     "ast_hash": "ce4d6bf520ef44db7df607ebe127c163",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorWorkspaceSession.swift": {
-    "mtime": 1788988826.501936,
-    "seen": 1788992306.953713,
+    "mtime": 1793295918.4128773,
+    "seen": 1793296052.814882,
     "ast_hash": "08ce59625b924c0a48fc486e5769db66",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorAuxiliaryWindowViews.swift": {
-    "mtime": 1788990589.0264544,
-    "seen": 1788992306.953676,
+    "mtime": 1793295918.2888663,
+    "seen": 1793296052.814838,
     "ast_hash": "8584ca9f041a79feed8975c8fe10e5c4",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorLiveOutputGuard.swift": {
-    "mtime": 1788900898.6083462,
-    "seen": 1788992306.953679,
+    "mtime": 1793295918.4080117,
+    "seen": 1793296052.814841,
     "ast_hash": "3ed79deffa3e13e470c1d518ccfd4e50",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/StableWebRTCVideoSurface.swift": {
-    "mtime": 1788900898.6511426,
-    "seen": 1788992306.9539452,
+    "mtime": 1793295918.2070518,
+    "seen": 1793296052.815232,
     "ast_hash": "e4ecb6317cbeda86c39f926fe8e0fc55",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorMainSwitcherAreaView.swift": {
-    "mtime": 1788900898.7119641,
-    "seen": 1788992306.9536798,
+    "mtime": 1793295917.879186,
+    "seen": 1793296052.8148422,
     "ast_hash": "0db5f53ede0b6ccee6a105f71d0ddf35",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorPreviewGridView.swift": {
-    "mtime": 1788985115.6985111,
-    "seen": 1788992306.953681,
+    "mtime": 1793295918.4128075,
+    "seen": 1793296052.814844,
     "ast_hash": "6fef78b995d832c33a416ab75536bf2b",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorProgramOutputCorePanel.swift": {
-    "mtime": 1788900898.7521667,
-    "seen": 1788992306.9536881,
+    "mtime": 1793295918.407802,
+    "seen": 1793296052.8148532,
     "ast_hash": "5849a9d899fb537a14f3df40010f4ae1",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorTakeBarView.swift": {
-    "mtime": 1788900898.7717838,
-    "seen": 1788992306.95371,
+    "mtime": 1793295917.878419,
+    "seen": 1793296052.814879,
     "ast_hash": "5dfff4f59d012c7af8f23942708cd3e2",
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1788900898.6917677,
-    "seen": 1788992306.953977,
+    "mtime": 1793295918.4121583,
+    "seen": 1793296052.815277,
     "ast_hash": "88ca3801b199f8305a92d9b1a287b64d",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorCamerasSidebarContent.swift": {
-    "mtime": 1788985053.3659894,
-    "seen": 1788992306.953677,
+    "mtime": 1793295918.412825,
+    "seen": 1793296052.8148391,
     "ast_hash": "05813732ca9c81d28e71f3690058009b",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorPlaylistsSidebarContent.swift": {
-    "mtime": 1788900898.9187353,
-    "seen": 1788992306.9536798,
+    "mtime": 1793295918.4123619,
+    "seen": 1793296052.814843,
     "ast_hash": "075f496fa704af400664d2043e2d78f0",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorProgramAirGraphicsView.swift": {
-    "mtime": 1788900898.8149652,
-    "seen": 1788992306.953686,
+    "mtime": 1793295917.8775964,
+    "seen": 1793296052.814851,
     "ast_hash": "fa35cda1d7ef13080ed553ea52fce1d1",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorProgramPreviewOverlayView.swift": {
-    "mtime": 1788900898.8352187,
-    "seen": 1788992306.95369,
+    "mtime": 1793295918.2667158,
+    "seen": 1793296052.814857,
     "ast_hash": "088c81e05b659b31860e41c0d1c408cf",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorProgramStudioHintsOverlay.swift": {
-    "mtime": 1788900898.8540685,
-    "seen": 1788992306.9536908,
+    "mtime": 1793295917.877504,
+    "seen": 1793296052.814858,
     "ast_hash": "d89950a897c7504059604c8dff7abca7",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorProgramVideoBusView.swift": {
-    "mtime": 1788900898.7918239,
-    "seen": 1788992306.953692,
-    "ast_hash": "01192ca47f68b30808903c4881f13f9a",
+    "mtime": 1793298665.8076625,
+    "seen": 1793298749.435162,
+    "ast_hash": "2b7de058f11358b50ab3bc1541d5c274",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSessionCompactView.swift": {
-    "mtime": 1788988841.405357,
-    "seen": 1788992306.9536939,
+    "mtime": 1793295918.0859835,
+    "seen": 1793296052.814861,
     "ast_hash": "7f6664f0a1f45913c6cfb7f46eb500d5",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSettingsLiveGraphicsSection.swift": {
-    "mtime": 1788900898.9799252,
-    "seen": 1788992306.9536982,
+    "mtime": 1793295917.8771262,
+    "seen": 1793296052.8148649,
     "ast_hash": "d7862ffdf59a6813ffdf69857a7f4abf",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSettingsRemoteControlsSection.swift": {
-    "mtime": 1788990587.9653533,
-    "seen": 1788992306.953699,
+    "mtime": 1793295917.8773634,
+    "seen": 1793296052.8148658,
     "ast_hash": "1cf9fa89c4f306d089cae21c907d3cc0",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSettingsWidgetStudioSection.swift": {
-    "mtime": 1788988824.6145475,
-    "seen": 1788992306.9537,
+    "mtime": 1793295918.412949,
+    "seen": 1793296052.814868,
     "ast_hash": "d19a1b5c6cad011e4221026043234af2",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorRemoteControlsView.swift": {
-    "mtime": 1788900898.8742695,
-    "seen": 1788992306.9538739,
+    "mtime": 1793295917.878537,
+    "seen": 1793296052.815081,
     "ast_hash": "269365395bb98f8fa4d849dfcb7ada90",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStreamSettingsWindowContent.swift": {
-    "mtime": 1788900899.12842,
-    "seen": 1788992306.953702,
+    "mtime": 1793295917.8773875,
+    "seen": 1793296052.81487,
     "ast_hash": "61f1833ec042cd41466c932dc2828f71",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/CameraSourceTile.swift": {
-    "mtime": 1788988232.1748478,
-    "seen": 1788992306.95386,
+    "mtime": 1793295917.8774502,
+    "seen": 1793296052.815064,
     "ast_hash": "bf340f21b18f7da916574b85484fd021",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorStatusBar.swift": {
-    "mtime": 1788900899.0230167,
-    "seen": 1788992306.9538822,
+    "mtime": 1793295918.3720977,
+    "seen": 1793296052.81509,
     "ast_hash": "6c7d8c41c8c213c0886eb1aaf406ca3d",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/SwitchTransitionControls.swift": {
-    "mtime": 1788900899.0852935,
-    "seen": 1788992306.9539468,
+    "mtime": 1793295918.1627882,
+    "seen": 1793296052.815236,
     "ast_hash": "d1edc316623da633800e73a8d4a58003",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/TakeToProgramButton.swift": {
-    "mtime": 1788900899.064321,
-    "seen": 1788992306.953948,
+    "mtime": 1793295918.4032845,
+    "seen": 1793296052.815237,
     "ast_hash": "b799c978d3ae017208d52f17db55b0dd",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/TransitionProgramView.swift": {
-    "mtime": 1788900899.106888,
-    "seen": 1788992306.953951,
-    "ast_hash": "e01125c6e1b1bfa53cd2ecb8f0d7a267",
+    "mtime": 1793298674.978377,
+    "seen": 1793298749.435494,
+    "ast_hash": "53372818fc8935a367cc27bac24c6dfa",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorInspectorPanel.swift": {
@@ -1278,8 +1278,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorSourceListRow.swift": {
-    "mtime": 1788985053.1862507,
-    "seen": 1788992306.95388,
+    "mtime": 1793297380.4419506,
+    "seen": 1793298749.4354088,
     "ast_hash": "6c984d70f9fb65781d5e2044d8d22407",
     "semantic_hash": ""
   },
@@ -1296,8 +1296,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/PreviewMonitorCellView.swift": {
-    "mtime": 1788988820.7795084,
-    "seen": 1788992306.9539058,
+    "mtime": 1793297380.4252915,
+    "seen": 1793298749.4354439,
     "ast_hash": "bf31bdf3aaab6b8bde54269e2a29652b",
     "semantic_hash": ""
   },
@@ -1326,8 +1326,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/PreviewMonitorSettingsForm.swift": {
-    "mtime": 1788991578.8449106,
-    "seen": 1788992306.953911,
+    "mtime": 1793297380.5109277,
+    "seen": 1793298749.4354491,
     "ast_hash": "1beb38a7bb53ed29de0943aa9f266cf4",
     "semantic_hash": ""
   },
@@ -1362,44 +1362,44 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastWidgetStudioClockFields.swift": {
-    "mtime": 1788813228.189181,
-    "seen": 1788992306.953839,
+    "mtime": 1793295917.8773053,
+    "seen": 1793296052.815043,
     "ast_hash": "bb1b7807dd2e37ecd03919d0467b6c60",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastWidgetStudioCountdownFields.swift": {
-    "mtime": 1788813228.1895146,
-    "seen": 1788992306.95384,
+    "mtime": 1793295918.197638,
+    "seen": 1793296052.815045,
     "ast_hash": "371b918d545a47bd9360363bc8b79af0",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastWidgetStudioLogoFields.swift": {
-    "mtime": 1788989641.591023,
-    "seen": 1788992306.9538429,
+    "mtime": 1793297380.4790008,
+    "seen": 1793298749.4353652,
     "ast_hash": "32a209c7edac31fafeade2f8e108304d",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastWidgetStudioLowerThirdFields.swift": {
-    "mtime": 1788813228.191072,
-    "seen": 1788992306.953849,
+    "mtime": 1793295918.4119186,
+    "seen": 1793296052.81505,
     "ast_hash": "cdbf8a948b31903744889f4621965158",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastWidgetStudioSharedControls.swift": {
-    "mtime": 1788813228.1926053,
-    "seen": 1788992306.953853,
+    "mtime": 1793295918.2679546,
+    "seen": 1793296052.8150551,
     "ast_hash": "12611f9bccc2262ec44da128274d0386",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastWidgetStudioTickerFields.swift": {
-    "mtime": 1788813228.1929774,
-    "seen": 1788992306.9538538,
+    "mtime": 1793295917.8784025,
+    "seen": 1793296052.8150558,
     "ast_hash": "2f3f45248d068c6bdfcd46149eda1247",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastWidgetTemplatePickerSheet.swift": {
-    "mtime": 1788813228.1939678,
-    "seen": 1788992306.953855,
+    "mtime": 1793295917.8783548,
+    "seen": 1793296052.815058,
     "ast_hash": "08fbccce66c77425fed672d4c1c498a0",
     "semantic_hash": ""
   },
@@ -1422,50 +1422,50 @@
     "semantic_hash": ""
   },
   "EasyStream/Features/Camera/CameraSessionControlsCard.swift": {
-    "mtime": 1788900899.2414415,
-    "seen": 1788992306.953662,
+    "mtime": 1793295917.878663,
+    "seen": 1793296052.814825,
     "ast_hash": "019b4a1841e914843d4efbf58feb28d3",
     "semantic_hash": ""
   },
   "EasyStream/Features/Camera/CameraSessionDirectorCard.swift": {
-    "mtime": 1788900899.2624345,
-    "seen": 1788992306.9536629,
+    "mtime": 1793295918.4125721,
+    "seen": 1793296052.814826,
     "ast_hash": "24fd6856594c8372f3b1494025145926",
     "semantic_hash": ""
   },
   "EasyStream/Features/Camera/CameraSessionIntercomCard.swift": {
-    "mtime": 1788900899.2832258,
-    "seen": 1788992306.953664,
+    "mtime": 1793295918.4079537,
+    "seen": 1793296052.814827,
     "ast_hash": "f65cfa96edf2ed73a74d5e2c0cf6e269",
     "semantic_hash": ""
   },
   "EasyStream/Features/Camera/CameraSessionLandscapeChrome.swift": {
-    "mtime": 1788900899.1704113,
-    "seen": 1788992306.953664,
+    "mtime": 1793295918.2018597,
+    "seen": 1793296052.814828,
     "ast_hash": "b2ee4bd8fdd90d84be3f23fd45759512",
     "semantic_hash": ""
   },
   "EasyStream/Features/Camera/CameraSessionLandscapeControlsColumn.swift": {
-    "mtime": 1788900899.3034,
-    "seen": 1788992306.953665,
+    "mtime": 1793295917.8786159,
+    "seen": 1793296052.814829,
     "ast_hash": "fde2609f0a3a9c2876e169a4ccd999da",
     "semantic_hash": ""
   },
   "EasyStream/Features/Camera/CameraSessionLandscapePreviewColumn.swift": {
-    "mtime": 1788985049.922459,
-    "seen": 1788992306.9536672,
+    "mtime": 1793295918.40805,
+    "seen": 1793296052.814831,
     "ast_hash": "ab0a4a4bf47044cf31a9f3517a9a1f4f",
     "semantic_hash": ""
   },
   "EasyStream/Features/Camera/CameraSessionLandscapePreviewHeader.swift": {
-    "mtime": 1788900899.1912756,
-    "seen": 1788992306.953672,
+    "mtime": 1793295917.8772867,
+    "seen": 1793296052.8148322,
     "ast_hash": "c6b254b59320924e5cd8faa361015506",
     "semantic_hash": ""
   },
   "EasyStream/Features/Camera/CameraSessionLayoutMetrics.swift": {
-    "mtime": 1788900899.149695,
-    "seen": 1788992306.953673,
+    "mtime": 1793295917.8784208,
+    "seen": 1793296052.814833,
     "ast_hash": "e91c08860249683e431a4de09f710b00",
     "semantic_hash": ""
   },
@@ -1512,8 +1512,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/IntercomPushToTalkButton.swift": {
-    "mtime": 1788900899.4783008,
-    "seen": 1788992306.953887,
+    "mtime": 1793295918.413099,
+    "seen": 1793296052.815098,
     "ast_hash": "6bc180fbc0b0d1441d4ece06740a3cb5",
     "semantic_hash": ""
   },
@@ -1530,8 +1530,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorConnectionPanel.swift": {
-    "mtime": 1788900899.95764,
-    "seen": 1788992306.953867,
+    "mtime": 1793295917.8775015,
+    "seen": 1793296052.815073,
     "ast_hash": "f7bca06d0befd19aa840e536294779d0",
     "semantic_hash": ""
   },
@@ -1572,8 +1572,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastMediaPhotoImporter+View.swift": {
-    "mtime": 1788900899.4363294,
-    "seen": 1788992306.9538171,
+    "mtime": 1793295917.877384,
+    "seen": 1793296052.815014,
     "ast_hash": "672db8907e0677c7d2e00167bb367f24",
     "semantic_hash": ""
   },
@@ -1608,8 +1608,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastWidgetLogoPhotoImporter.swift": {
-    "mtime": 1788992266.0265114,
-    "seen": 1788992306.953838,
+    "mtime": 1793297380.517899,
+    "seen": 1793298749.435358,
     "ast_hash": "401d9a267592fda4425c84e8686da6e3",
     "semantic_hash": ""
   },
@@ -1656,8 +1656,8 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/PreviewWidgetOverlayView.swift": {
-    "mtime": 1788989639.9798946,
-    "seen": 1788992306.953913,
+    "mtime": 1793297380.4708836,
+    "seen": 1793298749.435453,
     "ast_hash": "0ff56102f21ccdcd63b930c8a0d5cad9",
     "semantic_hash": ""
   },
@@ -1788,56 +1788,56 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/CameraPreviewView+AppKit.swift": {
-    "mtime": 1788813228.1956816,
-    "seen": 1788992306.953859,
+    "mtime": 1793295917.8786304,
+    "seen": 1793296052.815062,
     "ast_hash": "d65b9036e94c1f9ccaa78b67fe401e03",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/CameraPreviewView+UIKit.swift": {
-    "mtime": 1788813228.1960585,
-    "seen": 1788992306.95386,
+    "mtime": 1793295917.8785682,
+    "seen": 1793296052.815063,
     "ast_hash": "e61730836e1852b0018ad0a110c1cc08",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ClippingRTCVideoContainer.swift": {
-    "mtime": 1788900899.5209935,
-    "seen": 1788992306.953862,
+    "mtime": 1793295917.8774471,
+    "seen": 1793296052.815066,
     "ast_hash": "38bd8cda540af7133f4e499941c06727",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ClippingRTCVideoContainerView.swift": {
-    "mtime": 1788813228.1970978,
-    "seen": 1788992306.953863,
+    "mtime": 1793295918.412653,
+    "seen": 1793296052.8150668,
     "ast_hash": "3b18f140955ed044955bf9c9d241d49f",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/LayoutNeutralRTCMTLNSVideoView.swift": {
-    "mtime": 1788813228.204897,
-    "seen": 1788992306.953888,
+    "mtime": 1793295917.8783824,
+    "seen": 1793296052.8150988,
     "ast_hash": "419234281ce45770260a75e14a0ac3f7",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/LayoutNeutralRTCMTLVideoView.swift": {
-    "mtime": 1788813228.205259,
-    "seen": 1788992306.9538891,
+    "mtime": 1793295918.2668087,
+    "seen": 1793296052.8151,
     "ast_hash": "909acf71b8808ac56b6672464bcc9f7c",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/PreviewContainerView.swift": {
-    "mtime": 1788813228.2099793,
-    "seen": 1788992306.9539042,
+    "mtime": 1793295918.4076908,
+    "seen": 1793296052.81514,
     "ast_hash": "78703f0eb83e3b003fcc913f0abc4495",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/WebRTCVideoContentMode+UIKit.swift": {
-    "mtime": 1788813228.2221627,
-    "seen": 1788992306.9539552,
+    "mtime": 1793295917.879064,
+    "seen": 1793296052.815247,
     "ast_hash": "5d457d1981b899c3b2f7bcf79a14277e",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/WebRTCVideoScaling.swift": {
-    "mtime": 1788900899.4992948,
-    "seen": 1788992306.9539561,
+    "mtime": 1793295917.8785813,
+    "seen": 1793296052.8152478,
     "ast_hash": "b10d04f939196ec2745a373180e8b47b",
     "semantic_hash": ""
   },
@@ -1878,243 +1878,477 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorRemoteControlsHeader.swift": {
-    "mtime": 1788900899.3244944,
-    "seen": 1788992306.953873,
+    "mtime": 1793295917.8786068,
+    "seen": 1793296052.81508,
     "ast_hash": "2c55945b017ffbe1d445986cb6bb3116",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorRemoteExposureControl.swift": {
-    "mtime": 1788900899.3908427,
-    "seen": 1788992306.9538748,
+    "mtime": 1793295917.8784688,
+    "seen": 1793296052.815082,
     "ast_hash": "b5474f675b28357482d411ee342ea966",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorRemoteLensPicker.swift": {
-    "mtime": 1788900899.3467405,
-    "seen": 1788992306.953876,
+    "mtime": 1793295917.8772368,
+    "seen": 1793296052.815083,
     "ast_hash": "ebfeac0a74b61ee23dd78b38bb25f842",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorRemoteWhiteBalancePicker.swift": {
-    "mtime": 1788900899.4117496,
-    "seen": 1788992306.953876,
+    "mtime": 1793295918.267932,
+    "seen": 1793296052.815084,
     "ast_hash": "1349e764ac90109b870809f7e42125aa",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorRemoteZoomControl.swift": {
-    "mtime": 1788900899.3665378,
-    "seen": 1788992306.953877,
+    "mtime": 1793295918.4131365,
+    "seen": 1793296052.8150852,
     "ast_hash": "196e1f34f72e485473b3629dbba4a604",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/IntercomPushToTalkAnimations.swift": {
-    "mtime": 1788900899.4575672,
-    "seen": 1788992306.953887,
+    "mtime": 1793295918.1308942,
+    "seen": 1793296052.815097,
     "ast_hash": "1587f565de06a2216ebc53c6ff7c91b7",
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoPipeline/Sources/EasyStreamVideoPipeline/ProgramFrameDisplayBus.swift": {
-    "mtime": 1788900899.5404649,
-    "seen": 1788992306.953971,
+    "mtime": 1793295918.2840703,
+    "seen": 1793296052.8152692,
     "ast_hash": "2c26fd07ff4fa5cb80f8c33258ab64fb",
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoBusNative/Sources/ESVBNativeCore/ProgramFrameNativeBus.mm": {
-    "mtime": 1788900899.5818949,
-    "seen": 1788992306.95396,
+    "mtime": 1793295918.4120605,
+    "seen": 1793296052.815254,
     "ast_hash": "2a581d86a16cc56e014f62e3fc26a3fb",
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoBusNative/Sources/ESVBNativeCore/include/ProgramFrameNativeBus.hpp": {
-    "mtime": 1788900899.5608673,
-    "seen": 1788992306.953962,
+    "mtime": 1793295917.8774495,
+    "seen": 1793296052.815257,
     "ast_hash": "86e8ba71a6a6374202668c35fa9ce3f3",
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoBusNative/Sources/EasyStreamVideoBusNative/NativeProgramFrameBus.swift": {
-    "mtime": 1788900899.6440842,
-    "seen": 1788992306.953965,
+    "mtime": 1793295918.0861406,
+    "seen": 1793296052.815261,
     "ast_hash": "5ef9ba5dc0c51ff242ae93bba6d1ff44",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalDisplayLinkDriver.swift": {
-    "mtime": 1788900899.6639009,
-    "seen": 1788992306.9538932,
+    "mtime": 1793295917.8771458,
+    "seen": 1793296052.815105,
     "ast_hash": "4c1e4b5c0ce264fec143e8ead928ee5f",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalTextureBinding.swift": {
-    "mtime": 1788900899.683687,
-    "seen": 1788992306.9539,
+    "mtime": 1793295918.4082198,
+    "seen": 1793296052.815113,
     "ast_hash": "454618c864e86a8db615f1a370888e20",
     "semantic_hash": ""
   },
   "Packages/EasyStreamTransport/Sources/EasyStreamTransport/EasyStreamVideoDecoderFactory.swift": {
-    "mtime": 1788900899.7236383,
-    "seen": 1788992306.953792,
+    "mtime": 1793295918.3622806,
+    "seen": 1793296052.81498,
     "ast_hash": "34c9f0a26e72e0878f21d3c1f01d406e",
     "semantic_hash": ""
   },
   "Packages/EasyStreamTransport/Sources/EasyStreamTransport/EasyStreamWebRTCH264Preferences.swift": {
-    "mtime": 1788900899.7036421,
-    "seen": 1788992306.953793,
+    "mtime": 1793295917.878388,
+    "seen": 1793296052.8149812,
     "ast_hash": "2b5a92fa1c9882328888c22f977644ef",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/Program/ProgramBusTrace.swift": {
-    "mtime": 1788900899.744034,
-    "seen": 1788992306.9537542,
+    "mtime": 1793295918.2678576,
+    "seen": 1793296052.814934,
     "ast_hash": "f773205894f7d815c857c0cd9eceebff",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSessionView+IOS.swift": {
-    "mtime": 1788992267.9658785,
-    "seen": 1788992306.953695,
+    "mtime": 1793295918.412604,
+    "seen": 1793296052.814862,
     "ast_hash": "b04a4cefd7ac91ed3f72dbc2d4efcd76",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSessionView+MacOS.swift": {
-    "mtime": 1788988881.6700904,
-    "seen": 1788992306.953696,
+    "mtime": 1793295917.8773174,
+    "seen": 1793296052.8148632,
     "ast_hash": "892e832eb68ae1f9e32ef2215a649940",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSettingsStudioTab.swift": {
-    "mtime": 1788990586.301371,
-    "seen": 1788992306.9537,
+    "mtime": 1793295917.8783612,
+    "seen": 1793296052.814867,
     "ast_hash": "38afa402dcd01472d96cc8ca6408778e",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStudioSettingsHubComponents.swift": {
-    "mtime": 1788900899.8302672,
-    "seen": 1788992306.953703,
+    "mtime": 1793295917.878991,
+    "seen": 1793296052.814871,
     "ast_hash": "57facd909509e6801c7515f56dd2baba",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStudioSettingsHubPlatformLayout.swift": {
-    "mtime": 1788900899.9375334,
-    "seen": 1788992306.9537039,
+    "mtime": 1793295917.8784814,
+    "seen": 1793296052.814872,
     "ast_hash": "6ae088c73f87faf7f9b697f7c5e47517",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStudioSettingsHubView+IOS.swift": {
-    "mtime": 1788900899.8517451,
-    "seen": 1788992306.953705,
+    "mtime": 1793295917.877507,
+    "seen": 1793296052.814873,
     "ast_hash": "f8630e1d98f538368e4d8633e5e70719",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStudioSettingsHubView+MacOS.swift": {
-    "mtime": 1788900899.872765,
-    "seen": 1788992306.953706,
+    "mtime": 1793295918.4129484,
+    "seen": 1793296052.8148742,
     "ast_hash": "bb09643e5b10753df39bb984e6551b8a",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStudioSettingsHubView.swift": {
-    "mtime": 1788991573.5190368,
-    "seen": 1788992306.953706,
+    "mtime": 1793295917.878545,
+    "seen": 1793296052.814875,
     "ast_hash": "da6c10771d64e2971eb0cb385967c6b6",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStudioSettingsTab.swift": {
-    "mtime": 1788900899.7647614,
-    "seen": 1788992306.953708,
+    "mtime": 1793295917.8776715,
+    "seen": 1793296052.814877,
     "ast_hash": "ba5394c16da8833a772cc9c48ea47728",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/Program/ProgramFrameQualityGate.swift": {
-    "mtime": 1788900899.9993465,
-    "seen": 1788992306.953755,
+    "mtime": 1793295918.4124286,
+    "seen": 1793296052.814935,
     "ast_hash": "df3a585692534baae681b112347316a0",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastNeonProgressBar.swift": {
-    "mtime": 1788985047.0556178,
-    "seen": 1788992306.9538188,
+    "mtime": 1793295917.8952725,
+    "seen": 1793296052.815017,
     "ast_hash": "57e46c5767ed96fa87dae9a501346cd8",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStudioSettingsPrewarm.swift": {
-    "mtime": 1788990611.1011615,
-    "seen": 1788992306.953707,
+    "mtime": 1793295917.8786044,
+    "seen": 1793296052.8148758,
     "ast_hash": "3fca8aa6c028cf471fdff6a0d3e2f6de",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorTileThumbnailCoordinator.swift": {
-    "mtime": 1788990584.5588067,
-    "seen": 1788992306.953883,
+    "mtime": 1793295918.4125168,
+    "seen": 1793296052.815092,
     "ast_hash": "94c7cf26e5f0c8f06ba321be787bf099",
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoPipeline/Sources/EasyStreamVideoPipeline/BroadcastTileThumbnailSink.swift": {
-    "mtime": 1788900900.0643623,
-    "seen": 1788992306.953967,
+    "mtime": 1793295918.4128523,
+    "seen": 1793296052.815264,
     "ast_hash": "4001b02b32cf2ba75ba80cbc9e4a48eb",
     "semantic_hash": ""
   },
   "Packages/EasyStreamVideoPipeline/Sources/EasyStreamVideoPipeline/DirectorSourceThumbnailBus.swift": {
-    "mtime": 1788900900.0430145,
-    "seen": 1788992306.953968,
+    "mtime": 1793295918.412583,
+    "seen": 1793296052.815265,
     "ast_hash": "3dd94d528d538626836ba2793b91c019",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/Program/TileThumbnailTrace.swift": {
-    "mtime": 1788900900.1065478,
-    "seen": 1788992306.953758,
+    "mtime": 1793295918.412278,
+    "seen": 1793296052.8149388,
     "ast_hash": "ee753d8421a5d3425ecdae17f9b1b500",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCameraCapture/Sources/EasyStreamCameraCapture/TileSnapshotJPEGEncoder.swift": {
-    "mtime": 1788902552.5615804,
-    "seen": 1788992306.9537332,
+    "mtime": 1793295918.085734,
+    "seen": 1793296052.8149068,
     "ast_hash": "8a3ff52fa26fd9ac014e30f1ea04e141",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorThumbnailJPEGDecoder.swift": {
-    "mtime": 1788900965.8730373,
-    "seen": 1788992306.9538822,
+    "mtime": 1793297380.4172995,
+    "seen": 1793298749.435412,
     "ast_hash": "a8710fa9937f70dfa10237dbe970f0d9",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/BroadcastConnectionProgress.swift": {
-    "mtime": 1788985045.948641,
-    "seen": 1788992306.953804,
+    "mtime": 1793297380.434062,
+    "seen": 1793298749.435314,
     "ast_hash": "9d4392d0f61c851df4d48ab5c3e4e0a1",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorRemoteVideoTrackPolicy.swift": {
-    "mtime": 1788987185.5961373,
-    "seen": 1788992306.953693,
+    "mtime": 1793297380.4482803,
+    "seen": 1793298749.4351628,
     "ast_hash": "b18f56836bff8b3e5ffdf87bdd9dbce2",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorWidgetStudioEditorView.swift": {
-    "mtime": 1788990584.9367185,
-    "seen": 1788992306.953711,
+    "mtime": 1793297380.455236,
+    "seen": 1793298749.435186,
     "ast_hash": "cd68e25e31fd298e9aa701e0a90d3e76",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorWidgetStudioPresentationHost.swift": {
-    "mtime": 1788992267.2214034,
-    "seen": 1788992306.9537122,
+    "mtime": 1793297380.4630122,
+    "seen": 1793298749.4351869,
     "ast_hash": "0919df60f6883f91ee0d9fee901c26d0",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorPreviewWarmupTour.swift": {
-    "mtime": 1788990584.5795138,
-    "seen": 1788992306.953685,
+    "mtime": 1793297380.487004,
+    "seen": 1793298749.4351518,
     "ast_hash": "94e8f63bb01f14732b02956a46681a41",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorPreviewMonitorPresentationHost.swift": {
-    "mtime": 1788991569.3137112,
-    "seen": 1788992306.953682,
+    "mtime": 1793297380.5035043,
+    "seen": 1793298749.435148,
     "ast_hash": "800be855906d3e188fd329c878ca351c",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/PreviewMonitorExternalDisplayController.swift": {
-    "mtime": 1788991616.6371686,
-    "seen": 1788992306.953714,
+    "mtime": 1793297380.495219,
+    "seen": 1793298749.4351912,
     "ast_hash": "2b5db1713231a7e05149f761c3e37c49",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/.claude/settings.json": {
+    "mtime": 1793296471.2793283,
+    "seen": 1793296591.0710678,
+    "ast_hash": "dc580fca35a0e98ed20777ede5e545a1",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/.vscode/extensions.json": {
+    "mtime": 1793296431.3183773,
+    "seen": 1793296591.071069,
+    "ast_hash": "b2354ba0225f5689d13651ec0fac0de0",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/.vscode/settings.json": {
+    "mtime": 1793296431.3206046,
+    "seen": 1793296591.07107,
+    "ast_hash": "6b9302c1f72c315e90233c7539c48c9f",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/app.config.ts": {
+    "mtime": 1793297380.5252156,
+    "seen": 1793298749.435533,
+    "ast_hash": "574ceaef43be48eebc9c9537a8d68d4a",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/app/+html.tsx": {
+    "mtime": 1793296431.3245337,
+    "seen": 1793296591.071072,
+    "ast_hash": "ba92d7deb21b50212f47548e6d9de1bf",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/app/+not-found.tsx": {
+    "mtime": 1793297380.6926482,
+    "seen": 1793298749.435536,
+    "ast_hash": "3e03d45b5eb8953dfac825a33b307e3a",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/app/_layout.tsx": {
+    "mtime": 1793297380.6600866,
+    "seen": 1793298749.4355369,
+    "ast_hash": "778ace68341e8e4176f3e4b79ce47fb5",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/app/index.tsx": {
+    "mtime": 1793297380.6662948,
+    "seen": 1793298749.4355378,
+    "ast_hash": "97704ab75d67a5acc3b2c65378c5cc93",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/package.json": {
+    "mtime": 1793297380.6846843,
+    "seen": 1793298749.435539,
+    "ast_hash": "b610e11bf8a52c6c9b891e888ae93b9e",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/components/CameraControlBar.tsx": {
+    "mtime": 1793297380.6477377,
+    "seen": 1793298749.43554,
+    "ast_hash": "0486c5ba5c7c3568b8161f45718985e0",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/components/CameraPreviewSurface.tsx": {
+    "mtime": 1793297423.815903,
+    "seen": 1793298749.435541,
+    "ast_hash": "7e9c87817adc8b7a12ae9d8fef2299b2",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/components/ConnectionStatusBadge.tsx": {
+    "mtime": 1793297380.6265147,
+    "seen": 1793298749.435542,
+    "ast_hash": "a74fcc2dff47250635df55e0414dacda",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/components/DirectorPickerList.tsx": {
+    "mtime": 1793297380.6403992,
+    "seen": 1793298749.435543,
+    "ast_hash": "cfb61d72ee1a7525879ee183e0a0f390",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/constants/network.ts": {
+    "mtime": 1793297380.5393696,
+    "seen": 1793298749.435544,
+    "ast_hash": "98492a33a2c3d805333eb81f659d3db0",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/hooks/useCameraDiscovery.ts": {
+    "mtime": 1793298209.8045952,
+    "seen": 1793298749.4355452,
+    "ast_hash": "fb5293d56668025d6f616b7d0307af18",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/hooks/useCameraSession.ts": {
+    "mtime": 1793298721.8144011,
+    "seen": 1793298749.4355462,
+    "ast_hash": "6728342abd8bb70dc444ca02cb0a0410",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/hooks/useDeviceIdentity.ts": {
+    "mtime": 1793297980.3391874,
+    "seen": 1793298749.4355469,
+    "ast_hash": "bf18e7c9fb9c5c96b49d25c0ad5ffb7b",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/services/discovery/EasyStreamDiscoveryService.ts": {
+    "mtime": 1793298720.5565472,
+    "seen": 1793298749.4355478,
+    "ast_hash": "5ad6a7eb8d0611afb7a25cb946b503b2",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/services/signaling/TcpSignalingClient.ts": {
+    "mtime": 1793298719.1526053,
+    "seen": 1793298749.435549,
+    "ast_hash": "d9f8acf214da9862c105d5f164d4800d",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/services/webrtc/CameraStreamSession.ts": {
+    "mtime": 1793298264.085656,
+    "seen": 1793298749.43555,
+    "ast_hash": "e0961e7b7057c14aa2b8583affef13d0",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/theme/colors.ts": {
+    "mtime": 1793297380.614734,
+    "seen": 1793298749.435551,
+    "ast_hash": "55a72d3decf6cf69e8c031d0f446dbc3",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/types/native-modules.d.ts": {
+    "mtime": 1793297590.601224,
+    "seen": 1793298749.435552,
+    "ast_hash": "5778d5b386059d8fd7e403547df2b39c",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/types/protocol.ts": {
+    "mtime": 1793297380.5462017,
+    "seen": 1793298749.435553,
+    "ast_hash": "f9ec2e4b6b93627102e520de0ea67332",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/utils/remoteCommandExecutor.ts": {
+    "mtime": 1793297380.565996,
+    "seen": 1793298749.4355571,
+    "ast_hash": "0f7c23ba7d70a0d86077a4db31624146",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/utils/signalingCodec.ts": {
+    "mtime": 1793297404.3185732,
+    "seen": 1793298749.4355588,
+    "ast_hash": "d5d6535171c4c98bada4417f89d5d101",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/utils/transportProfile.ts": {
+    "mtime": 1793297380.5595834,
+    "seen": 1793298749.43556,
+    "ast_hash": "b3e289eb1cf126b85723da55698ac978",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/views/CameraSessionView.tsx": {
+    "mtime": 1793297380.653801,
+    "seen": 1793298749.435561,
+    "ast_hash": "d78d8b9f5c4bfa250ab1476968225874",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/tsconfig.json": {
+    "mtime": 1793297380.5314584,
+    "seen": 1793298749.435562,
+    "ast_hash": "fb3978cb72764f7fa7118dc07b22af9b",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/AGENTS.md": {
+    "mtime": 1793296471.2794688,
+    "seen": 1793296591.071094,
+    "ast_hash": "233d1484702a528f5dcb4333cd01bb43",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/README.md": {
+    "mtime": 1793297425.1405213,
+    "seen": 1793298749.4355662,
+    "ast_hash": "98ee193387402f908dcbc3da0ae2b854",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/assets/images/android-icon-background.png": {
+    "mtime": 1793296431.3276234,
+    "seen": 1793296591.0710962,
+    "ast_hash": "2d65569cc0e2afdcea0af9f9902d4173",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/assets/images/android-icon-foreground.png": {
+    "mtime": 1793296431.3283129,
+    "seen": 1793296591.0710971,
+    "ast_hash": "72e71a9c846c6aa4ae32476641a00e18",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/assets/images/android-icon-monochrome.png": {
+    "mtime": 1793296431.3286939,
+    "seen": 1793296591.071098,
+    "ast_hash": "1e097dab989759fc0b69440092ca22cd",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/assets/images/favicon.png": {
+    "mtime": 1793296431.3289614,
+    "seen": 1793296591.0710988,
+    "ast_hash": "d9f444efbdfbe7931aa93beada07318a",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/assets/images/icon.png": {
+    "mtime": 1793296431.330669,
+    "seen": 1793296591.0711,
+    "ast_hash": "cb975bba2216ce10a60e6c0ffe9941a2",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/assets/images/splash-icon.png": {
+    "mtime": 1793296431.3316028,
+    "seen": 1793296591.071101,
+    "ast_hash": "97dae5a0e62ad8551d8a31897b425e63",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/utils/deviceId.ts": {
+    "mtime": 1793298064.4494889,
+    "seen": 1793298749.435554,
+    "ast_hash": "1fed876891c72b028dc46bb5ca70ece9",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/utils/logger.ts": {
+    "mtime": 1793297403.7833545,
+    "seen": 1793298749.435555,
+    "ast_hash": "985846647314306130177c613fd07301",
+    "semantic_hash": ""
+  },
+  "apps/easystream-camera/src/utils/sdpH264.ts": {
+    "mtime": 1793298259.3952172,
+    "seen": 1793298749.4355578,
+    "ast_hash": "63fade938bd8efb538abb29861a10ffa",
     "semantic_hash": ""
   }
 }

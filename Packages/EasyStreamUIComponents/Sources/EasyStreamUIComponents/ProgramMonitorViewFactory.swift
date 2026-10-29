@@ -14,7 +14,8 @@ public enum ProgramMonitorViewFactory {
         incomingTrack: RTCVideoTrack?,
         isTransitioning: Bool,
         progress: Double,
-        kind: SwitchTransitionKind
+        kind: SwitchTransitionKind,
+        offAirPreviewVisibleOnProgramMonitor: Bool = false
     ) -> some View {
         switch configuration.backend {
         case .metalCompositor:
@@ -27,7 +28,8 @@ public enum ProgramMonitorViewFactory {
                     incomingTrack: incomingTrack,
                     isTransitioning: isTransitioning,
                     progress: progress,
-                    kind: kind
+                    kind: kind,
+                    offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
                 )
             } else {
                 Color.black

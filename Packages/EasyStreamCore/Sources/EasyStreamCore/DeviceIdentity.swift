@@ -11,6 +11,7 @@ public enum DevicePlatform: String, Sendable, Codable, CaseIterable {
     case iPhone
     case iPad
     case mac
+    case android
     case unknown
 
     public var displayName: String {
@@ -18,6 +19,7 @@ public enum DevicePlatform: String, Sendable, Codable, CaseIterable {
         case .iPhone: "iPhone"
         case .iPad: "iPad"
         case .mac: "Mac"
+        case .android: "Android"
         case .unknown: "Desconocido"
         }
     }
@@ -79,7 +81,7 @@ public struct DeviceIdentity: Sendable, Codable, Equatable {
     /// Suggested role based on device form factor (non-binding).
     public static var suggestedRole: AppRole {
         switch currentPlatform() {
-        case .iPhone: .camera
+        case .iPhone, .android: .camera
         case .iPad, .mac: .director
         case .unknown: .camera
         }

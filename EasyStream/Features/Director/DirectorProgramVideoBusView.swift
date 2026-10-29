@@ -13,6 +13,7 @@ struct DirectorProgramVideoBusView: View, Equatable {
     let transitionKind: SwitchTransitionKind
     let emptyStatusMessage: String
     let hasAirGraphics: Bool
+    let offAirPreviewVisibleOnProgramMonitor: Bool
 
     init(viewModel: DirectorSessionViewModel, hasAirGraphics: Bool) {
         programDisplayTrack = viewModel.programDisplayTrack
@@ -23,6 +24,7 @@ struct DirectorProgramVideoBusView: View, Equatable {
         transitionKind = viewModel.selectedTransition.kind
         emptyStatusMessage = viewModel.statusMessage
         self.hasAirGraphics = hasAirGraphics
+        offAirPreviewVisibleOnProgramMonitor = viewModel.showsAndroidOffAirPreviewOnProgramMonitor
     }
 
     nonisolated static func == (lhs: DirectorProgramVideoBusView, rhs: DirectorProgramVideoBusView) -> Bool {
@@ -33,6 +35,7 @@ struct DirectorProgramVideoBusView: View, Equatable {
             && lhs.transitionKind == rhs.transitionKind
             && lhs.emptyStatusMessage == rhs.emptyStatusMessage
             && lhs.hasAirGraphics == rhs.hasAirGraphics
+            && lhs.offAirPreviewVisibleOnProgramMonitor == rhs.offAirPreviewVisibleOnProgramMonitor
         else { return false }
 
         if lhs.isTransitioning && rhs.isTransitioning {
@@ -53,7 +56,8 @@ struct DirectorProgramVideoBusView: View, Equatable {
             transitionProgress: transitionProgress,
             transitionKind: transitionKind,
             emptyStatusMessage: emptyStatusMessage,
-            hasAirGraphics: hasAirGraphics
+            hasAirGraphics: hasAirGraphics,
+            offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
         )
     }
 }
