@@ -28,32 +28,37 @@ struct DirectorSettingsRemoteControlsSection: View {
 }
 
 struct DirectorSettingsEmissionSection: View {
-    @Bindable var viewModel: DirectorSessionViewModel
+    let viewModel: DirectorSessionViewModel
 
     var body: some View {
         DirectorInspectorSection("Emisión", systemImage: "dot.radiowaves.up.forward") {
-            VStack(alignment: .leading, spacing: 16) {
-                FacebookLivePanel(
-                    isConfigured: viewModel.isFacebookConfigured,
-                    session: viewModel.facebookSession,
-                    pages: viewModel.facebookPages,
-                    selectedPageID: viewModel.selectedFacebookPageID,
-                    isLoading: viewModel.isFacebookLoading,
-                    statusMessage: viewModel.facebookStatusMessage,
-                    onSignIn: { viewModel.signInWithFacebook() },
-                    onAuthorizePages: { viewModel.authorizeFacebookPages() },
-                    onSignOut: { viewModel.signOutFromFacebook() },
-                    onSelectPage: { viewModel.selectFacebookPage($0) },
-                    onPrepareLive: { viewModel.prepareFacebookLive() }
-                )
-                Divider().overlay(BroadcastTheme.workspaceDivider)
-                StreamDestinationPanel(
-                    destination: $viewModel.streamDestination,
-                    publisherStats: viewModel.publisherStats,
-                    isPublishing: viewModel.isPublishing,
-                    onStart: { viewModel.startPublishing() },
-                    onStop: { viewModel.stopPublishing() }
-                )
+            TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                VStack(alignment: .leading, spacing: 16) {
+                    FacebookLivePanel(
+                        isConfigured: viewModel.isFacebookConfigured,
+                        session: viewModel.facebookSession,
+                        pages: viewModel.facebookPages,
+                        selectedPageID: viewModel.selectedFacebookPageID,
+                        isLoading: viewModel.isFacebookLoading,
+                        statusMessage: viewModel.facebookStatusMessage,
+                        onSignIn: { viewModel.signInWithFacebook() },
+                        onAuthorizePages: { viewModel.authorizeFacebookPages() },
+                        onSignOut: { viewModel.signOutFromFacebook() },
+                        onSelectPage: { viewModel.selectFacebookPage($0) },
+                        onPrepareLive: { viewModel.prepareFacebookLive() }
+                    )
+                    Divider().overlay(BroadcastTheme.workspaceDivider)
+                    StreamDestinationPanel(
+                        destination: Binding(
+                            get: { viewModel.streamDestination },
+                            set: { viewModel.streamDestination = $0 }
+                        ),
+                        publisherStats: viewModel.publisherStats,
+                        isPublishing: viewModel.isPublishing,
+                        onStart: { viewModel.startPublishing() },
+                        onStop: { viewModel.stopPublishing() }
+                    )
+                }
             }
         }
     }

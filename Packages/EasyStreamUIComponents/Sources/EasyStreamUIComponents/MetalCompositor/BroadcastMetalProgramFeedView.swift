@@ -290,6 +290,10 @@ final class BroadcastMetalProgramFeedContainerUIView: UIView, ProgramCrossfadeHo
     func promoteIncomingFrameToProgram(allowPreviewTier: Bool = false) {
         compositor.promoteIncomingFrameToProgram(allowPreviewTier: allowPreviewTier)
     }
+
+    func resetProgramLetterboxStabilization() {
+        compositor.resetProgramLetterboxStabilization()
+    }
 }
 #endif
 
@@ -583,6 +587,10 @@ final class BroadcastMetalProgramFeedContainerNSView: NSView, ProgramCrossfadeHo
 
     func promoteIncomingFrameToProgram(allowPreviewTier: Bool = false) {
         compositor.promoteIncomingFrameToProgram(allowPreviewTier: allowPreviewTier)
+    }
+
+    func resetProgramLetterboxStabilization() {
+        compositor.resetProgramLetterboxStabilization()
     }
 }
 #endif

@@ -3,6 +3,7 @@ import Foundation
 /// Tracks live WebRTC Metal renderer attachments for director performance diagnostics.
 public enum VideoRendererSinkCategory: String, Sendable {
     case tile
+    case tileThumbnail
     case program
     case previewMonitor
     case programCrossfade

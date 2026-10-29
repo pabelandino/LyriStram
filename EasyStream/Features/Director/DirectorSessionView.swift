@@ -21,6 +21,7 @@ struct DirectorSessionView: View {
 
     @State var isStreamSettingsPresented = false
     @State var isStudioSettingsPresented = false
+    @State var isPreviewMonitorPresented = false
     @State var studioSettingsInitialTab: DirectorStudioSettingsTab = .studio
     @State var shouldPrewarmStudioSettings = false
 
@@ -78,6 +79,12 @@ struct DirectorSessionView: View {
             ProgramOutputSyncBridge(viewModel: viewModel)
         }
         .background {
+            DirectorWidgetStudioPresentationHost(mediaViewModel: mediaViewModel)
+        }
+        .background {
+            DirectorPreviewMonitorPresentationHost(isPresented: $isPreviewMonitorPresented)
+        }
+        .background {
             if shouldPrewarmStudioSettings {
                 DirectorStudioSettingsPrewarmShell(
                     viewModel: viewModel,
@@ -85,11 +92,6 @@ struct DirectorSessionView: View {
                     previewMonitor: previewMonitor,
                     intercomService: intercomService
                 )
-            }
-        }
-        .onChange(of: mediaViewModel.isWidgetStudioOpen) { _, isOpen in
-            if isOpen {
-                openStudioSettings(tab: .studio)
             }
         }
         .sheet(isPresented: $mediaViewModel.isPlaylistEditorPresented) {
@@ -112,7 +114,14 @@ struct DirectorSessionView: View {
         .sheet(isPresented: $mediaViewModel.isWidgetTemplatePickerPresented) {
             BroadcastWidgetTemplatePickerSheet { template in
                 mediaViewModel.openNewWidgetStudio(template: template)
+                platformOpenWidgetStudioWindow()
             }
+        }
+    }
+
+    func presentWidgetTemplatePicker() {
+        DirectorModalPresentation.afterYield {
+            mediaViewModel.isWidgetTemplatePickerPresented = true
         }
     }
 
@@ -135,8 +144,11 @@ struct DirectorSessionView: View {
             .layoutPriority(1)
             .clipped()
 
-            DirectorLibraryRailView(mediaViewModel: mediaViewModel)
-                .frame(width: WorkspaceMetrics.libraryRailWidth)
+            DirectorLibraryRailView(
+                mediaViewModel: mediaViewModel,
+                onCreateWidget: presentWidgetTemplatePicker
+            )
+            .frame(width: WorkspaceMetrics.libraryRailWidth)
                 .layoutPriority(2)
                 .clipped()
         }
@@ -149,21 +161,23 @@ struct DirectorSessionView: View {
             viewModel: viewModel,
             mediaViewModel: mediaViewModel,
             liveProgramAir: liveProgramAir,
-            onOpenSettings: { openStudioSettings() }
+            onOpenSettings: { openStudioSettings() },
+            onCreateWidget: presentWidgetTemplatePicker
         )
     }
 
     func scheduleStudioSettingsPrewarm() {
-        guard !DirectorWorkspaceSession.shared.hasPrewarmedSettingsUI else {
-            shouldPrewarmStudioSettings = true
-            return
-        }
+        guard !DirectorWorkspaceSession.shared.hasPrewarmedSettingsUI else { return }
 
         Task { @MainActor in
             await DirectorModalPresentation.deferHeavyUI()
             shouldPrewarmStudioSettings = true
+            await DirectorModalPresentation.deferHeavyUI()
+            await DirectorModalPresentation.deferHeavyUI()
+            shouldPrewarmStudioSettings = false
             DirectorWorkspaceSession.shared.markSettingsUIPrewarmed()
             platformPrewarmStudioSettingsWindowIfNeeded()
+            platformPrewarmWidgetStudioWindowIfNeeded()
         }
     }
 }

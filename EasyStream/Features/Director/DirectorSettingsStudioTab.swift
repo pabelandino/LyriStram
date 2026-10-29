@@ -5,8 +5,8 @@ import EasyStreamTransport
 
 /// Studio tab — audio, intercom, graphics, emission, remote camera controls.
 struct DirectorSettingsStudioTab: View {
-    @Bindable var viewModel: DirectorSessionViewModel
-    @Bindable var mediaViewModel: BroadcastMediaViewModel
+    let viewModel: DirectorSessionViewModel
+    let mediaViewModel: BroadcastMediaViewModel
     @Bindable var intercomService: TeamIntercomService
 
     var body: some View {
@@ -41,10 +41,6 @@ struct DirectorSettingsStudioTab: View {
                         onTalkBegin: { intercomService.toggleTalking() },
                         onTalkEnd: { intercomService.toggleTalking() }
                     )
-                }
-
-                if mediaViewModel.isWidgetStudioOpen {
-                    DirectorSettingsWidgetStudioSection(mediaViewModel: mediaViewModel)
                 }
 
                 if !mediaViewModel.liveWidgets.isEmpty

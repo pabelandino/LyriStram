@@ -16,11 +16,16 @@ final class DirectorWorkspaceSession {
     var onConfigurePreviewMonitor: (() -> Void)?
     var pendingStudioSettingsTab: DirectorStudioSettingsTab = .studio
     private(set) var hasPrewarmedSettingsUI = false
+    private(set) var hasPrewarmedWidgetStudioUI = false
 
     private init() {}
 
     func markSettingsUIPrewarmed() {
         hasPrewarmedSettingsUI = true
+    }
+
+    func markWidgetStudioUIPrewarmed() {
+        hasPrewarmedWidgetStudioUI = true
     }
 
     func requestStudioSettings(tab: DirectorStudioSettingsTab = .studio) {

@@ -21,6 +21,7 @@ struct DirectorCamerasSidebarContent: View {
                     isProgram: source.id == viewModel.programSourceID,
                     isAudio: source.id == viewModel.programAudioSourceID,
                     isConnected: source.connectionState == .connected,
+                    connectionState: source.connectionState,
                     isSelected: source.id == viewModel.previewSourceID,
                     onSelect: { viewModel.selectPreview(source.id) },
                     onReconnect: source.connectionState != .connected

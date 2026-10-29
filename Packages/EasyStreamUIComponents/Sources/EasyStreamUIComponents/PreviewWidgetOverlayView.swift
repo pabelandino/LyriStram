@@ -5,16 +5,19 @@ import EasyStreamCore
 public struct PreviewWidgetOverlayView: View {
     let layers: [ProgramFeedWidgetLayer]
     let isPlacementEditing: Bool
+    let allowsMotion: Bool
     @Binding var editingPlacement: BroadcastWidgetPlacement
 
     public init(
         layers: [ProgramFeedWidgetLayer],
         isPlacementEditing: Bool,
-        editingPlacement: Binding<BroadcastWidgetPlacement>
+        editingPlacement: Binding<BroadcastWidgetPlacement>,
+        allowsMotion: Bool? = nil
     ) {
         self.layers = layers
         self.isPlacementEditing = isPlacementEditing
         self._editingPlacement = editingPlacement
+        self.allowsMotion = allowsMotion ?? !isPlacementEditing
     }
 
     public var body: some View {
@@ -25,7 +28,7 @@ public struct PreviewWidgetOverlayView: View {
                     logoURL: layer.logoURL,
                     isEditing: isPlacementEditing,
                     isLive: false,
-                    allowsMotion: !isPlacementEditing,
+                    allowsMotion: allowsMotion,
                     placement: $editingPlacement
                 )
             }

@@ -51,20 +51,56 @@ public struct PreviewMonitorCellView: View {
 
     @ViewBuilder
     private var videoLayer: some View {
-        let track = displayTrack ?? camera.track
-        if let track {
-            BoundedWebRTCVideoView(track: track, sinkCategory: .previewMonitor)
-        } else {
-            ZStack {
-                Color.black.opacity(0.9)
-                VStack(spacing: 6) {
-                    Image(systemName: camera.isConnected ? "video" : "video.slash")
-                    Text(camera.isConnected ? "Conectando…" : "Sin señal")
-                        .font(.caption2)
+        // Never fall back to camera.track — decodes every source and freezes the director UI.
+        let liveTrack = camera.isConnected ? displayTrack : nil
+        ZStack {
+            Color.black
+            if camera.isConnected {
+                PreviewMonitorStableVideoSlot(sourceID: camera.id, track: liveTrack)
+            }
+            if !camera.isConnected {
+                disconnectedLayer
+            } else if liveTrack == nil {
+                if showsTileSnapshot {
+                    DirectorTileThumbnailView(sourceID: camera.id)
+                } else {
+                    idleLayer
                 }
-                .foregroundStyle(.white.opacity(0.55))
             }
         }
+    }
+
+    private var disconnectedLayer: some View {
+        ZStack {
+            Color.black.opacity(0.92)
+            VStack(spacing: 8) {
+                Image(systemName: "video.slash.fill")
+                    .font(.title3.weight(.semibold))
+                Text("Cámara desconectada")
+                    .font(.caption2.weight(.semibold))
+            }
+            .foregroundStyle(.white.opacity(0.62))
+        }
+    }
+
+    private var idleLayer: some View {
+        ZStack {
+            Color.black.opacity(0.9)
+            VStack(spacing: 6) {
+                Image(systemName: camera.isConnected ? "pause.circle" : "video")
+                Text(camera.isConnected ? "En espera" : "Conectando…")
+                    .font(.caption2)
+            }
+            .foregroundStyle(.white.opacity(0.55))
+        }
+    }
+
+    /// Idle cells only — preview/program use live decoders on the multiview monitor.
+    private var showsTileSnapshot: Bool {
+        camera.isConnected
+            && !isPreview
+            && !isProgram
+            && DirectorTileThumbnailView.hasThumbnail(for: camera.id)
     }
 
     private var overlayLayer: some View {
@@ -174,4 +210,18 @@ public struct PreviewMonitorCellView: View {
             .foregroundStyle(.white)
     }
 
+}
+
+/// One persistent Metal slot per camera — swaps PREV/PROG roles without NSView teardown.
+private struct PreviewMonitorStableVideoSlot: View {
+    let sourceID: CameraSourceID
+    let track: RTCVideoTrack?
+
+    var body: some View {
+        BoundedWebRTCVideoView(track: track, sinkCategory: .previewMonitor)
+            .id(sourceID)
+            .opacity(track != nil ? 1 : 0)
+            .allowsHitTesting(false)
+            .animation(nil, value: track.map { ObjectIdentifier($0) })
+    }
 }

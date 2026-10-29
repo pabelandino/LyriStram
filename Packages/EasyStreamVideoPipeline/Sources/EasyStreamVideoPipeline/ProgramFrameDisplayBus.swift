@@ -20,6 +20,12 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
     }
 
     public var onDisplayRefreshRequested: (@Sendable () -> Void)?
+    /// Compositor releases letterbox lock when PROG preset changes during live output.
+    public var onProgramMonitorPresetChanged: (@Sendable () -> Void)?
+
+    public func notifyProgramMonitorPresetChanged() {
+        onProgramMonitorPresetChanged?()
+    }
 
     private let processingQueue = DispatchQueue(
         label: "com.easystream.program-frame-bus.processing",
@@ -115,7 +121,7 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
 
     public func incomingMeetsProgramDisplayThreshold() -> Bool {
         guard let incoming = displaySample(for: .programIncoming) else { return false }
-        return ProgramFrameQualityGate.acceptsOnAirFrame(
+        return ProgramFrameQualityGate.meetsConfiguredProgramPreset(
             width: Int(incoming.contentSize.x),
             height: Int(incoming.contentSize.y)
         )
@@ -141,12 +147,12 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
             return
         }
         if !allowPreviewTier,
-           !ProgramFrameQualityGate.acceptsOnAirFrame(
+           !ProgramFrameQualityGate.meetsConfiguredProgramPreset(
                width: Int(incoming.contentSize.x),
                height: Int(incoming.contentSize.y)
            ) {
             ProgramBusTrace.event(
-                "bus promote skipped incoming=\(sizeLabel(incoming)) below program threshold"
+                "bus promote skipped incoming=\(sizeLabel(incoming)) below program preset"
             )
             return
         }
@@ -170,14 +176,20 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
     }
 
     private func allowsOnAirPublish(width: Int, height: Int) -> Bool {
-        if ProgramFrameQualityGate.acceptsOnAirFrame(width: width, height: height) {
-            endSubHDOnAirGraceIfActive(reason: "HD frame")
+        if ProgramFrameQualityGate.meetsConfiguredProgramPreset(width: width, height: height) {
+            endSubHDOnAirGraceIfActive(reason: "program preset frame")
             return true
         }
+
         rampGraceLock.lock()
-        defer { rampGraceLock.unlock() }
-        guard let deadline = subHDOnAirGraceDeadline else { return false }
-        return DispatchTime.now() < deadline
+        let inGrace = subHDOnAirGraceDeadline.map { DispatchTime.now() < $0 } ?? false
+        rampGraceLock.unlock()
+
+        if inGrace {
+            return ProgramFrameQualityGate.acceptsRampHoldFrame(width: width, height: height)
+        }
+
+        return ProgramFrameQualityGate.acceptsOnAirFrame(width: width, height: height)
     }
 
     private func endSubHDOnAirGraceIfActive(reason: String) {

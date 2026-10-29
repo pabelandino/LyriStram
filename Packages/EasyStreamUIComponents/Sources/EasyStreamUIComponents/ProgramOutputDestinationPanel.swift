@@ -131,4 +131,66 @@ public enum ProgramOutputDisplayDiscovery {
         return preferredExternalScreenIndex()
     }
 }
+
+#elseif os(iOS)
+import UIKit
+
+public enum ProgramOutputDisplayDiscovery {
+    public static func availableScreens() -> [ProgramOutputDisplayOption] {
+        connectedScreens().enumerated().map { index, screen in
+            let bounds = screen.bounds
+            let scale = screen.scale
+            let builtIn = screen == UIScreen.main
+            let name = builtIn ? "Pantalla del iPad" : "Pantalla externa"
+            return ProgramOutputDisplayOption(
+                id: index,
+                name: name,
+                width: Int(bounds.width * scale),
+                height: Int(bounds.height * scale),
+                isBuiltIn: builtIn
+            )
+        }
+    }
+
+    public static var hasExternalDisplay: Bool {
+        connectedScreens().contains { $0 != UIScreen.main }
+    }
+
+    public static var isExternalDisplayMirroring: Bool {
+        guard let external = connectedScreens().first(where: { $0 != UIScreen.main }) else { return false }
+        return external.mirrored != nil
+    }
+
+    public static func preferredExternalScreenIndex() -> Int? {
+        let screens = connectedScreens()
+        guard screens.count > 1 else { return nil }
+        return screens.firstIndex { $0 != UIScreen.main }
+    }
+
+    public static func validatedExternalScreenIndex(_ index: Int) -> Int? {
+        guard hasExternalDisplay else { return nil }
+        let screens = connectedScreens()
+        if index >= 0, index < screens.count, screens[index] != UIScreen.main {
+            return index
+        }
+        return preferredExternalScreenIndex()
+    }
+
+    private static func connectedScreens() -> [UIScreen] {
+        var screens: [UIScreen] = [UIScreen.main]
+
+        let sceneScreens = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .map { $0.screen }
+        for screen in sceneScreens where !screens.contains(screen) {
+            screens.append(screen)
+        }
+
+        for screen in UIScreen.screens where !screens.contains(screen) {
+            screens.append(screen)
+        }
+
+        return screens
+    }
+}
 #endif

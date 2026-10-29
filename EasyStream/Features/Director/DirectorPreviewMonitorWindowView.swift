@@ -32,8 +32,11 @@ struct DirectorPreviewMonitorWindowView: View {
                     programAudioSourceID: store.programAudioSourceID,
                     settings: store.settings,
                     currentPage: store.currentPage,
+                    suppressProgramHeroLiveVideo: false,
                     onSelect: { store.selectPreview($0) }
                 )
+                .animation(nil, value: store.previewSourceID)
+                .animation(nil, value: store.programSourceID)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

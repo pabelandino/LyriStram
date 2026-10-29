@@ -11,6 +11,7 @@ public actor DirectorStreamReceiver {
         case sourceAudioTrack(CameraSourceID, RTCAudioTrack, displayName: String)
         case sourceConnectionState(CameraSourceID, StreamConnectionState)
         case sourceSettingsUpdated(CameraSourceID, RemoteCameraSettings)
+        case sourceTileSnapshot(CameraSourceID, jpeg: Data, sequence: UInt64)
         case failed(String)
     }
 
@@ -127,6 +128,12 @@ public actor DirectorStreamReceiver {
             await addIceCandidate(sessionID: sessionID, candidate: candidate, sdpMid: sdpMid, sdpMLineIndex: sdpMLineIndex)
         case .settingsState(let deviceID, let settings):
             emit(.sourceSettingsUpdated(CameraSourceID(deviceID), settings))
+        case .tileSnapshot(let deviceID, let sequence, let jpegBase64):
+            guard let jpeg = Data(base64Encoded: jpegBase64) else {
+                EasyStreamLog.transport.debug("tileSnapshot base64 decode failed source=\(deviceID.uuidString, privacy: .public)")
+                return
+            }
+            emit(.sourceTileSnapshot(CameraSourceID(deviceID), jpeg: jpeg, sequence: sequence))
         default:
             break
         }

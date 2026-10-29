@@ -96,7 +96,7 @@ public struct DirectorVideoQualityPanel: View {
             BroadcastQualityDropdown(
                 title: "Monitor PROG",
                 systemImage: "tv.fill",
-                options: ProgramMonitorPreset.allCases,
+                options: ProgramMonitorPreset.directorSettingsOptions,
                 selection: $settings.progPreset,
                 label: { $0.title },
                 chips: { progChips(for: $0) }
@@ -118,9 +118,16 @@ public struct DirectorVideoQualityPanel: View {
 
             BroadcastSettingsToggleRow(
                 title: "Pausar cámaras en espera",
-                subtitle: "Solo preview y programa envían video. Esencial con 3+ cámaras para evitar que el CPU crezca linealmente.",
+                subtitle: "Las idle no envían video WebRTC — bajo consumo en iPhone/iPad. Preview y PROG sin cambios.",
                 systemImage: "moon.fill",
                 isOn: $settings.pauseIdleCameraStreams
+            )
+
+            BroadcastSettingsToggleRow(
+                title: "Snapshots en tiles idle",
+                subtitle: "Cada cámara idle envía un JPEG ~cada 3.5 s para ver todas en multiview. En macOS activo por defecto.",
+                systemImage: "photo.on.rectangle.angled",
+                isOn: $settings.idleTileSnapshotsEnabled
             )
 
             BroadcastSettingsToggleRow(
@@ -131,7 +138,7 @@ public struct DirectorVideoQualityPanel: View {
             )
 
             BroadcastSettingsInfoCallout(
-                text: "Off-air solo decodifica el tile de preview — el monitor PROG no usa GPU. Con 3+ cámaras activa «Pausar cámaras en espera»."
+                text: "Live en PREV + PROG; idle muestra snapshot JPEG. Al conectar, el director recorre las cámaras una vez para llenar las miniaturas."
             )
         }
     }

@@ -130,6 +130,11 @@ final class DirectorSessionViewModel {
     private var publisherTask: Task<Void, Never>?
     private var stuckSourceWatchTask: Task<Void, Never>?
     private var monitorQualityBroadcastTask: Task<Void, Never>?
+    private var previewAssignmentBroadcastTask: Task<Void, Never>?
+    private var incomingWarmDebounceTask: Task<Void, Never>?
+    /// Debounced prefetch target — avoids rebinding PROG incoming on every preview tap.
+    private(set) var incomingWarmPreviewSourceID: CameraSourceID?
+    private var lastBroadcastMonitorQuality: DirectorMonitorQualitySettings?
     /// Serializes preview/take mutations so concurrent Tasks cannot apply switcher state out of order.
     private var switcherQueueTail: Task<Void, Never>?
     private var lastEncoderStatsRefresh = Date.distantPast
@@ -159,7 +164,7 @@ final class DirectorSessionViewModel {
         return previewVideoTrack
     }
 
-    /// Incoming lane wired into the compositor (handoff pin or preview warm — single entry point).
+    /// Incoming lane wired into the compositor (handoff pin or debounced preview warm — single entry point).
     var programBusIncomingTrack: RTCVideoTrack? {
         if isTransitioning {
             return transitionIncomingVideoTrack
@@ -167,11 +172,9 @@ final class DirectorSessionViewModel {
         if let takeHandoffSourceID {
             return track(for: takeHandoffSourceID)
         }
-        if programSourceID != nil {
-            return warmedPreviewVideoTrack
-        }
-        guard monitorQuality.prefetchTakeTarget else { return nil }
-        return warmedPreviewVideoTrack
+        guard programSourceID != nil, monitorQuality.prefetchTakeTarget else { return nil }
+        guard let warmID = incomingWarmPreviewSourceID, warmID != programSourceID else { return nil }
+        return track(for: warmID)
     }
 
     /// On-air program bus only — never mirrors preview (preview warms on the incoming compositor lane).
@@ -265,6 +268,13 @@ final class DirectorSessionViewModel {
         publisherTask?.cancel()
         stuckSourceWatchTask?.cancel()
         monitorQualityBroadcastTask?.cancel()
+        previewAssignmentBroadcastTask?.cancel()
+        incomingWarmDebounceTask?.cancel()
+        incomingWarmPreviewSourceID = nil
+        DirectorPreviewWarmupTour.reset()
+        DirectorRemoteVideoTrackPolicy.reset()
+        DirectorTileThumbnailCoordinator.reset()
+        lastBroadcastMonitorQuality = nil
         sources = []
         lastBroadcastAssignments = [:]
         previewSourceID = nil
@@ -290,27 +300,55 @@ final class DirectorSessionViewModel {
     }
 
     func selectPreview(_ sourceID: CameraSourceID) {
-        enqueueSwitcherOperation {
-            await self.selectPreviewAndSync(sourceID)
-        }
-    }
-
-    func selectPreviewAndSync(_ sourceID: CameraSourceID) async {
         guard takeHandoffSourceID == nil else { return }
-        inspectorSourceID = sourceID
-        guard previewSourceID != sourceID else {
-            syncRemoteVideoTrackPolicy()
-            return
-        }
         // On-air source stays on the program bus — preview lane is for the next take target only.
         guard sourceID != programSourceID else {
             syncRemoteVideoTrackPolicy()
             return
         }
-        if let event = await switcher.setPreview(sourceID) {
-            applySwitcherEvent(event)
+        guard previewSourceID != sourceID else {
+            syncRemoteVideoTrackPolicy()
+            return
         }
+
+        // Optimistic UI — transport/network debounced; inspector stays independent (settings scroll).
+        previewSourceID = sourceID
         syncRemoteVideoTrackPolicy()
+        syncPreviewMonitor()
+        schedulePreviewAssignmentBroadcast(to: sourceID)
+        scheduleIncomingWarmPreview(to: sourceID)
+    }
+
+    private func scheduleIncomingWarmPreview(to sourceID: CameraSourceID) {
+        incomingWarmDebounceTask?.cancel()
+        guard programSourceID != nil, monitorQuality.prefetchTakeTarget else {
+            incomingWarmPreviewSourceID = nil
+            return
+        }
+        guard sourceID != programSourceID else {
+            incomingWarmPreviewSourceID = nil
+            return
+        }
+        incomingWarmDebounceTask = Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled, previewSourceID == sourceID else { return }
+            incomingWarmPreviewSourceID = sourceID
+        }
+    }
+
+    func selectPreviewAndSync(_ sourceID: CameraSourceID) async {
+        selectPreview(sourceID)
+        await previewAssignmentBroadcastTask?.value
+    }
+
+    private func schedulePreviewAssignmentBroadcast(to sourceID: CameraSourceID) {
+        previewAssignmentBroadcastTask?.cancel()
+        previewAssignmentBroadcastTask = Task {
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled, previewSourceID == sourceID else { return }
+            _ = await switcher.setPreview(sourceID)
+            await broadcastSwitcherAssignmentsNow()
+        }
     }
 
     func takeToProgram() {
@@ -439,6 +477,7 @@ final class DirectorSessionViewModel {
 
         takeHandoffSourceID = target
         transitionIncomingVideoTrack = incoming
+        incomingWarmPreviewSourceID = target
 
         if transition.kind == .cut || transition.duration <= 0 {
             ProgramBusTrace.event(
@@ -587,9 +626,20 @@ final class DirectorSessionViewModel {
     private func markSourceReconnecting(_ sourceID: CameraSourceID) {
         guard let index = sources.firstIndex(where: { $0.id == sourceID }) else { return }
         sources[index].videoTrack = nil
+        sources[index].audioTrack = nil
         sources[index].connectionState = .connecting
         sources[index].connectionStateUpdatedAt = Date()
         syncPreviewMonitor()
+    }
+
+    private func markSourceDisconnected(_ sourceID: CameraSourceID) {
+        guard let index = sources.firstIndex(where: { $0.id == sourceID }) else { return }
+        sources[index].videoTrack = nil
+        sources[index].audioTrack = nil
+        sources[index].connectionState = .disconnected
+        sources[index].connectionStateUpdatedAt = Date()
+        syncPreviewMonitor()
+        syncRemoteVideoTrackPolicy()
     }
 
     func source(at index: Int) -> CameraSourceID? {
@@ -637,7 +687,8 @@ final class DirectorSessionViewModel {
             statusMessage = "\(displayName) conectada"
 
         case .sourceDisconnected(let sourceID):
-            sources.removeAll { $0.id == sourceID }
+            markSourceDisconnected(sourceID)
+            DirectorSourceThumbnailBus.shared.remove(sourceID: sourceID)
             Task {
                 let events = await switcher.unregisterSource(sourceID)
                 for event in events { applySwitcherEvent(event) }
@@ -666,13 +717,25 @@ final class DirectorSessionViewModel {
             }
 
         case .sourceConnectionState(let sourceID, let state):
-            upsertSource(sourceID, connectionState: state)
+            if state == .disconnected || state == .failed {
+                markSourceDisconnected(sourceID)
+            } else {
+                upsertSource(sourceID, connectionState: state)
+            }
 
         case .sourceSettingsUpdated(let sourceID, let settings):
             Task {
                 await settingsStore.save(settings, for: sourceID)
                 upsertSource(sourceID, remoteSettings: settings)
             }
+
+        case .sourceTileSnapshot(let sourceID, let jpeg, let sequence):
+            DirectorSourceThumbnailBus.shared.publishJPEG(sourceID: sourceID, jpeg: jpeg, sequence: sequence)
+            TileThumbnailTrace.eventThrottled(
+                "director-jpeg-\(sourceID.rawValue.uuidString.prefix(8))",
+                intervalMs: 3_000,
+                "director idle jpeg received source=\(ProgramBusTrace.shortSourceID(sourceID.rawValue)) bytes=\(jpeg.count) seq=\(sequence)"
+            )
 
         case .failed(let error):
             lastError = error
@@ -748,6 +811,11 @@ final class DirectorSessionViewModel {
             case .programChanged(let id):
                 programSourceID = id
                 syncProgramEncoder()
+                if id == nil {
+                    incomingWarmPreviewSourceID = nil
+                } else if let preview = previewSourceID {
+                    scheduleIncomingWarmPreview(to: preview)
+                }
             case .programAudioChanged(let id):
                 programAudioSourceID = id
                 updateAudioRouting()
@@ -795,6 +863,8 @@ final class DirectorSessionViewModel {
 
     private func broadcastMonitorQuality() {
         let quality = effectiveMonitorQuality
+        guard quality != lastBroadcastMonitorQuality else { return }
+        lastBroadcastMonitorQuality = quality
         for source in sources {
             Task {
                 try? await streamReceiver.sendControl(
@@ -805,18 +875,29 @@ final class DirectorSessionViewModel {
         }
     }
 
-    /// Idle sources stop decoding on the director — preview + program lanes are never disabled while on-air.
+    /// Idle sources stop decoding on the director — only mutates tracks whose role changed.
     private func syncRemoteVideoTrackPolicy() {
-        for source in sources {
-            guard let track = source.videoTrack else { continue }
-            let assignment = switcherAssignment(for: source.id)
-            track.isEnabled = DirectorLiveOutputGuard.shouldKeepTrackDecoding(
-                sourceID: source.id,
-                programSourceID: programSourceID,
-                previewSourceID: previewSourceID,
-                assignmentIsActive: assignment.isActive
-            )
-        }
+        let quality = monitorQuality.effectiveSettings()
+        DirectorRemoteVideoTrackPolicy.applyDiff(
+            sources: sources,
+            previewSourceID: previewSourceID,
+            programSourceID: programSourceID,
+            assignmentFor: { switcherAssignment(for: $0) }
+        )
+        let tracks = Dictionary(uniqueKeysWithValues: sources.map { ($0.id, $0.videoTrack) })
+        DirectorTileThumbnailCoordinator.sync(
+            sources: tracks,
+            previewSourceID: previewSourceID,
+            programSourceID: programSourceID,
+            idleThumbnailsEnabled: quality.idleTileSnapshotsEnabled || !quality.pauseIdleCameraStreams
+        )
+        DirectorPreviewWarmupTour.scheduleIfNeeded(
+            sources: sources,
+            programSourceID: programSourceID,
+            previewSourceID: previewSourceID,
+            idleSnapshotsEnabled: quality.idleTileSnapshotsEnabled,
+            selectPreview: { [weak self] id in self?.selectPreview(id) }
+        )
     }
 
     private func switcherAssignment(for sourceID: CameraSourceID) -> CameraSwitcherAssignment {

@@ -7,6 +7,8 @@ public enum SignalingMessage: Sendable, Equatable {
     case ice(sessionID: UUID, candidate: String, sdpMid: String?, sdpMLineIndex: Int32?)
     case control(RemoteCameraCommand)
     case settingsState(deviceID: UUID, settings: RemoteCameraSettings)
+    /// Idle tile preview (~1.5 fps JPEG) — isolated from WebRTC video; never touches PROG bus.
+    case tileSnapshot(deviceID: UUID, sequence: UInt64, jpegBase64: String)
 }
 
 extension SignalingMessage: Codable {
@@ -22,10 +24,12 @@ extension SignalingMessage: Codable {
         case sdpMLineIndex
         case command
         case settings
+        case sequence
+        case jpegBase64
     }
 
     private enum MessageType: String, Codable {
-        case hello, offer, answer, ice, control, settingsState
+        case hello, offer, answer, ice, control, settingsState, tileSnapshot
     }
 
     public init(from decoder: Decoder) throws {
@@ -62,6 +66,12 @@ extension SignalingMessage: Codable {
                 deviceID: try container.decode(UUID.self, forKey: .deviceID),
                 settings: try container.decode(RemoteCameraSettings.self, forKey: .settings)
             )
+        case .tileSnapshot:
+            self = .tileSnapshot(
+                deviceID: try container.decode(UUID.self, forKey: .deviceID),
+                sequence: try container.decode(UInt64.self, forKey: .sequence),
+                jpegBase64: try container.decode(String.self, forKey: .jpegBase64)
+            )
         }
     }
 
@@ -94,6 +104,11 @@ extension SignalingMessage: Codable {
             try container.encode(MessageType.settingsState, forKey: .type)
             try container.encode(deviceID, forKey: .deviceID)
             try container.encode(settings, forKey: .settings)
+        case .tileSnapshot(let deviceID, let sequence, let jpegBase64):
+            try container.encode(MessageType.tileSnapshot, forKey: .type)
+            try container.encode(deviceID, forKey: .deviceID)
+            try container.encode(sequence, forKey: .sequence)
+            try container.encode(jpegBase64, forKey: .jpegBase64)
         }
     }
 }

@@ -5,8 +5,9 @@ import EasyStreamTransport
 
 /// Unified director settings — quality, multiview monitor, and studio controls in one surface.
 struct DirectorStudioSettingsHubView: View {
-    @Bindable var viewModel: DirectorSessionViewModel
-    @Bindable var mediaViewModel: BroadcastMediaViewModel
+    /// Plain references — avoids re-rendering this window on every encoder/publisher stats tick.
+    let viewModel: DirectorSessionViewModel
+    let mediaViewModel: BroadcastMediaViewModel
     @Bindable var previewMonitor: DirectorPreviewMonitorStore
     @Bindable var intercomService: TeamIntercomService
 
@@ -113,6 +114,12 @@ struct DirectorStudioSettingsHubView: View {
     }
 
     private var monitorTab: some View {
+#if os(iOS)
+        PreviewMonitorSettingsForm(
+            settings: $previewMonitor.settings,
+            onOpenMonitor: onOpenPreviewMonitor
+        )
+#else
         ScrollView(.vertical, showsIndicators: true) {
             PreviewMonitorSettingsForm(
                 settings: $previewMonitor.settings,
@@ -120,6 +127,7 @@ struct DirectorStudioSettingsHubView: View {
             )
             .padding(.horizontal, 4)
         }
+#endif
     }
 
     func commitVideoQualityIfNeeded() {

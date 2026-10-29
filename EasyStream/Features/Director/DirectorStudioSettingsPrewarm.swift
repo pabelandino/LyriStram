@@ -5,12 +5,14 @@ import EasyStreamTransport
 
 /// Mounts heavy settings panels off-screen once so the first user-open does not stall PROG Metal.
 struct DirectorStudioSettingsPrewarmShell: View {
-    @Bindable var viewModel: DirectorSessionViewModel
-    @Bindable var mediaViewModel: BroadcastMediaViewModel
+    let viewModel: DirectorSessionViewModel
+    let mediaViewModel: BroadcastMediaViewModel
     @Bindable var previewMonitor: DirectorPreviewMonitorStore
     @Bindable var intercomService: TeamIntercomService
 
     @State private var draftVideoQuality: DirectorMonitorQualitySettings
+    @State private var draftWidgetConfiguration = BroadcastWidgetConfiguration()
+    @State private var draftWidgetDisplayName = "Prewarm"
 
     init(
         viewModel: DirectorSessionViewModel,
@@ -27,15 +29,26 @@ struct DirectorStudioSettingsPrewarmShell: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            DirectorSettingsStudioTab(
-                viewModel: viewModel,
-                mediaViewModel: mediaViewModel,
-                intercomService: intercomService
-            )
             DirectorVideoQualityPanel(settings: $draftVideoQuality)
             PreviewMonitorSettingsForm(
                 settings: $previewMonitor.settings,
                 onOpenMonitor: {}
+            )
+            BroadcastWidgetStudioPanel(
+                configuration: $draftWidgetConfiguration,
+                displayName: $draftWidgetDisplayName,
+                templateTitle: draftWidgetConfiguration.resolvedTemplate.title,
+                logoURL: nil,
+                isEditingExisting: false,
+                isEditingPlacement: false,
+                onEnterPlayMode: {},
+                onEnterLayoutMode: {},
+                onImportLogo: {},
+                onImportLogoFromPhotoLibrary: {},
+                onSave: {},
+                onPreview: {},
+                onGoLive: {},
+                onClose: {}
             )
         }
         .frame(width: 0, height: 0)

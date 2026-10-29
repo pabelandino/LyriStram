@@ -1,6 +1,7 @@
 #if os(iOS)
 import SwiftUI
 import UniformTypeIdentifiers
+import EasyStreamCore
 import EasyStreamUIComponents
 import UIKit
 
@@ -42,24 +43,12 @@ extension DirectorSessionView {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
             }
-            .fileImporter(
-                isPresented: $mediaViewModel.isWidgetLogoImporterPresented,
-                allowedContentTypes: [.png],
-                allowsMultipleSelection: false
-            ) { result in
-                guard case .success(let urls) = result, let url = urls.first else { return }
-                mediaViewModel.importWidgetLogo(from: url)
-            }
             .broadcastMediaPhotoImporter(
                 isPresented: $mediaViewModel.isPhotoPickerPresented,
                 kind: mediaViewModel.pendingImportKind
             ) { data, ext in
                 mediaViewModel.importData(data, kind: mediaViewModel.pendingImportKind, preferredExtension: ext)
             }
-            .broadcastWidgetLogoPhotoImporter(
-                isPresented: $mediaViewModel.isWidgetLogoPhotoPickerPresented,
-                onImport: { mediaViewModel.importWidgetLogoData($0) }
-            )
     }
 
     @ViewBuilder
@@ -113,6 +102,14 @@ extension DirectorSessionView {
     }
 
     func openPreviewMonitor() {
+        let shownOnExternal = PreviewMonitorExternalDisplayController.shared.present(
+            openOnExternalDisplay: previewMonitor.settings.openOnExternalDisplay
+        )
+        if !shownOnExternal {
+            DirectorModalPresentation.afterYield {
+                isPreviewMonitorPresented = true
+            }
+        }
         previewMonitor.restartPaginationIfNeeded()
     }
 

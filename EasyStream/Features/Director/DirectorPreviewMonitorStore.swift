@@ -33,7 +33,7 @@ final class DirectorPreviewMonitorStore {
         programSourceID: CameraSourceID?,
         programAudioSourceID: CameraSourceID?
     ) {
-        cameras = sources.enumerated().map { index, source in
+        let nextCameras = sources.enumerated().map { index, source in
             PreviewMonitorCamera(
                 id: source.id,
                 displayName: source.displayName,
@@ -43,10 +43,27 @@ final class DirectorPreviewMonitorStore {
                 sourceIndex: index
             )
         }
-        self.previewSourceID = previewSourceID
-        self.programSourceID = programSourceID
-        self.programAudioSourceID = programAudioSourceID
-        clampCurrentPage()
+        let camerasChanged = nextCameras != cameras
+        let previewChanged = previewSourceID != self.previewSourceID
+        let programChanged = programSourceID != self.programSourceID
+        let audioChanged = programAudioSourceID != self.programAudioSourceID
+        guard camerasChanged || previewChanged || programChanged || audioChanged else { return }
+
+        if camerasChanged {
+            cameras = nextCameras
+        }
+        if previewChanged {
+            self.previewSourceID = previewSourceID
+        }
+        if programChanged {
+            self.programSourceID = programSourceID
+        }
+        if audioChanged {
+            self.programAudioSourceID = programAudioSourceID
+        }
+        if camerasChanged || programChanged {
+            clampCurrentPage()
+        }
     }
 
     func bind(onSelect: @escaping (CameraSourceID) -> Void) {

@@ -6,7 +6,7 @@ import EasyStreamCore
 public enum DirectorPreviewTileTrackPolicy {
     public static var visibilityPolicy: ProgramPreviewVisibilityPolicy = .directorDefault
 
-    /// Switcher tiles: only the selected preview source receives a live track when policy limits decoders.
+    /// Switcher tiles: preview + program receive a live track; idle uses placeholder or JPEG opt-in.
     public static func liveTileTrack(
         for sourceID: CameraSourceID,
         track: RTCVideoTrack?,
@@ -16,11 +16,25 @@ public enum DirectorPreviewTileTrackPolicy {
         guard track != nil else { return nil }
         guard visibilityPolicy.allowsLiveTile(
             sourceIsPreview: sourceID == previewSourceID,
+            sourceIsProgram: sourceID == programSourceID,
             previewEqualsProgram: previewSourceID == programSourceID
         ) else {
             return nil
         }
         return track
+    }
+
+    /// Phase 2 — lightweight ~2 fps decode for idle tiles.
+    public static func shouldAttachTileThumbnail(
+        for sourceID: CameraSourceID,
+        previewSourceID: CameraSourceID?,
+        programSourceID: CameraSourceID?
+    ) -> Bool {
+        visibilityPolicy.shouldAttachTileThumbnail(
+            sourceIsPreview: sourceID == previewSourceID,
+            sourceIsProgram: sourceID == programSourceID,
+            previewEqualsProgram: previewSourceID == programSourceID
+        )
     }
 
     /// Preview-monitor hero: withhold program live video when the director already has a PROG monitor.
@@ -50,6 +64,7 @@ public enum DirectorPreviewTileTrackPolicy {
         guard track != nil else { return nil }
         guard visibilityPolicy.allowsPreviewMonitorGridCell(
             sourceIsPreview: sourceID == previewSourceID,
+            sourceIsProgram: sourceID == programSourceID,
             previewEqualsProgram: previewSourceID == programSourceID
         ) else {
             return nil

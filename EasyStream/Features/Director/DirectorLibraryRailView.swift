@@ -5,6 +5,7 @@ import EasyStreamUIComponents
 /// Right rail — media library for quick drag/take to program.
 struct DirectorLibraryRailView: View {
     @Bindable var mediaViewModel: BroadcastMediaViewModel
+    let onCreateWidget: () -> Void
 
     var body: some View {
         DirectorLibraryRailPanel {
@@ -23,7 +24,7 @@ struct DirectorLibraryRailView: View {
                     mediaViewModel.setSelectedPlaylistID($0, for: mediaViewModel.selectedLibraryKind)
                 },
                 onImport: { mediaViewModel.beginImport(kind: $0) },
-                onCreateWidget: { mediaViewModel.isWidgetTemplatePickerPresented = true },
+                onCreateWidget: onCreateWidget,
                 onEditWidget: { mediaViewModel.openWidgetStudio(for: $0) },
                 onSelectResource: { mediaViewModel.selectResource($0) },
                 onTakeToProgram: { mediaViewModel.takeResourceToProgram($0) },

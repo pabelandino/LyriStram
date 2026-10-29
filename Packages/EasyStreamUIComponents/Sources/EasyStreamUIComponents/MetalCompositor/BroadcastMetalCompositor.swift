@@ -123,6 +123,11 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         } else {
             DispatchQueue.main.async(execute: configure)
         }
+        ProgramFrameDisplayBus.shared.onProgramMonitorPresetChanged = { [weak self] in
+            Task { @MainActor in
+                self?.resetProgramLetterboxStabilization()
+            }
+        }
     }
 
     func detachFromView() {
@@ -255,17 +260,22 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
 
     func clearProgramVideoFrame() {
         ProgramFrameDisplayBus.shared.clearOnAirLane()
+        resetProgramLetterboxStabilization()
+    }
+
+    func resetProgramLetterboxStabilization() {
         contentSizeLock.lock()
         lockedProgramContentSize = .zero
         programContentSizeLockFramesRemaining = 0
         contentSizeLock.unlock()
+        requestDraw()
     }
 
     func promoteIncomingFrameToProgram(allowPreviewTier: Bool = false) {
         ProgramBusTrace.event("compositor promoteIncomingFrameToProgram previewTier=\(allowPreviewTier)")
         ProgramFrameDisplayBus.shared.promoteIncomingToOnAir(allowPreviewTier: allowPreviewTier)
         if let sample = ProgramFrameDisplayBus.shared.displaySample(for: .programOnAir) {
-            if ProgramFrameQualityGate.acceptsOnAirFrame(
+            if ProgramFrameQualityGate.meetsConfiguredProgramPreset(
                 width: Int(sample.contentSize.x),
                 height: Int(sample.contentSize.y)
             ) {
