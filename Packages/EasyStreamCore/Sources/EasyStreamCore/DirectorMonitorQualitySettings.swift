@@ -27,9 +27,9 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
         progPreset: ProgramMonitorPreset = .balanced720,
         previewPreset: PreviewTilePreset = .minimal,
         outputPreset: StreamOutputPreset = .youtube1080p30,
-        energySaverMode: Bool = true,
+        energySaverMode: Bool = false,
         prefetchTakeTarget: Bool = true,
-        pauseIdleCameraStreams: Bool = true,
+        pauseIdleCameraStreams: Bool = false,
         idleTileSnapshotsEnabled: Bool = Self.defaultIdleTileSnapshotsEnabled
     ) {
         self.progPreset = progPreset
@@ -105,11 +105,11 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
         try container.encode(energySaverMode, forKey: .energySaverMode)
     }
 
-    /// Applies conservative toggles while energy saver is on (does not override PROG preset the operator chose).
+    /// Energy saver lowers preview encode cost. Idle cameras stay on a light live stream so tiles do not freeze.
     public func effectiveSettings() -> DirectorMonitorQualitySettings {
         guard energySaverMode else { return self }
         var copy = self
-        copy.pauseIdleCameraStreams = true
+        copy.pauseIdleCameraStreams = false
         if copy.previewPreset == .standard {
             copy.previewPreset = .economy
         }
@@ -131,6 +131,11 @@ public enum DirectorMonitorQualityPreferencesStore {
         }
         var normalized = settings
         normalized.progPreset = settings.progPreset.normalizedForDirectorSettings()
+        // Low-power mode stays available in settings, but it is not the working default.
+        if normalized.energySaverMode {
+            normalized.energySaverMode = false
+            save(normalized)
+        }
 #if os(macOS)
         if !UserDefaults.standard.bool(forKey: macIdleSnapshotsMigrationKey), !normalized.idleTileSnapshotsEnabled {
             normalized.idleTileSnapshotsEnabled = true

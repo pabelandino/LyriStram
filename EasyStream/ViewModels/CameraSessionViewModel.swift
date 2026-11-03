@@ -36,7 +36,7 @@ final class CameraSessionViewModel {
     private var idleTileSnapshotTask: Task<Void, Never>?
     private var transportApplyTask: Task<Void, Never>?
     var canReconnect: Bool {
-        isRunning && !isReconnecting && streamState != .connecting && streamState != .signaling
+        isRunning && !isReconnecting
     }
 
     private let deviceID = DeviceIdentity.current().deviceID
@@ -59,6 +59,7 @@ final class CameraSessionViewModel {
     private var discoveryTask: Task<Void, Never>?
     private var streamTask: Task<Void, Never>?
     private var signalingHealthTask: Task<Void, Never>?
+    private var connectionTimeoutTask: Task<Void, Never>?
     private(set) var connectedDirectorID: UUID?
     private var pendingDirectorID: UUID?
 
@@ -97,8 +98,8 @@ final class CameraSessionViewModel {
                 statusMessage = "Buscando Director…"
                 await refreshDevices()
                 try capture.start()
-                capture.setStreamingDeliveryEnabled(false)
-                capture.applyCaptureLoadTier(.idle, streamSpec: CameraTransportProfile.standby.streamSpec)
+                capture.ensureRunning()
+                capture.applyCaptureLoadTier(.program, streamSpec: CameraTransportProfile.program.streamSpec)
                 RemoteCameraCommandExecutor.applySavedSettings(saved, capture: capture)
                 imagingState = capture.imagingState
                 localPreviewSession = capture.makePreviewSession()
@@ -135,6 +136,8 @@ final class CameraSessionViewModel {
         streamTask = nil
         signalingHealthTask?.cancel()
         signalingHealthTask = nil
+        connectionTimeoutTask?.cancel()
+        connectionTimeoutTask = nil
         connectedDirectorID = nil
         pendingDirectorID = nil
         selectedDirectorID = nil
@@ -310,6 +313,8 @@ final class CameraSessionViewModel {
         case .localNetworkPermissionRequired:
             needsLocalNetworkPermission = true
             statusMessage = "Permiso de red local requerido"
+        case .advertisingReady:
+            break
         }
     }
 
@@ -418,6 +423,7 @@ final class CameraSessionViewModel {
         selectedDirectorID = freshDirector.id
         streamState = .connecting
         statusMessage = "Conectando a \(freshDirector.displayName)…"
+        armConnectionTimeout(generation: generation)
 
         let identity = DeviceIdentity.current()
         let parameters = makeSignalingParameters(for: freshDirector)
@@ -445,7 +451,8 @@ final class CameraSessionViewModel {
                         try await channel.send(.hello(
                             deviceID: identity.deviceID,
                             displayName: identity.displayName,
-                            role: AppRole.camera.rawValue
+                            role: AppRole.camera.rawValue,
+                            platform: identity.platform
                         ))
                         try await streamClient.startOffer()
                         await reportSettingsState()
@@ -458,7 +465,6 @@ final class CameraSessionViewModel {
                         }
                     } catch {
                         guard generation == connectionGeneration else { break }
-                        capture.setStreamingDeliveryEnabled(false)
                         lastError = error.localizedDescription
                         streamState = .failed
                         statusMessage = "Error al negociar con \(freshDirector.displayName)"
@@ -477,21 +483,31 @@ final class CameraSessionViewModel {
                     }
                 case .disconnected:
                     guard generation == connectionGeneration else { break }
-                    capture.setStreamingDeliveryEnabled(false)
+                    connectionTimeoutTask?.cancel()
                     streamState = .disconnected
                     statusMessage = "Desconectado del Director"
                     connectedDirectorID = nil
                     pendingDirectorID = nil
+                    let channel = signalingChannel
                     signalingChannel = nil
+                    if let channel {
+                        await channel.stop()
+                    }
+                    capture.recoverAfterLinkLoss()
                 case .failed(let error):
                     guard generation == connectionGeneration else { break }
-                    capture.setStreamingDeliveryEnabled(false)
+                    connectionTimeoutTask?.cancel()
                     lastError = error
                     streamState = .failed
                     statusMessage = "Error de conexión"
                     connectedDirectorID = nil
                     pendingDirectorID = nil
+                    let channel = signalingChannel
                     signalingChannel = nil
+                    if let channel {
+                        await channel.stop()
+                    }
+                    capture.recoverAfterLinkLoss()
                 }
             }
         }
@@ -514,13 +530,14 @@ final class CameraSessionViewModel {
         devices = await discovery.discoveredDevices
     }
 
+    /// Drops the director link. The camera sensor stays on so a failed socket cannot turn the lens off.
     private func disconnectStreamSession() async {
         connectionGeneration &+= 1
+        connectionTimeoutTask?.cancel()
         directorConnectionTask?.cancel()
         directorConnectionTask = nil
         streamTask?.cancel()
         streamTask = nil
-        capture.setStreamingDeliveryEnabled(false)
         await streamClient.resetPeerConnection()
         if let channel = signalingChannel {
             await channel.stop()
@@ -531,6 +548,23 @@ final class CameraSessionViewModel {
         lastAppliedTransportAssignment = nil
         lastAppliedWebRTCStreamSpec = nil
         lastAppliedCaptureStreamSpec = nil
+        capture.recoverAfterLinkLoss()
+    }
+
+    private func armConnectionTimeout(generation: UInt) {
+        connectionTimeoutTask?.cancel()
+        connectionTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(12))
+            guard let self, !Task.isCancelled, generation == self.connectionGeneration else { return }
+            guard self.streamState == .connecting || self.streamState == .signaling else { return }
+            self.statusMessage = "Sin conexión con el Director"
+            self.lastError = self.statusMessage
+            self.streamState = .failed
+            await self.disconnectStreamSession()
+            self.streamState = .failed
+            self.statusMessage = "Sin conexión con el Director"
+            self.capture.ensureRunning()
+        }
     }
 
     private func reconnectStreamToDirector() async {
@@ -540,7 +574,6 @@ final class CameraSessionViewModel {
         }
         isReconnecting = true
         defer { isReconnecting = false }
-        capture.setStreamingDeliveryEnabled(false)
         await streamClient.resetPeerConnection()
         streamState = .signaling
         statusMessage = "Reconectando con el Director…"
@@ -569,11 +602,7 @@ final class CameraSessionViewModel {
     private func scheduleApplyTransportProfile(for assignment: CameraSwitcherAssignment) {
         transportApplyTask?.cancel()
         transportApplyTask = Task {
-            // Debounce downgrade to idle — avoids sensor flash when hopping preview across tiles.
-            if !assignment.isActive {
-                try? await Task.sleep(for: .milliseconds(450))
-                guard !Task.isCancelled, switcherAssignment == assignment else { return }
-            }
+            guard !Task.isCancelled else { return }
             await applyTransportProfile(for: assignment)
         }
     }
@@ -581,17 +610,18 @@ final class CameraSessionViewModel {
     private func applyTransportProfile(for assignment: CameraSwitcherAssignment) async {
         let quality = CameraTransportProfile.directorQuality
         let webRTCProfile = CameraTransportProfile.webRTCProfile(for: assignment)
-        let pauseIdle = quality.pauseIdleCameraStreams
+        let pauseIdle = false
 
-        // Keep sensor preset stable for every active role; WebRTC scales preview vs program on the wire.
-        let captureStreamSpec = assignment.isActive
-            ? quality.progPreset.streamSpec
-            : CameraTransportProfile.standby.streamSpec
-        let captureTier: CameraCaptureLoadTier = assignment.isActive ? .program : .idle
+        // One capture preset for every role so switching preview/program never reconfigures the camera.
+        let captureStreamSpec = quality.progPreset.streamSpec
+        let captureTier: CameraCaptureLoadTier = .program
 
-        if assignment == lastAppliedTransportAssignment,
-           webRTCProfile.streamSpec == lastAppliedWebRTCStreamSpec,
-           captureStreamSpec == lastAppliedCaptureStreamSpec {
+        let specsUnchanged = webRTCProfile.streamSpec == lastAppliedWebRTCStreamSpec
+            && captureStreamSpec == lastAppliedCaptureStreamSpec
+        if specsUnchanged, lastAppliedTransportAssignment != nil {
+            // Role labels (idle/preview/program) must not restart the camera. Size changes only with the quality preset.
+            lastAppliedTransportAssignment = assignment
+            capture.setStreamingDeliveryEnabled(true)
             return
         }
 
@@ -603,22 +633,11 @@ final class CameraSessionViewModel {
             "camera transport apply assignment=\(assignment.rawValue) webrtc=\(webRTCProfile.width)x\(webRTCProfile.height)@\(webRTCProfile.frameRate) capture=\(captureStreamSpec.width)x\(captureStreamSpec.height)@\(captureStreamSpec.frameRate) tier=\(captureTierLabel(for: assignment)) pauseIdle=\(pauseIdle)"
         )
 
-        if assignment.isActive {
-            stopIdleTileSnapshotPublisher()
-            capture.setStreamingDeliveryEnabled(true)
-            await streamClient.updateTransportProfile(webRTCProfile)
-            capture.applyCaptureLoadTier(captureTier, streamSpec: captureStreamSpec)
-        } else if pauseIdle {
-            capture.setStreamingDeliveryEnabled(false)
-            capture.applyCaptureLoadTier(.idle, streamSpec: CameraTransportProfile.standby.streamSpec)
-            startIdleTileSnapshotPublisherIfNeeded()
-            Task { await sendIdleTileSnapshotImmediately() }
-        } else {
-            stopIdleTileSnapshotPublisher()
-            capture.setStreamingDeliveryEnabled(true)
-            capture.applyCaptureLoadTier(.idle, streamSpec: CameraTransportProfile.standby.streamSpec)
-            await streamClient.updateTransportProfile(.standby)
-        }
+        // Idle, preview, and program share one size. A new size is applied only when the director quality preset changes.
+        stopIdleTileSnapshotPublisher()
+        capture.setStreamingDeliveryEnabled(true)
+        await streamClient.updateTransportProfile(webRTCProfile)
+        capture.applyCaptureLoadTier(captureTier, streamSpec: captureStreamSpec)
     }
 
     private static let idleTileSnapshotSendIntervalSeconds: TimeInterval = 3.5
@@ -696,15 +715,15 @@ final class CameraSessionViewModel {
                     streamState = state
                     switch state {
                     case .connected:
-                        // Wait for director assignment/quality before choosing idle vs active stream.
+                        connectionTimeoutTask?.cancel()
                         try? await Task.sleep(for: .milliseconds(250))
                         await applyTransportProfile(for: switcherAssignment)
-                        statusMessage = switcherAssignment.isActive
-                            ? "Transmitiendo al Director"
-                            : "Conectada · en espera (bajo consumo)"
+                        capture.recoverAfterLinkLoss()
+                        statusMessage = "Transmitiendo al Director"
                     case .disconnected, .failed, .idle:
+                        connectionTimeoutTask?.cancel()
                         stopIdleTileSnapshotPublisher()
-                        capture.setStreamingDeliveryEnabled(false)
+                        capture.recoverAfterLinkLoss()
                     default:
                         break
                     }

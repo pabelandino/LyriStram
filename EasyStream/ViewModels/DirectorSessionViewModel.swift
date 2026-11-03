@@ -39,9 +39,14 @@ final class DirectorSessionViewModel {
     private(set) var sources: [ConnectedCameraSource] = []
     private(set) var isRunning = false
     private(set) var statusMessage = "Iniciando…"
+    private(set) var listeningPort: UInt16?
+    private(set) var localIPv4Addresses: [String] = []
+    private(set) var advertisedConnectHost = ""
     private(set) var needsLocalNetworkPermission = false
     private(set) var previewSourceID: CameraSourceID?
     private(set) var programSourceID: CameraSourceID?
+    /// Camera the program monitor is reading. Independent from the next-preview tally, so a cut cannot snap the picture back.
+    private(set) var monitorSourceID: CameraSourceID?
     private(set) var programAudioSourceID: CameraSourceID?
     private(set) var lastError: String?
     private(set) var encoderStats = VideoEncoderStats()
@@ -133,8 +138,7 @@ final class DirectorSessionViewModel {
     private var stuckSourceWatchTask: Task<Void, Never>?
     private var monitorQualityBroadcastTask: Task<Void, Never>?
     private var previewAssignmentBroadcastTask: Task<Void, Never>?
-    private var incomingWarmDebounceTask: Task<Void, Never>?
-    /// Debounced prefetch target — avoids rebinding PROG incoming on every preview tap.
+    /// Prefetch target — incoming lane follows the selected preview immediately.
     private(set) var incomingWarmPreviewSourceID: CameraSourceID?
     private var lastBroadcastMonitorQuality: DirectorMonitorQualitySettings?
     /// Serializes preview/take mutations so concurrent Tasks cannot apply switcher state out of order.
@@ -177,8 +181,8 @@ final class DirectorSessionViewModel {
         guard let previewSourceID,
               previewSourceID != programSourceID else { return nil }
 
-        // Expo Android cameras: mirror PREV on the large PROG monitor before first take (iOS native unchanged).
-        if programSourceID == nil, showsAndroidOffAirPreviewOnProgramMonitor {
+        // Before first take, mirror the selected PREV source on the large PROG monitor.
+        if programSourceID == nil, showsOffAirPreviewOnProgramMonitor {
             return track(for: previewSourceID)
         }
 
@@ -187,18 +191,17 @@ final class DirectorSessionViewModel {
         return track(for: warmID)
     }
 
-    /// On-air program bus only — never mirrors preview (preview warms on the incoming compositor lane).
+    /// Program monitor reads one cached camera. It does not fall back to the previous program track.
     var programDisplayTrack: RTCVideoTrack? {
         if isTransitioning {
-            return outgoingProgramVideoTrack ?? programVideoTrack
+            return outgoingProgramVideoTrack ?? track(for: monitorSourceID) ?? programVideoTrack
         }
-        return programVideoTrack
+        return track(for: monitorSourceID) ?? programVideoTrack
     }
 
-    /// When preview is an Android Expo camera and nothing is on-air yet, show PREV on the PROG monitor.
-    var showsAndroidOffAirPreviewOnProgramMonitor: Bool {
-        guard programSourceID == nil, let previewSourceID else { return false }
-        return platform(for: previewSourceID) == .android
+    /// The selected camera is already the program picture, so the incoming lane must not paint over it.
+    var showsOffAirPreviewOnProgramMonitor: Bool {
+        false
     }
 
     var activeStreamingSourceCount: Int {
@@ -247,7 +250,12 @@ final class DirectorSessionViewModel {
             }
 
             do {
-                try await discovery.start(role: .director, identity: identity)
+                refreshLocalAddresses()
+                try await discovery.start(
+                    role: .director,
+                    identity: identity,
+                    connectHost: advertisedConnectHost.isEmpty ? nil : advertisedConnectHost
+                )
                 isRunning = true
                 statusMessage = "Esperando cámaras…"
                 await refreshDevices()
@@ -265,7 +273,12 @@ final class DirectorSessionViewModel {
         needsLocalNetworkPermission = false
         Task {
             do {
-                try await discovery.start(role: .director, identity: identity)
+                refreshLocalAddresses()
+                try await discovery.start(
+                    role: .director,
+                    identity: identity,
+                    connectHost: advertisedConnectHost.isEmpty ? nil : advertisedConnectHost
+                )
                 isRunning = true
                 statusMessage = "Esperando cámaras…"
                 await refreshDevices()
@@ -285,7 +298,6 @@ final class DirectorSessionViewModel {
         stuckSourceWatchTask?.cancel()
         monitorQualityBroadcastTask?.cancel()
         previewAssignmentBroadcastTask?.cancel()
-        incomingWarmDebounceTask?.cancel()
         incomingWarmPreviewSourceID = nil
         DirectorPreviewWarmupTour.reset()
         DirectorRemoteVideoTrackPolicy.reset()
@@ -294,6 +306,7 @@ final class DirectorSessionViewModel {
         sources = []
         lastBroadcastAssignments = [:]
         previewSourceID = nil
+        monitorSourceID = nil
         programSourceID = nil
         programAudioSourceID = nil
         outgoingProgramSourceID = nil
@@ -329,27 +342,17 @@ final class DirectorSessionViewModel {
 
         // Optimistic UI — transport/network debounced; inspector stays independent (settings scroll).
         previewSourceID = sourceID
+        monitorSourceID = sourceID
+        DirectorDecodedSignalCache.shared.setLiveSelection(sourceID)
         syncRemoteVideoTrackPolicy()
         syncPreviewMonitor()
-        schedulePreviewAssignmentBroadcast(to: sourceID)
-        scheduleIncomingWarmPreview(to: sourceID)
-    }
-
-    private func scheduleIncomingWarmPreview(to sourceID: CameraSourceID) {
-        incomingWarmDebounceTask?.cancel()
-        guard programSourceID != nil, monitorQuality.prefetchTakeTarget else {
-            incomingWarmPreviewSourceID = nil
-            return
-        }
-        guard sourceID != programSourceID else {
-            incomingWarmPreviewSourceID = nil
-            return
-        }
-        incomingWarmDebounceTask = Task {
-            try? await Task.sleep(for: .milliseconds(400))
-            guard !Task.isCancelled, previewSourceID == sourceID else { return }
+        // Warm the program incoming lane immediately so the next cut already has frames.
+        if programSourceID != nil, sourceID != programSourceID, monitorQuality.prefetchTakeTarget {
             incomingWarmPreviewSourceID = sourceID
+        } else if programSourceID == nil {
+            incomingWarmPreviewSourceID = nil
         }
+        schedulePreviewAssignmentBroadcast(to: sourceID)
     }
 
     func selectPreviewAndSync(_ sourceID: CameraSourceID) async {
@@ -360,7 +363,6 @@ final class DirectorSessionViewModel {
     private func schedulePreviewAssignmentBroadcast(to sourceID: CameraSourceID) {
         previewAssignmentBroadcastTask?.cancel()
         previewAssignmentBroadcastTask = Task {
-            try? await Task.sleep(for: .milliseconds(150))
             guard !Task.isCancelled, previewSourceID == sourceID else { return }
             _ = await switcher.setPreview(sourceID)
             await broadcastSwitcherAssignmentsNow()
@@ -494,6 +496,8 @@ final class DirectorSessionViewModel {
         takeHandoffSourceID = target
         transitionIncomingVideoTrack = incoming
         incomingWarmPreviewSourceID = target
+        monitorSourceID = target
+        DirectorDecodedSignalCache.shared.setLiveSelection(target)
 
         if transition.kind == .cut || transition.duration <= 0 {
             ProgramBusTrace.event(
@@ -503,18 +507,9 @@ final class DirectorSessionViewModel {
             transitionProgress = 1
             isTransitioning = false
 
-            ProgramFrameDisplayBus.shared.beginSubHDOnAirGracePeriod()
-            await preRampTakeTargetToProgram(target)
-
-            if effectiveMonitorQuality.prefetchTakeTarget {
-                let ready = await ProgramFrameDisplayBus.shared.waitForIncomingProgramThreshold(
-                    maxAttempts: 45,
-                    intervalMs: 16
-                )
-                ProgramBusTrace.event(
-                    "director take cut prewarm ready=\(ready) incomingHD=\(ProgramFrameDisplayBus.shared.incomingMeetsProgramDisplayThreshold())"
-                )
-            }
+            // Cut on the frame already decoded in preview. Do not wait for the encoder to ramp to HD.
+            ProgramFrameDisplayBus.shared.beginSubHDOnAirGracePeriod(milliseconds: 1_200)
+            _ = await ProgramFrameDisplayBus.shared.waitForIncomingDisplaySample(maxAttempts: 4, intervalMs: 4)
 
             let events = await switcher.take(to: target, transition: transition)
             applySwitcherEvents(events)
@@ -573,20 +568,6 @@ final class DirectorSessionViewModel {
         return track(for: sourceID)
     }
 
-    /// Starts program-tier encode on the take target before the switcher flips state.
-    private func preRampTakeTargetToProgram(_ target: CameraSourceID) async {
-        let assignment = CameraSwitcherAssignment.program
-        guard lastBroadcastAssignments[target] != assignment else { return }
-        lastBroadcastAssignments[target] = assignment
-        ProgramBusTrace.event(
-            "director pre-ramp take target=\(ProgramBusTrace.shortSourceID(target.rawValue)) -> program"
-        )
-        try? await streamReceiver.sendControl(
-            to: target,
-            command: .setSwitcherAssignment(assignment)
-        )
-    }
-
     func setProgramAudioSource(_ sourceID: CameraSourceID) {
         Task {
             if let event = await switcher.setProgramAudioSource(sourceID) {
@@ -622,11 +603,8 @@ final class DirectorSessionViewModel {
             do {
                 try await streamReceiver.prepareReconnect(for: sourceID)
             } catch DirectorStreamError.sourceNotConnected {
-                sources.removeAll { $0.id == sourceID }
-                lastBroadcastAssignments.removeValue(forKey: sourceID)
-                await switcher.unregisterSource(sourceID)
-                await syncSwitcherState()
-                statusMessage = "Esperando que la cámara vuelva a conectar…"
+                markSourceDisconnected(sourceID)
+                statusMessage = "Sin enlace con la cámara. Quedó desconectada."
             } catch {
                 upsertSource(sourceID, connectionState: .disconnected)
                 lastError = "No se pudo contactar la cámara. Usa Reconectar en el iPhone."
@@ -687,16 +665,62 @@ final class DirectorSessionViewModel {
         case .localNetworkPermissionRequired:
             needsLocalNetworkPermission = true
             statusMessage = "Permiso de red local requerido"
+        case .advertisingReady(let port):
+            listeningPort = port
+        }
+    }
+
+    func applyAdvertisedConnectHost(_ host: String) {
+        let trimmed = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard Self.isIPv4(trimmed) else {
+            lastError = "Escribe una dirección IPv4, por ejemplo 192.168.1.20"
+            return
+        }
+        lastError = nil
+        advertisedConnectHost = trimmed
+        UserDefaults.standard.set(trimmed, forKey: Self.connectHostDefaultsKey)
+        Task {
+            do {
+                try await discovery.setAdvertisedHost(trimmed)
+            } catch {
+                lastError = error.localizedDescription
+            }
+        }
+    }
+
+    private func refreshLocalAddresses() {
+        localIPv4Addresses = LocalInterfaceAddresses.ipv4()
+        if let saved = UserDefaults.standard.string(forKey: Self.connectHostDefaultsKey), Self.isIPv4(saved) {
+            advertisedConnectHost = saved
+        } else if advertisedConnectHost.isEmpty, let first = localIPv4Addresses.first {
+            advertisedConnectHost = first
+        }
+    }
+
+    private static let connectHostDefaultsKey = "com.easystream.directorConnectHost"
+
+    private static func isIPv4(_ value: String) -> Bool {
+        let parts = value.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 4 else { return false }
+        return parts.allSatisfy { part in
+            guard let number = Int(part), (0...255).contains(number) else { return false }
+            return true
         }
     }
 
     private func handleStreamEvent(_ event: DirectorStreamReceiver.Event) {
         switch event {
-        case .sourceConnected(let sourceID, let displayName):
+        case .sourceConnected(let sourceID, let displayName, let platform):
             enqueueSwitcherOperation {
                 await self.refreshDevices()
                 let saved = await self.settingsStore.settings(for: sourceID)
-                self.upsertSource(sourceID, displayName: displayName, connectionState: .connecting, remoteSettings: saved)
+                self.upsertSource(
+                    sourceID,
+                    displayName: displayName,
+                    connectionState: .connecting,
+                    remoteSettings: saved,
+                    signaledPlatform: platform
+                )
                 _ = await self.switcher.registerSource(sourceID)
                 await self.syncSwitcherState()
                 if self.inspectorSourceID == nil { self.inspectorSourceID = sourceID }
@@ -766,12 +790,18 @@ final class DirectorSessionViewModel {
         videoTrack: RTCVideoTrack? = nil,
         audioTrack: RTCAudioTrack? = nil,
         connectionState: StreamConnectionState? = nil,
-        remoteSettings: RemoteCameraSettings? = nil
+        remoteSettings: RemoteCameraSettings? = nil,
+        signaledPlatform: DevicePlatform? = nil
     ) {
         if let index = sources.firstIndex(where: { $0.id == sourceID }) {
             var source = sources[index]
-            if let displayName { source.displayName = displayName }
+            if let displayName {
+                source.displayName = resolvedDisplayName(for: sourceID, signalingName: displayName)
+            }
             if let videoTrack {
+                if source.videoTrack !== videoTrack {
+                    DirectorRemoteVideoTrackPolicy.invalidate(sourceID: sourceID)
+                }
                 source.videoTrack = videoTrack
                 if source.connectionState == .connecting || source.connectionState == .signaling {
                     source.connectionState = .connected
@@ -785,20 +815,29 @@ final class DirectorSessionViewModel {
                 source.connectionState = connectionState
             }
             if let remoteSettings { source.remoteSettings = remoteSettings }
-            let resolvedPlatform = platform(for: sourceID)
-            if resolvedPlatform != .unknown {
-                source.platform = resolvedPlatform
+            if let signaledPlatform, signaledPlatform != .unknown {
+                source.platform = signaledPlatform
+            } else {
+                let resolvedPlatform = platform(for: sourceID)
+                if resolvedPlatform != .unknown {
+                    source.platform = resolvedPlatform
+                }
             }
             sources[index] = source
         } else {
+            let name = resolvedDisplayName(for: sourceID, signalingName: displayName)
+            let resolvedPlatform: DevicePlatform = {
+                if let signaledPlatform, signaledPlatform != .unknown { return signaledPlatform }
+                return platform(for: sourceID)
+            }()
             sources.append(ConnectedCameraSource(
                 id: sourceID,
-                displayName: displayName ?? "Cámara",
+                displayName: name,
                 videoTrack: videoTrack,
                 audioTrack: audioTrack,
                 connectionState: connectionState ?? .connecting,
                 remoteSettings: remoteSettings ?? RemoteCameraSettings(),
-                platform: platform(for: sourceID),
+                platform: resolvedPlatform,
                 connectionStateUpdatedAt: Date()
             ))
         }
@@ -835,8 +874,8 @@ final class DirectorSessionViewModel {
                 syncProgramEncoder()
                 if id == nil {
                     incomingWarmPreviewSourceID = nil
-                } else if let preview = previewSourceID {
-                    scheduleIncomingWarmPreview(to: preview)
+                } else if let preview = previewSourceID, preview != id {
+                    incomingWarmPreviewSourceID = preview
                 }
             case .programAudioChanged(let id):
                 programAudioSourceID = id
@@ -900,6 +939,13 @@ final class DirectorSessionViewModel {
     /// Idle sources stop decoding on the director — only mutates tracks whose role changed.
     private func syncRemoteVideoTrackPolicy() {
         let quality = monitorQuality.effectiveSettings()
+        let connectedFeeds = sources.filter {
+            $0.connectionState == .connected && $0.videoTrack != nil
+        }.count
+        // Small productions: every tile decodes its light live stream. Larger sets keep PREV+PROG only.
+        DirectorPreviewTileTrackPolicy.visibilityPolicy =
+            connectedFeeds <= 6 ? .allConnectedSources : .previewSourceOnly
+
         DirectorRemoteVideoTrackPolicy.applyDiff(
             sources: sources,
             previewSourceID: previewSourceID,
@@ -907,18 +953,12 @@ final class DirectorSessionViewModel {
             assignmentFor: { switcherAssignment(for: $0) }
         )
         let tracks = Dictionary(uniqueKeysWithValues: sources.map { ($0.id, $0.videoTrack) })
+        DirectorDecodedSignalCache.shared.sync(sources: tracks)
         DirectorTileThumbnailCoordinator.sync(
             sources: tracks,
             previewSourceID: previewSourceID,
             programSourceID: programSourceID,
             idleThumbnailsEnabled: quality.idleTileSnapshotsEnabled || !quality.pauseIdleCameraStreams
-        )
-        DirectorPreviewWarmupTour.scheduleIfNeeded(
-            sources: sources,
-            programSourceID: programSourceID,
-            previewSourceID: previewSourceID,
-            idleSnapshotsEnabled: quality.idleTileSnapshotsEnabled,
-            selectPreview: { [weak self] id in self?.selectPreview(id) }
         )
     }
 
@@ -969,18 +1009,27 @@ final class DirectorSessionViewModel {
     }
 
     private func reconcileStuckSources() {
-        let staleThreshold: TimeInterval = 18
+        let staleThreshold: TimeInterval = 12
         let now = Date()
         for source in sources {
             let age = now.timeIntervalSince(source.connectionStateUpdatedAt)
             switch source.connectionState {
-            case .connecting, .signaling where age >= staleThreshold:
-                reconnectCamera(source.id)
+            case .connecting, .signaling, .failed where age >= staleThreshold:
+                releaseStuckSource(source.id)
             case .connected where source.videoTrack == nil && age >= staleThreshold:
-                reconnectCamera(source.id)
+                releaseStuckSource(source.id)
             default:
                 break
             }
+        }
+    }
+
+    /// Closes a dead director link and leaves the camera in the list as disconnected.
+    private func releaseStuckSource(_ sourceID: CameraSourceID) {
+        Task {
+            await streamReceiver.releaseSource(sourceID)
+            markSourceDisconnected(sourceID)
+            statusMessage = "Sin conexión con \(inspectorSourceName(for: sourceID)). Quedó desconectada."
         }
     }
 
@@ -998,6 +1047,38 @@ final class DirectorSessionViewModel {
 
     private func refreshDevices() async {
         devices = await discovery.discoveredDevices
+        syncSourceMetadataFromDiscovery()
+    }
+
+    private func resolvedDisplayName(for sourceID: CameraSourceID, signalingName: String?) -> String {
+        if let device = devices.first(where: { $0.id == sourceID.rawValue }),
+           !device.displayName.isEmpty {
+            return device.displayName
+        }
+        if let signalingName, !signalingName.isEmpty {
+            return signalingName
+        }
+        return "Cámara"
+    }
+
+    private func syncSourceMetadataFromDiscovery() {
+        guard !devices.isEmpty else { return }
+        var changed = false
+        for index in sources.indices {
+            let sourceID = sources[index].id
+            guard let device = devices.first(where: { $0.id == sourceID.rawValue }) else { continue }
+            if !device.displayName.isEmpty, sources[index].displayName != device.displayName {
+                sources[index].displayName = device.displayName
+                changed = true
+            }
+            if device.platform != .unknown, sources[index].platform != device.platform {
+                sources[index].platform = device.platform
+                changed = true
+            }
+        }
+        if changed {
+            syncPreviewMonitor()
+        }
     }
 
     private func updateAudioRouting() {

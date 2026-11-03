@@ -38,7 +38,22 @@ function parseTxt(txt: Record<string, string> | undefined) {
     return null;
   }
 
-  return { deviceID, displayName, protocolVersion };
+  const connectHost = txt[TXT_KEYS.connectHost];
+  return { deviceID, displayName, protocolVersion, connectHost };
+}
+
+function isIPv4(value: string): boolean {
+  const parts = value.split('.');
+  if (parts.length !== 4) {
+    return false;
+  }
+  return parts.every((part) => {
+    if (!/^\d{1,3}$/.test(part)) {
+      return false;
+    }
+    const number = Number(part);
+    return number >= 0 && number <= 255;
+  });
 }
 
 function directorsFingerprint(directors: DiscoveredDirector[]): string {
@@ -48,7 +63,10 @@ function directorsFingerprint(directors: DiscoveredDirector[]): string {
     .join('|');
 }
 
-function pickHost(service: ZeroconfService): string | null {
+function pickHost(service: ZeroconfService, preferredHost?: string | null): string | null {
+  if (preferredHost && isIPv4(preferredHost)) {
+    return preferredHost;
+  }
   const addresses = service.addresses ?? [];
   const ipv4 = addresses.find((address) => !address.includes(':'));
   if (ipv4) {
@@ -146,7 +164,7 @@ export class EasyStreamDiscoveryService {
         return;
       }
 
-      const host = pickHost(service);
+      const host = pickHost(service, parsed.connectHost);
       const port = service.port;
       if (!host || !port) {
         return;

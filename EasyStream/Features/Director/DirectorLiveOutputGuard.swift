@@ -53,9 +53,13 @@ enum DirectorLiveOutputGuard {
         sourceID: CameraSourceID,
         programSourceID: CameraSourceID?,
         previewSourceID: CameraSourceID?,
-        assignmentIsActive: Bool
+        assignmentIsActive: Bool,
+        decodeAllConnectedFeeds: Bool = false
     ) -> Bool {
         if sourceID == programSourceID || sourceID == previewSourceID {
+            return true
+        }
+        if decodeAllConnectedFeeds {
             return true
         }
         return assignmentIsActive

@@ -22,7 +22,10 @@ public actor CameraStreamClient {
     private var audioTrack: RTCAudioTrack?
     private var eventContinuation: AsyncStream<Event>.Continuation?
     private var hasCreatedOffer = false
-    private var transportProfile = CameraTransportProfile.standby
+    private var transportProfile = CameraTransportProfile.program
+    private var appliedWidth: Int32 = 0
+    private var appliedHeight: Int32 = 0
+    private var appliedFrameRate: Int32 = 0
 
     public init() {}
 
@@ -54,6 +57,9 @@ public actor CameraStreamClient {
             height: transportProfile.height,
             fps: transportProfile.frameRate
         )
+        appliedWidth = transportProfile.width
+        appliedHeight = transportProfile.height
+        appliedFrameRate = transportProfile.frameRate
         videoFramePublisher.attach(to: videoSource)
         videoFramePublisher.updateTargetFrameRate(transportProfile.frameRate)
         videoTrack = factory.videoTrack(with: videoSource, trackId: "easystream-video")
@@ -67,9 +73,15 @@ public actor CameraStreamClient {
     public var localVideoTrack: RTCVideoTrack? { videoTrack }
 
     public func updateTransportProfile(_ profile: CameraTransportProfile) {
-        guard transportProfile != profile else { return }
         transportProfile = profile
+        let sizeChanged = appliedWidth != profile.width
+            || appliedHeight != profile.height
+            || appliedFrameRate != profile.frameRate
+        guard sizeChanged else { return }
 
+        appliedWidth = profile.width
+        appliedHeight = profile.height
+        appliedFrameRate = profile.frameRate
         videoSource?.adaptOutputFormat(
             toWidth: profile.width,
             height: profile.height,
@@ -197,10 +209,15 @@ public actor CameraStreamClient {
         encoding.isActive = true
         encoding.maxFramerate = NSNumber(value: transportProfile.frameRate)
         encoding.maxBitrateBps = NSNumber(value: transportProfile.maxBitrateBps)
-        encoding.minBitrateBps = NSNumber(value: transportProfile.minBitrateBps)
+        // A forced minimum makes WebRTC pause the picture until the estimate catches up, then jump.
+        encoding.minBitrateBps = nil
         encoding.scaleResolutionDownBy = NSNumber(value: 1.0)
 
         params.encodings = [encoding]
+        // Keep the configured size. The default preference scales the picture down (352×198) and ramps later.
+        params.degradationPreference = NSNumber(
+            value: RTCDegradationPreference.maintainFramerateAndResolution.rawValue
+        )
         sender.parameters = params
     }
 

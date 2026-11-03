@@ -3,6 +3,7 @@ import EasyStreamCore
 
 public struct DirectorSourceListRow: View {
     let name: String
+    let platform: DevicePlatform
     let isPreview: Bool
     let isProgram: Bool
     let isAudio: Bool
@@ -14,6 +15,7 @@ public struct DirectorSourceListRow: View {
 
     public init(
         name: String,
+        platform: DevicePlatform = .unknown,
         isPreview: Bool,
         isProgram: Bool,
         isAudio: Bool,
@@ -24,6 +26,7 @@ public struct DirectorSourceListRow: View {
         onReconnect: (() -> Void)? = nil
     ) {
         self.name = name
+        self.platform = platform
         self.isPreview = isPreview
         self.isProgram = isProgram
         self.isAudio = isAudio
@@ -35,66 +38,69 @@ public struct DirectorSourceListRow: View {
     }
 
     public var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(accentBarColor)
-                    .frame(width: 4)
-                    .padding(.vertical, 4)
+        HStack(spacing: 8) {
+            Button(action: onSelect) {
+                HStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(accentBarColor)
+                        .frame(width: 4)
+                        .padding(.vertical, 4)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(BroadcastTheme.primaryText)
-                        .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            CameraPlatformBrandIcon(platform: platform, size: 18)
+                            Text(name)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(BroadcastTheme.primaryText)
+                                .lineLimit(1)
+                        }
 
-                    HStack(spacing: 6) {
-                        if isPreview {
-                            BroadcastTallyPill(BroadcastTerminology.previewShort, color: BroadcastTheme.previewGreen)
+                        HStack(spacing: 6) {
+                            if isPreview {
+                                BroadcastTallyPill(BroadcastTerminology.previewShort, color: BroadcastTheme.previewGreen)
+                            }
+                            if isProgram {
+                                BroadcastTallyPill(BroadcastTerminology.programShort, color: BroadcastTheme.programRed)
+                            }
+                            if isAudio {
+                                BroadcastTallyPill(BroadcastTerminology.audioShort, color: BroadcastTheme.audioGold)
+                            }
                         }
-                        if isProgram {
-                            BroadcastTallyPill(BroadcastTerminology.programShort, color: BroadcastTheme.programRed)
-                        }
-                        if isAudio {
-                            BroadcastTallyPill(BroadcastTerminology.audioShort, color: BroadcastTheme.audioGold)
+
+                        if showsConnectionProgress {
+                            BroadcastConnectionProgressBar(
+                                progress: BroadcastConnectionProgress.fraction(streamState: connectionState),
+                                tint: BroadcastConnectionProgress.tint(streamState: connectionState),
+                                height: 3
+                            )
                         }
                     }
 
-                    if showsConnectionProgress {
-                        BroadcastConnectionProgressBar(
-                            progress: BroadcastConnectionProgress.fraction(streamState: connectionState),
-                            tint: BroadcastConnectionProgress.tint(streamState: connectionState),
-                            height: 3
-                        )
-                    }
+                    Spacer(minLength: 0)
+
+                    Circle()
+                        .fill(isConnected ? BroadcastTheme.previewGreen : Color.orange)
+                        .frame(width: 8, height: 8)
+                        .shadow(color: isConnected ? BroadcastTheme.previewGreen.opacity(0.6) : .clear, radius: 4)
                 }
+            }
+            .buttonStyle(.plain)
 
-                Spacer(minLength: 0)
-
-                if !isConnected, let onReconnect {
-                    Button(action: onReconnect) {
-                        Image(systemName: "arrow.clockwise.circle.fill")
-                            .font(.body)
-                            .foregroundStyle(BroadcastTheme.studioAccent)
-                    }
+            if !isConnected, let onReconnect {
+                Button("Reconectar", systemImage: "arrow.clockwise.circle.fill", action: onReconnect)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BroadcastTheme.studioAccent)
                     .buttonStyle(.plain)
                     .help("Reconectar cámara")
-                }
-
-                Circle()
-                    .fill(isConnected ? BroadcastTheme.previewGreen : Color.orange)
-                    .frame(width: 8, height: 8)
-                    .shadow(color: isConnected ? BroadcastTheme.previewGreen.opacity(0.6) : .clear, radius: 4)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(rowBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(rowBorder, lineWidth: isSelected ? 1.5 : 1)
             }
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(rowBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(rowBorder, lineWidth: isSelected ? 1.5 : 1)
+        }
     }
 
     private var showsConnectionProgress: Bool {

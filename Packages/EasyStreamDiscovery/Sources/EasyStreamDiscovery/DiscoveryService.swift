@@ -13,6 +13,7 @@ public actor DiscoveryService {
     private var continuation: AsyncStream<DiscoveryEvent>.Continuation?
     private var ownDeviceID: UUID?
     private var incomingConnectionHandler: (@Sendable (NWConnection) -> Void)?
+    private var connectHost: String?
 
     public init() {}
 
@@ -38,12 +39,13 @@ public actor DiscoveryService {
         }
     }
 
-    public func start(role: AppRole, identity: DeviceIdentity) async throws {
+    public func start(role: AppRole, identity: DeviceIdentity, connectHost: String? = nil) async throws {
         await stop()
 
         self.role = role
         self.identity = identity
         self.ownDeviceID = identity.deviceID
+        self.connectHost = connectHost.flatMap { Self.normalizedIPv4($0) }
 
         await LocalNetworkPermissionTrigger.shared.primeForPermissionPrompt()
 
@@ -74,7 +76,7 @@ public actor DiscoveryService {
         let parameters = NWParameters.tcp
         parameters.includePeerToPeer = true
 
-        let txtRecord = BonjourTXTCodec.makeRecord(identity: identity, role: role)
+        let txtRecord = BonjourTXTCodec.makeRecord(identity: identity, role: role, connectHost: connectHost)
         let serviceType = role.advertisedServiceType.networkType
 
         // Bonjour service names should stay ASCII-safe; human-readable name lives in TXT.
@@ -112,10 +114,34 @@ public actor DiscoveryService {
         EasyStreamLog.discovery.info("Advertising \(serviceType, privacy: .public) as \(identity.displayName, privacy: .public)")
     }
 
+    /// Republish Bonjour with the IPv4 cameras should dial. The listener already accepts every interface.
+    public func setAdvertisedHost(_ host: String) async throws {
+        guard let normalized = Self.normalizedIPv4(host) else { return }
+        guard normalized != connectHost else { return }
+        connectHost = normalized
+        guard let role, let identity else { return }
+        listener?.cancel()
+        listener = nil
+        try await startAdvertising(role: role, identity: identity)
+    }
+
+    private static func normalizedIPv4(_ host: String) -> String? {
+        let trimmed = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = trimmed.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 4 else { return nil }
+        let octets = parts.compactMap { UInt8($0) }
+        guard octets.count == 4 else { return nil }
+        return octets.map(String.init).joined(separator: ".")
+    }
+
     private func handleListenerState(_ state: NWListener.State) {
         switch state {
         case .ready:
-            EasyStreamLog.discovery.debug("Listener ready")
+            let port = self.listener?.port?.rawValue ?? 0
+            EasyStreamLog.discovery.debug("Listener ready port=\(port, privacy: .public)")
+            if port > 0 {
+                emit(.advertisingReady(port: port))
+            }
         case .failed(let error):
             EasyStreamLog.discovery.error("Listener failed: \(error.localizedDescription, privacy: .public)")
             if isLocalNetworkPermissionError(error) {

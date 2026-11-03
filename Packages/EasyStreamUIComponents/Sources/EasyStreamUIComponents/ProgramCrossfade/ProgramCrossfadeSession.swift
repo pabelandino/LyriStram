@@ -219,7 +219,6 @@ final class ProgramBusController {
     ) {
         if phase == .onAir {
             detachTrack(&attachedProgram, from: host.programRenderer)
-            host.clearProgramVideoFrame()
         }
         detachTrack(&attachedOutgoing, from: host.outgoingRenderer)
 

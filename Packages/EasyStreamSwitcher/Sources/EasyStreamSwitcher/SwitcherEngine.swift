@@ -86,25 +86,11 @@ public actor SwitcherEngine {
             snapshot.preferredTransition = transition
         }
 
-        let outgoingProgram = snapshot.programSourceID
         snapshot.programSourceID = id
 
-        var events: [SwitcherEvent] = [.programChanged(id)]
-
-        if let outgoingProgram, outgoingProgram != id {
-            snapshot.previewSourceID = outgoingProgram
-            events.append(.previewChanged(outgoingProgram))
-        } else {
-            let nextPreview = availableSources
-                .sorted { $0.rawValue.uuidString < $1.rawValue.uuidString }
-                .first { $0 != id }
-            snapshot.previewSourceID = nextPreview ?? id
-            if let nextPreview, nextPreview != id {
-                events.append(.previewChanged(nextPreview))
-            }
-        }
-
-        return events
+        // Leave preview where the operator put it. Moving it back to the camera that
+        // just left program made that camera look selected again and retargeted the buses.
+        return [.programChanged(id)]
     }
 
     @discardableResult

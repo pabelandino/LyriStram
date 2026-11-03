@@ -54,17 +54,18 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
         }
     }
 
-    public func publish(pixelBuffer: CVPixelBuffer, lane: ProgramFrameBusSlot) {
+    /// Presents a frame that is already decoded in the per-camera cache. No quality gate — the switch must not blink.
+    public func publishCachedSelection(pixelBuffer: CVPixelBuffer) {
+        publish(pixelBuffer: pixelBuffer, lane: .programOnAir, enforceQualityGate: false)
+    }
+
+    public func publish(pixelBuffer: CVPixelBuffer, lane: ProgramFrameBusSlot, enforceQualityGate: Bool = true) {
         let width = CVPixelBufferGetWidth(pixelBuffer)
         let height = CVPixelBufferGetHeight(pixelBuffer)
-        if lane == .programOnAir, !allowsOnAirPublish(width: width, height: height) {
-            ProgramBusTrace.eventThrottled(
-                "bus-drop-onair-subhd",
-                intervalMs: 500,
-                "bus drop on-air sub-threshold frame \(width)x\(height)"
-            )
-            return
-        }
+        // One picture per camera. Do not keep the previous camera on screen by rejecting this camera's frames.
+        _ = enforceQualityGate
+        _ = width
+        _ = height
 
         let widthF = Float(width)
         let heightF = Float(height)
@@ -146,19 +147,7 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
             ProgramBusTrace.event("bus promote skipped no incoming frame")
             return
         }
-        if !allowPreviewTier,
-           !ProgramFrameQualityGate.meetsConfiguredProgramPreset(
-               width: Int(incoming.contentSize.x),
-               height: Int(incoming.contentSize.y)
-           ) {
-            ProgramBusTrace.event(
-                "bus promote skipped incoming=\(sizeLabel(incoming)) below program preset"
-            )
-            return
-        }
-        if allowPreviewTier {
-            beginSubHDOnAirGracePeriod()
-        }
+        _ = allowPreviewTier
         let programBefore = displaySample(for: .programOnAir)
         NativeProgramFrameBus.promoteIncomingToOnAir()
         let programAfter = displaySample(for: .programOnAir)

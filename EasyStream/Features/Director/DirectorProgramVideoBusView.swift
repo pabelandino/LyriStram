@@ -24,7 +24,7 @@ struct DirectorProgramVideoBusView: View, Equatable {
         transitionKind = viewModel.selectedTransition.kind
         emptyStatusMessage = viewModel.statusMessage
         self.hasAirGraphics = hasAirGraphics
-        offAirPreviewVisibleOnProgramMonitor = viewModel.showsAndroidOffAirPreviewOnProgramMonitor
+        offAirPreviewVisibleOnProgramMonitor = viewModel.showsOffAirPreviewOnProgramMonitor
     }
 
     nonisolated static func == (lhs: DirectorProgramVideoBusView, rhs: DirectorProgramVideoBusView) -> Bool {

@@ -16,6 +16,7 @@ export type CommandExecutorCallbacks = {
   onReconnectStream: () => void;
   onImagingChange: (state: LocalImagingState) => void;
   onMuteChange: (muted: boolean) => void;
+  onLensChange?: (lens: string) => void;
 };
 
 export function defaultImagingState(): LocalImagingState {
@@ -72,6 +73,7 @@ export function applyRemoteCameraCommand(
 
   if ('setLens' in command) {
     next.activeLens = command.setLens;
+    callbacks.onLensChange?.(command.setLens);
     callbacks.onImagingChange(next);
     return next;
   }

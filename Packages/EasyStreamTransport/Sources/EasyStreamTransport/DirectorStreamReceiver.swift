@@ -5,7 +5,7 @@ import EasyStreamCore
 /// Receives camera media from multiple Camera Clients on the Director over WebRTC.
 public actor DirectorStreamReceiver {
     public enum Event {
-        case sourceConnected(CameraSourceID, displayName: String)
+        case sourceConnected(CameraSourceID, displayName: String, platform: DevicePlatform)
         case sourceDisconnected(CameraSourceID)
         case sourceVideoTrack(CameraSourceID, RTCVideoTrack, displayName: String)
         case sourceAudioTrack(CameraSourceID, RTCAudioTrack, displayName: String)
@@ -18,7 +18,7 @@ public actor DirectorStreamReceiver {
     private let factory = WebRTCConfiguration.directorFactory()
     private var sessions: [UUID: SessionContext] = [:]
     private var sessionIDBySource: [CameraSourceID: UUID] = [:]
-    private var pendingHello: [UUID: (deviceID: UUID, displayName: String)] = [:]
+    private var pendingHello: [UUID: (deviceID: UUID, displayName: String, platform: DevicePlatform)] = [:]
     private var pendingRemoteNames: [UUID: String] = [:]
     private var eventContinuation: AsyncStream<Event>.Continuation?
 
@@ -66,6 +66,21 @@ public actor DirectorStreamReceiver {
         try await context.signaling.send(.control(command))
     }
 
+    /// Closes a source that never became a live stream. The camera row stays on the Director.
+    public func releaseSource(_ sourceID: CameraSourceID) async {
+        guard let sessionID = sessionIDBySource[sourceID],
+              let context = sessions[sessionID] else {
+            return
+        }
+        sessions.removeValue(forKey: sessionID)
+        sessionIDBySource.removeValue(forKey: sourceID)
+        pendingHello.removeValue(forKey: context.signaling.id)
+        context.peerConnection.close()
+        await context.signaling.stop()
+        emit(.sourceDisconnected(sourceID))
+        emit(.sourceConnectionState(sourceID, .disconnected))
+    }
+
     /// Tears down WebRTC for a source and asks the camera to negotiate a new stream.
     public func prepareReconnect(for sourceID: CameraSourceID) async throws {
         guard let sessionID = sessionIDBySource[sourceID],
@@ -98,9 +113,10 @@ public actor DirectorStreamReceiver {
 
     private func handleSignalingMessage(_ message: SignalingMessage, channel: SignalingChannel) async {
         switch message {
-        case .hello(let deviceID, let displayName, _):
+        case .hello(let deviceID, let displayName, _, let platform):
             EasyStreamLog.transport.info("Signaling hello from \(displayName, privacy: .public)")
             let sourceID = CameraSourceID(deviceID)
+            let resolvedPlatform = platform ?? .unknown
             if let existingSessionID = sessionIDBySource[sourceID],
                let existing = sessions[existingSessionID],
                existing.signaling.id != channel.id {
@@ -111,18 +127,21 @@ public actor DirectorStreamReceiver {
                 Task { await existing.signaling.stop() }
                 emit(.sourceConnectionState(sourceID, .connecting))
             }
-            pendingHello[channel.id] = (deviceID, displayName)
+            pendingHello[channel.id] = (deviceID, displayName, resolvedPlatform)
+            emit(.sourceConnected(sourceID, displayName: displayName, platform: resolvedPlatform))
         case .offer(let sessionID, let sdp):
             let hello = pendingHello[channel.id]
             let deviceID = hello?.deviceID ?? UUID()
             let remoteName = hello?.displayName ?? "Cámara"
+            let remotePlatform = hello?.platform ?? .unknown
             let sourceID = CameraSourceID(deviceID)
             await handleOffer(
                 sessionID: sessionID,
                 sourceID: sourceID,
                 sdp: sdp,
                 channel: channel,
-                remoteName: remoteName
+                remoteName: remoteName,
+                platform: remotePlatform
             )
         case .ice(let sessionID, let candidate, let sdpMid, let sdpMLineIndex):
             await addIceCandidate(sessionID: sessionID, candidate: candidate, sdpMid: sdpMid, sdpMLineIndex: sdpMLineIndex)
@@ -144,7 +163,8 @@ public actor DirectorStreamReceiver {
         sourceID: CameraSourceID,
         sdp: String,
         channel: SignalingChannel,
-        remoteName: String
+        remoteName: String,
+        platform: DevicePlatform
     ) async {
         if let existingSessionID = sessionIDBySource[sourceID] {
             if let existing = sessions[existingSessionID] {
@@ -172,8 +192,6 @@ public actor DirectorStreamReceiver {
         )
         sessions[sessionID] = context
         sessionIDBySource[sourceID] = sessionID
-
-        emit(.sourceConnected(sourceID, displayName: remoteName))
 
         // Push saved settings to camera when it connects.
         Task {

@@ -32,7 +32,7 @@ export type RemoteCameraCommand =
   | { reconnectStream: true };
 
 export type SignalingMessage =
-  | { type: 'hello'; deviceID: string; displayName: string; role: string }
+  | { type: 'hello'; deviceID: string; displayName: string; role: string; platform?: string }
   | { type: 'offer'; sessionID: string; sdp: string }
   | { type: 'answer'; sessionID: string; sdp: string }
   | {

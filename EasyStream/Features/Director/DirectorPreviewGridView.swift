@@ -80,6 +80,7 @@ private struct DirectorPreviewTileCell: View {
         ) {
             CameraSourceTile(
                 name: source.displayName,
+                platform: source.platform,
                 sourceID: source.id,
                 track: source.connectionState == .connected
                     ? DirectorPreviewTileTrackPolicy.liveTileTrack(

@@ -1,7 +1,7 @@
 import Foundation
 
 public enum SignalingMessage: Sendable, Equatable {
-    case hello(deviceID: UUID, displayName: String, role: String)
+    case hello(deviceID: UUID, displayName: String, role: String, platform: DevicePlatform?)
     case offer(sessionID: UUID, sdp: String)
     case answer(sessionID: UUID, sdp: String)
     case ice(sessionID: UUID, candidate: String, sdpMid: String?, sdpMLineIndex: Int32?)
@@ -17,6 +17,7 @@ extension SignalingMessage: Codable {
         case deviceID
         case displayName
         case role
+        case platform
         case sessionID
         case sdp
         case candidate
@@ -37,10 +38,12 @@ extension SignalingMessage: Codable {
         let type = try container.decode(MessageType.self, forKey: .type)
         switch type {
         case .hello:
+            let platformRaw = try container.decodeIfPresent(String.self, forKey: .platform)
             self = .hello(
                 deviceID: try container.decode(UUID.self, forKey: .deviceID),
                 displayName: try container.decode(String.self, forKey: .displayName),
-                role: try container.decode(String.self, forKey: .role)
+                role: try container.decode(String.self, forKey: .role),
+                platform: platformRaw.flatMap(DevicePlatform.init(rawValue:))
             )
         case .offer:
             self = .offer(
@@ -78,11 +81,12 @@ extension SignalingMessage: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
-        case .hello(let deviceID, let displayName, let role):
+        case .hello(let deviceID, let displayName, let role, let platform):
             try container.encode(MessageType.hello, forKey: .type)
             try container.encode(deviceID, forKey: .deviceID)
             try container.encode(displayName, forKey: .displayName)
             try container.encode(role, forKey: .role)
+            try container.encodeIfPresent(platform?.rawValue, forKey: .platform)
         case .offer(let sessionID, let sdp):
             try container.encode(MessageType.offer, forKey: .type)
             try container.encode(sessionID, forKey: .sessionID)

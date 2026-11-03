@@ -6,6 +6,14 @@ struct DirectorCamerasSidebarContent: View {
     let viewModel: DirectorSessionViewModel
 
     var body: some View {
+        DirectorConnectAddressCard(
+            addresses: viewModel.localIPv4Addresses,
+            port: viewModel.listeningPort,
+            activeHost: viewModel.advertisedConnectHost,
+            onApply: { viewModel.applyAdvertisedConnectHost($0) }
+        )
+        .padding(.bottom, 8)
+
         BroadcastSectionHeader("Cámaras", systemImage: "video")
 
         if viewModel.sources.isEmpty {
@@ -17,6 +25,7 @@ struct DirectorCamerasSidebarContent: View {
             ForEach(viewModel.sources) { source in
                 DirectorSourceListRow(
                     name: source.displayName,
+                    platform: source.platform,
                     isPreview: source.id == viewModel.previewSourceID,
                     isProgram: source.id == viewModel.programSourceID,
                     isAudio: source.id == viewModel.programAudioSourceID,

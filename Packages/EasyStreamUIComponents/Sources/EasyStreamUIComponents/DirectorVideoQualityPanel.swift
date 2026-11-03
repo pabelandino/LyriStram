@@ -77,7 +77,7 @@ public struct DirectorVideoQualityPanel: View {
         VStack(alignment: .leading, spacing: 16) {
             BroadcastSettingsToggleRow(
                 title: "Modo ahorro de energía",
-                subtitle: "Pausa cámaras idle, desactiva precalentado y baja tiles. No modifica el preset PROG que elijas.",
+                subtitle: "Opción apagada por defecto. Al activarla baja el costo de las tiles. El monitor y el directo siguen en la calidad alta que elijas.",
                 systemImage: "leaf.fill",
                 isOn: $settings.energySaverMode
             )

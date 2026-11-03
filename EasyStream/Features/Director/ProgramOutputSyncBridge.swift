@@ -25,9 +25,11 @@ struct ProgramOutputSyncBridge: View {
     /// Program bus only — preview hops must not re-sync external output windows.
     private var stableVideoToken: String {
         [
+            viewModel.previewSourceID?.rawValue.uuidString ?? "none",
             viewModel.programSourceID?.rawValue.uuidString ?? "none",
             viewModel.incomingWarmPreviewSourceID?.rawValue.uuidString ?? "none",
             viewModel.takeHandoffSourceID?.rawValue.uuidString ?? "none",
+            String(viewModel.showsOffAirPreviewOnProgramMonitor),
             String(viewModel.isTransitioning),
             viewModel.selectedTransition.kind.rawValue
         ].joined(separator: "|")

@@ -29,5 +29,7 @@ public enum NetworkConstants {
         public static let protocolVersion = "protocolVersion"
         public static let platform = "platform"
         public static let role = "role"
+        /// IPv4 the operator wants cameras to dial. Bonjour may resolve a different, unreachable address.
+        public static let connectHost = "connectHost"
     }
 }

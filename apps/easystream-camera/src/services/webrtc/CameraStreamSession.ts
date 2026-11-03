@@ -13,6 +13,22 @@ import { createEasyStreamDeviceID, normalizeEasyStreamDeviceID } from '@/utils/d
 import { log } from '@/utils/logger';
 import type { TransportProfile } from '@/utils/transportProfile';
 
+export type LocalCameraOption = {
+  deviceId: string;
+  label: string;
+  facingMode: 'user' | 'environment';
+};
+
+function describeCamera(deviceId: string, label: string, index: number): LocalCameraOption {
+  const raw = `${label} ${deviceId}`.toLowerCase();
+  const front = raw.includes('front') || raw.includes('user') || raw.includes('face');
+  return {
+    deviceId,
+    label: `Cámara ${index + 1}`,
+    facingMode: front ? 'user' : 'environment',
+  };
+}
+
 function peerConnectionConfig() {
   return {
     iceServers: [],
@@ -73,6 +89,53 @@ export class CameraStreamSession {
     return stream;
   }
 
+  /** Keeps the local camera open after a signaling failure. Does not stop tracks. */
+  async ensureLocalPreview(): Promise<MediaStream> {
+    const live = this.localStream?.getVideoTracks().some((track) => track.readyState === 'live') ?? false;
+    if (this.localStream && live) {
+      this.listener?.onLocalStream(this.localStream);
+      return this.localStream;
+    }
+    return this.prepareLocalMedia();
+  }
+
+  async listVideoCameras(): Promise<LocalCameraOption[]> {
+    const devices = (await mediaDevices.enumerateDevices()) as Array<{
+      kind?: string;
+      deviceId?: string;
+      label?: string;
+    }>;
+    const videos = devices.filter((device) => device.kind === 'videoinput');
+    const described = videos.map((device, index) =>
+      describeCamera(device.deviceId ?? '', device.label ?? '', index),
+    );
+    if (described.length > 0) {
+      return described;
+    }
+    return [
+      { deviceId: '', label: 'Cámara 1', facingMode: 'environment' },
+      { deviceId: '', label: 'Cámara 2', facingMode: 'user' },
+    ];
+  }
+
+  async selectCamera(option: LocalCameraOption): Promise<void> {
+    const track = this.localStream?.getVideoTracks()[0];
+    if (!track) {
+      return;
+    }
+    const profile = this.transportProfile;
+    await track.applyConstraints({
+      ...(option.deviceId ? { deviceId: option.deviceId } : {}),
+      facingMode: option.facingMode,
+      width: profile?.width ?? 1280,
+      height: profile?.height ?? 720,
+      frameRate: profile?.frameRate ?? 30,
+    });
+    if (profile) {
+      await this.lockOutboundVideoQuality(profile);
+    }
+  }
+
   setAudioMuted(muted: boolean): void {
     this.localStream?.getAudioTracks().forEach((track) => {
       track.enabled = !muted;
@@ -80,7 +143,17 @@ export class CameraStreamSession {
   }
 
   updateTransportProfile(profile: TransportProfile): void {
+    const previous = this.transportProfile;
     this.transportProfile = profile;
+    if (
+      previous &&
+      previous.width === profile.width &&
+      previous.height === profile.height &&
+      previous.frameRate === profile.frameRate
+    ) {
+      return;
+    }
+
     const videoTrack = this.localStream?.getVideoTracks()[0];
     if (!videoTrack) {
       return;
@@ -91,6 +164,7 @@ export class CameraStreamSession {
       height: profile.height,
       frameRate: profile.frameRate,
     }).catch(() => undefined);
+    void this.lockOutboundVideoQuality(profile);
   }
 
   resetConnection(): void {
@@ -127,6 +201,7 @@ export class CameraStreamSession {
             deviceID: normalizeEasyStreamDeviceID(identity.deviceID),
             displayName: identity.displayName,
             role: 'camera',
+            platform: identity.platform,
           });
           void this.startOffer();
           break;
@@ -220,6 +295,9 @@ export class CameraStreamSession {
 
       // RN WebRTC requires setLocalDescription with the native offer object unchanged.
       await pc.setLocalDescription(offer);
+      if (this.transportProfile) {
+        await this.lockOutboundVideoQuality(this.transportProfile);
+      }
 
       const outboundSdp = offer.sdp;
 
@@ -240,6 +318,28 @@ export class CameraStreamSession {
       log.webrtc.error('startOffer failed', { message });
       this.listener?.onError(message);
       this.listener?.onConnectionState('failed');
+    }
+  }
+
+  private async lockOutboundVideoQuality(profile: TransportProfile): Promise<void> {
+    const sender = this.peer?.getSenders().find((item) => item.track?.kind === 'video');
+    if (!sender) {
+      return;
+    }
+    const params = sender.getParameters();
+    const encoding = params.encodings[0];
+    if (!encoding) {
+      return;
+    }
+    encoding.active = true;
+    encoding.maxBitrate = profile.maxBitrateKbps * 1000;
+    encoding.maxFramerate = profile.frameRate;
+    encoding.scaleResolutionDownBy = 1;
+    params.degradationPreference = 'disabled';
+    try {
+      await sender.setParameters(params);
+    } catch {
+      // The camera keeps the capture size even if the sender rejects a bitrate hint.
     }
   }
 

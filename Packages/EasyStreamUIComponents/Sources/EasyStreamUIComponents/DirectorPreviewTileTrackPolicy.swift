@@ -62,13 +62,17 @@ public enum DirectorPreviewTileTrackPolicy {
         programSourceID: CameraSourceID?
     ) -> RTCVideoTrack? {
         guard track != nil else { return nil }
-        guard visibilityPolicy.allowsPreviewMonitorGridCell(
+        if visibilityPolicy.allowsPreviewMonitorGridCell(
             sourceIsPreview: sourceID == previewSourceID,
             sourceIsProgram: sourceID == programSourceID,
             previewEqualsProgram: previewSourceID == programSourceID
-        ) else {
-            return nil
+        ) {
+            return track
         }
-        return track
+        // Multiview: decode policy may still warm extra feeds — show when track is enabled.
+        if track?.isEnabled == true {
+            return track
+        }
+        return nil
     }
 }

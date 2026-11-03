@@ -10,15 +10,16 @@ export type TransportProfile = {
 const STANDBY: TransportProfile = {
   width: 640,
   height: 360,
-  frameRate: 12,
-  maxBitrateKbps: 450,
+  frameRate: 15,
+  maxBitrateKbps: 500,
 };
 
+/** Same tier as program so selecting PREV does not ramp quality after the cut. */
 const PREVIEW: TransportProfile = {
-  width: 960,
-  height: 540,
-  frameRate: 24,
-  maxBitrateKbps: 1_200,
+  width: 1280,
+  height: 720,
+  frameRate: 30,
+  maxBitrateKbps: 2_500,
 };
 
 const PROGRAM: TransportProfile = {
@@ -28,20 +29,14 @@ const PROGRAM: TransportProfile = {
   maxBitrateKbps: 2_500,
 };
 
-/** Mirrors `CameraTransportProfile.webRTCProfile(for:)` tiers on iOS. */
+/**
+ * One encode for every role. Preview and program only pick a feed that is already running,
+ * so a switch never restarts the camera (that restart was the HD blink).
+ */
 export function webRTCProfileForAssignment(
-  assignment: CameraSwitcherAssignment,
+  _assignment: CameraSwitcherAssignment,
 ): TransportProfile {
-  switch (assignment) {
-    case 'program':
-    case 'previewAndProgram':
-      return PROGRAM;
-    case 'preview':
-      return PREVIEW;
-    case 'idle':
-    default:
-      return STANDBY;
-  }
+  return PROGRAM;
 }
 
 export function assignmentIsActive(assignment: CameraSwitcherAssignment): boolean {

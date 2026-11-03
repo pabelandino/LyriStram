@@ -20,11 +20,17 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
 
     private let session = AVCaptureSession()
     private let sessionQueue = DispatchQueue(label: "com.easystream.capture.session")
+    /// Frames stay off the session queue so a lens change cannot deadlock against WebRTC.
+    private let frameQueue = DispatchQueue(label: "com.easystream.capture.frames")
     private let videoOutput = AVCaptureVideoDataOutput()
     private var videoInput: AVCaptureDeviceInput?
     private var activeLens: CameraLensKind = .wide
     private var isConfigured = false
+    private var wantsRunning = false
     private var isStreamingDeliveryEnabled = false
+    private var runtimeObserversInstalled = false
+    private var lastRecoveryAt = Date.distantPast
+    private var recoveryAttempts = 0
     private var activeLoadTier: CameraCaptureLoadTier?
     private let photoOutput = AVCapturePhotoOutput()
     private var isPhotoOutputConfigured = false
@@ -73,17 +79,70 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
             throw CameraCaptureError.permissionDenied
         }
 
+        wantsRunning = true
         try sessionQueue.sync {
             if !isConfigured {
                 try configureSession(lens: activeLens)
             }
+            installRuntimeObserversIfNeeded()
             if !session.isRunning {
                 session.startRunning()
             }
         }
     }
 
+    /// User-facing recovery: a dropped link must not leave the sensor stopped.
+    public func recoverAfterLinkLoss() {
+        sessionQueue.async {
+            self.recoveryAttempts = 0
+            self.lastRecoveryAt = .distantPast
+        }
+        ensureRunning()
+    }
+
+    /// Restarts the sensor after a runtime error or a dropped director link. Never turns the camera off.
+    public func ensureRunning() {
+        sessionQueue.async { [weak self] in
+            guard let self, self.wantsRunning else { return }
+            self.installRuntimeObserversIfNeeded()
+            if !self.session.isRunning {
+                let now = Date()
+                if now.timeIntervalSince(self.lastRecoveryAt) > 8 {
+                    self.recoveryAttempts = 0
+                }
+                guard self.recoveryAttempts < 3 else { return }
+                if now.timeIntervalSince(self.lastRecoveryAt) < 1 {
+                    let wait = 1.1 - now.timeIntervalSince(self.lastRecoveryAt)
+                    self.sessionQueue.asyncAfter(deadline: .now() + wait) {
+                        self.ensureRunning()
+                    }
+                    return
+                }
+                self.lastRecoveryAt = now
+                self.recoveryAttempts += 1
+                if !self.isConfigured {
+                    try? self.configureSession(lens: self.activeLens)
+                }
+                if self.isConfigured {
+                    self.session.startRunning()
+                }
+            } else {
+                self.recoveryAttempts = 0
+            }
+            if !self.isStreamingDeliveryEnabled {
+                self.isStreamingDeliveryEnabled = true
+                self.syncVideoOutputDelegate()
+#if os(iOS)
+                DispatchQueue.main.async {
+                    self.beginOrientationUpdatesIfNeeded()
+                }
+#endif
+            }
+        }
+    }
+
     public func stop() {
+        wantsRunning = false
 #if os(iOS)
         endOrientationUpdatesIfNeeded()
 #endif
@@ -153,9 +212,24 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         }
     }
 
+    private func installRuntimeObserversIfNeeded() {
+        guard !runtimeObserversInstalled else { return }
+        runtimeObserversInstalled = true
+        let center = NotificationCenter.default
+        let restartNames: [Notification.Name] = [
+            .AVCaptureSessionRuntimeError,
+            .AVCaptureSessionInterruptionEnded,
+        ]
+        for name in restartNames {
+            center.addObserver(forName: name, object: session, queue: nil) { [weak self] _ in
+                self?.ensureRunning()
+            }
+        }
+    }
+
     private func syncVideoOutputDelegate() {
         if isStreamingDeliveryEnabled {
-            videoOutput.setSampleBufferDelegate(self, queue: sessionQueue)
+            videoOutput.setSampleBufferDelegate(self, queue: frameQueue)
         } else {
             videoOutput.setSampleBufferDelegate(nil, queue: nil)
         }
@@ -375,7 +449,7 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
             videoOutput.videoSettings = [
                 kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
             ]
-            videoOutput.alwaysDiscardsLateVideoFrames = true
+            videoOutput.alwaysDiscardsLateVideoFrames = false
             guard session.canAddOutput(videoOutput) else {
                 session.commitConfiguration()
                 throw CameraCaptureError.configurationFailed
@@ -403,14 +477,29 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         }
 
         let newInput = try AVCaptureDeviceInput(device: device)
+        let previous = videoInput
+        let previousPreset = session.sessionPreset
         session.beginConfiguration()
-        if let current = videoInput {
-            session.removeInput(current)
+        if let previous {
+            session.removeInput(previous)
         }
+
+        let preset = supportedPreset(preferred: previousPreset, device: device)
+        if session.canSetSessionPreset(preset) {
+            session.sessionPreset = preset
+        }
+
         guard session.canAddInput(newInput) else {
+            if let previous, session.canAddInput(previous) {
+                session.addInput(previous)
+            }
+            if session.canSetSessionPreset(previousPreset) {
+                session.sessionPreset = previousPreset
+            }
             session.commitConfiguration()
             throw CameraCaptureError.configurationFailed
         }
+
         session.addInput(newInput)
         videoInput = newInput
         activeLens = lens
@@ -421,6 +510,20 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
 #endif
         session.commitConfiguration()
         refreshImagingState(from: device)
+    }
+
+    private func supportedPreset(preferred: AVCaptureSession.Preset, device: AVCaptureDevice) -> AVCaptureSession.Preset {
+        let candidates: [AVCaptureSession.Preset] = [
+            preferred,
+            .hd1280x720,
+            .hd1920x1080,
+            .high,
+            .vga640x480,
+        ]
+        for candidate in candidates where device.supportsSessionPreset(candidate) {
+            return candidate
+        }
+        return .high
     }
 
 #if os(iOS)
@@ -495,6 +598,7 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
             .builtInDualWideCamera,
             .builtInTripleCamera,
             .builtInDualCamera,
+            .builtInTrueDepthCamera,
         ]
 #else
         let deviceTypes: [AVCaptureDevice.DeviceType] = [

@@ -5,7 +5,7 @@ import {
   freshDirectorEndpoint,
   sharedDiscoveryService,
 } from '@/services/discovery/EasyStreamDiscoveryService';
-import { CameraStreamSession } from '@/services/webrtc/CameraStreamSession';
+import { CameraStreamSession, type LocalCameraOption } from '@/services/webrtc/CameraStreamSession';
 import type {
   CameraSwitcherAssignment,
   DeviceIdentity,
@@ -48,6 +48,11 @@ export function useCameraSession({ identity, directors }: UseCameraSessionArgs) 
   const [assignment, setAssignment] = useState<CameraSwitcherAssignment>('idle');
   const [imaging, setImaging] = useState<LocalImagingState>(defaultImagingState);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [cameras, setCameras] = useState<LocalCameraOption[]>([]);
+  const [activeCameraKey, setActiveCameraKey] = useState<string | null>(null);
+  const camerasRef = useRef<LocalCameraOption[]>([]);
+  const connectGenerationRef = useRef(0);
+  const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const preferredDirector = useMemo(() => {
     if (selectedDirectorID) {
@@ -85,6 +90,16 @@ export function useCameraSession({ identity, directors }: UseCameraSessionArgs) 
             setIsMuted(muted);
             sessionRef.current.setAudioMuted(muted);
           },
+          onLensChange: (lens) => {
+            const facing = lens === 'front' ? 'user' : 'environment';
+            const match =
+              camerasRef.current.find((camera) => camera.facingMode === facing) ??
+              camerasRef.current[0];
+            if (match) {
+              void sessionRef.current.selectCamera(match);
+              setActiveCameraKey(match.deviceId || match.facingMode);
+            }
+          },
         }),
       );
       reportSettings();
@@ -93,6 +108,12 @@ export function useCameraSession({ identity, directors }: UseCameraSessionArgs) 
   );
 
   const applyConnectionState = useCallback((state: StreamConnectionState, directorName: string) => {
+    if (state === 'connected' || state === 'failed' || state === 'disconnected' || state === 'idle') {
+      if (connectTimeoutRef.current) {
+        clearTimeout(connectTimeoutRef.current);
+        connectTimeoutRef.current = null;
+      }
+    }
     if (streamStateRef.current === state) {
       return;
     }
@@ -147,10 +168,31 @@ export function useCameraSession({ identity, directors }: UseCameraSessionArgs) 
       setSelectedDirectorID(director.id);
       setLastError(null);
       applyConnectionState('connecting', director.displayName);
+      connectGenerationRef.current += 1;
+      const generation = connectGenerationRef.current;
+      if (connectTimeoutRef.current) {
+        clearTimeout(connectTimeoutRef.current);
+      }
+      connectTimeoutRef.current = setTimeout(() => {
+        if (generation !== connectGenerationRef.current) {
+          return;
+        }
+        if (streamStateRef.current !== 'connecting' && streamStateRef.current !== 'signaling') {
+          return;
+        }
+        sessionRef.current.resetConnection();
+        activeDirectorIDRef.current = null;
+        setLastError('Sin conexión con el Director');
+        applyConnectionState('failed', director.displayName);
+        void sessionRef.current.ensureLocalPreview().then(setLocalStream).catch(() => undefined);
+      }, 12_000);
 
       sessionRef.current.connectToDirector(director.host, director.port, identity, {
         onConnectionState: (state) => {
           applyConnectionState(state, director.displayName);
+          if (state === 'failed' || state === 'disconnected') {
+            void sessionRef.current.ensureLocalPreview().then(setLocalStream).catch(() => undefined);
+          }
         },
         onLocalStream: setLocalStream,
         onSignalingMessage: (message) => {
@@ -167,6 +209,39 @@ export function useCameraSession({ identity, directors }: UseCameraSessionArgs) 
     },
     [applyConnectionState, handleRemoteCommand, identity],
   );
+
+  const connectManual = useCallback(
+    (host: string, port: number) => {
+      const trimmed = host.trim();
+      if (!trimmed || !Number.isFinite(port) || port <= 0) {
+        setLastError('Escribe la IP y el puerto del Director');
+        return;
+      }
+      const director: DiscoveredDirector = {
+        id: `manual-${trimmed}:${port}`,
+        name: 'manual',
+        host: trimmed,
+        port,
+        protocolVersion: '1',
+        displayName: `${trimmed}:${port}`,
+      };
+      setUserChoseDirector(true);
+      connectToDirector(director, { force: true });
+    },
+    [connectToDirector],
+  );
+
+  const selectCamera = useCallback((camera: LocalCameraOption) => {
+    setActiveCameraKey(camera.deviceId || camera.facingMode);
+    setImaging((current) => ({
+      ...current,
+      activeLens: camera.facingMode === 'user' ? 'front' : 'wide',
+    }));
+    void sessionRef.current.selectCamera(camera).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : 'No se pudo cambiar de cámara';
+      setLastError(message);
+    });
+  }, []);
 
   const selectDirector = useCallback(
     (director: DiscoveredDirector) => {
@@ -213,8 +288,15 @@ export function useCameraSession({ identity, directors }: UseCameraSessionArgs) 
 
     void sessionRef.current
       .prepareLocalMedia()
-      .then((stream) => {
+      .then(async (stream) => {
         setLocalStream(stream);
+        const list = await sessionRef.current.listVideoCameras();
+        camerasRef.current = list;
+        setCameras(list);
+        const current = list.find((camera) => camera.facingMode === 'environment') ?? list[0];
+        if (current) {
+          setActiveCameraKey(current.deviceId || current.facingMode);
+        }
       })
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : 'No se pudo abrir la cámara';
@@ -223,6 +305,10 @@ export function useCameraSession({ identity, directors }: UseCameraSessionArgs) 
       });
 
     return () => {
+      if (connectTimeoutRef.current) {
+        clearTimeout(connectTimeoutRef.current);
+        connectTimeoutRef.current = null;
+      }
       autoConnectDirectorIDRef.current = null;
       activeDirectorIDRef.current = null;
       streamStateRef.current = 'idle';
@@ -306,13 +392,20 @@ export function useCameraSession({ identity, directors }: UseCameraSessionArgs) 
       assignment,
       imaging,
       lastError,
+      cameras,
+      activeCameraKey,
       assignmentIsActive: assignmentIsActive(assignment),
       selectDirector,
+      connectManual,
+      selectCamera,
       reconnect,
       toggleMute,
     }),
     [
+      activeCameraKey,
       assignment,
+      cameras,
+      connectManual,
       directors,
       imaging,
       isMuted,
@@ -320,6 +413,7 @@ export function useCameraSession({ identity, directors }: UseCameraSessionArgs) 
       localStream,
       preferredDirector,
       reconnect,
+      selectCamera,
       selectDirector,
       selectedDirectorID,
       statusMessage,

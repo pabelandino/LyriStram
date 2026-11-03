@@ -27,7 +27,8 @@ let package = Package(
                 "EasyStreamFacebook",
                 "EasyStreamVideoPipeline",
                 "WebRTC",
-            ]
+            ],
+            resources: [.process("Resources")]
         ),
     ]
 )

@@ -14,6 +14,7 @@ export const TXT_KEYS = {
   protocolVersion: 'protocolVersion',
   platform: 'platform',
   role: 'role',
+  connectHost: 'connectHost',
 } as const;
 
 export const APP_ROLE = {

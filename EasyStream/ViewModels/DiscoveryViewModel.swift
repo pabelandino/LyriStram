@@ -69,6 +69,8 @@ public final class DiscoveryViewModel {
         case .localNetworkPermissionRequired:
             needsLocalNetworkPermission = true
             statusMessage = "Permiso de red local requerido"
+        case .advertisingReady:
+            break
         }
     }
 

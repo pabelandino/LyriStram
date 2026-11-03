@@ -16,24 +16,20 @@ public enum CameraTransportProfile: Sendable, Equatable {
         webRTCProfile(for: assignment)
     }
 
-    /// LAN encode tier for a switcher role. Preview can prewarm to program resolution while warming the take target.
+    /// Every connected camera stays on the program encode.
+    /// Preview tiles and the program monitor only select an already-decoded feed — no mid-switch ramp or blink.
     public static func webRTCProfile(for assignment: CameraSwitcherAssignment) -> CameraTransportProfile {
-        let quality = Self.directorQuality.effectiveSettings()
-        switch assignment {
-        case .idle:
-            return .standby
-        case .preview:
-            return quality.prefetchTakeTarget ? .program : .preview
-        case .program, .previewAndProgram:
-            return .program
-        }
+        _ = assignment
+        _ = Self.directorQuality
+        return .program
     }
 
     public var streamSpec: BroadcastStreamSpec {
         let quality = Self.directorQuality
         switch self {
         case .standby:
-            return BroadcastStreamSpec(width: 426, height: 240, frameRate: 8, maxBitrateBps: 350_000)
+            // Continuous light preview — low enough for several cameras, high enough not to look frozen.
+            return BroadcastStreamSpec(width: 640, height: 360, frameRate: 15, maxBitrateBps: 500_000)
         case .preview:
             return quality.previewPreset.streamSpec
         case .program:
@@ -58,6 +54,7 @@ public enum CameraTransportProfile: Sendable, Equatable {
     }
 
     public var minBitrateBps: Int {
-        max(200_000, maxBitrateBps / 4)
+        // Same ceiling as the max. Resolution is locked separately so this does not scale the picture.
+        maxBitrateBps
     }
 }

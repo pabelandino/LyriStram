@@ -8,7 +8,7 @@ import CoreGraphics
 /// LAN camera capture profile — tuned for low CPU and heat on iPhone.
 public enum CameraStreamConfiguration {
 #if os(iOS)
-    public static let capturePreset: AVCaptureSession.Preset = .vga640x480
+    public static let capturePreset: AVCaptureSession.Preset = .hd1280x720
     public static let targetFrameRate: Int32 = CameraTransportDefaults.frameRate
     public static let webRTCWidth: Int32 = CameraTransportDefaults.width
     public static let webRTCHeight: Int32 = CameraTransportDefaults.height

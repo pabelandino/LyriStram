@@ -54,4 +54,5 @@ public enum DiscoveryEvent: Sendable {
     case browsingFailed(String)
     case advertisingFailed(String)
     case localNetworkPermissionRequired
+    case advertisingReady(port: UInt16)
 }

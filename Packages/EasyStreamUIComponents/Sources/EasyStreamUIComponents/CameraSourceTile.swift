@@ -9,6 +9,7 @@ import AppKit
 
 public struct CameraSourceTile: View {
     let name: String
+    let platform: DevicePlatform
     let sourceID: CameraSourceID?
     let track: RTCVideoTrack?
     let hasVideoSignal: Bool
@@ -19,6 +20,7 @@ public struct CameraSourceTile: View {
 
     public init(
         name: String,
+        platform: DevicePlatform = .unknown,
         sourceID: CameraSourceID? = nil,
         track: RTCVideoTrack?,
         hasVideoSignal: Bool = true,
@@ -28,6 +30,7 @@ public struct CameraSourceTile: View {
         onSelect: @escaping () -> Void
     ) {
         self.name = name
+        self.platform = platform
         self.sourceID = sourceID
         self.track = track
         self.hasVideoSignal = hasVideoSignal
@@ -48,6 +51,7 @@ public struct CameraSourceTile: View {
     ) {
         self.init(
             name: name,
+            platform: .unknown,
             sourceID: nil,
             track: track,
             hasVideoSignal: track != nil,
@@ -70,8 +74,10 @@ public struct CameraSourceTile: View {
                     }
 
                 HStack(spacing: 6) {
+                    CameraPlatformBrandIcon(platform: platform, size: 14)
                     Text(name)
                         .font(.caption2.weight(.semibold))
+                        .lineLimit(1)
                     if isProgram {
                         Text(BroadcastTerminology.programShort)
                             .font(.caption2.weight(.bold))

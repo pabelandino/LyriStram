@@ -3,14 +3,18 @@ import Network
 import EasyStreamCore
 
 enum BonjourTXTCodec {
-    static func makeRecord(identity: DeviceIdentity, role: AppRole) -> NWTXTRecord {
-        NWTXTRecord([
+    static func makeRecord(identity: DeviceIdentity, role: AppRole, connectHost: String? = nil) -> NWTXTRecord {
+        var fields: [String: String] = [
             NetworkConstants.TXTKey.deviceID: identity.deviceID.uuidString,
             NetworkConstants.TXTKey.displayName: identity.displayName,
             NetworkConstants.TXTKey.protocolVersion: NetworkConstants.protocolVersion,
             NetworkConstants.TXTKey.platform: identity.platform.rawValue,
             NetworkConstants.TXTKey.role: role.rawValue,
-        ])
+        ]
+        if let connectHost, !connectHost.isEmpty {
+            fields[NetworkConstants.TXTKey.connectHost] = connectHost
+        }
+        return NWTXTRecord(fields)
     }
 
     static func decode(_ record: NWTXTRecord?) -> (

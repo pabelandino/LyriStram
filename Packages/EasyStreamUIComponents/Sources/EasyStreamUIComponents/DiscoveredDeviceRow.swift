@@ -10,9 +10,15 @@ public struct DiscoveredDeviceRow: View {
 
     public var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: device.role == .camera ? "video.fill" : "rectangle.inset.filled.and.person.filled")
-                .foregroundStyle(BroadcastTheme.studioAccent)
-                .frame(width: 28)
+            Group {
+                if device.role == .camera {
+                    CameraPlatformBrandIcon(platform: device.platform, size: 22, tint: .white)
+                } else {
+                    Image(systemName: "rectangle.inset.filled.and.person.filled")
+                        .foregroundStyle(BroadcastTheme.studioAccent)
+                }
+            }
+            .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(device.displayName)

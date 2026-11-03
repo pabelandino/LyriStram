@@ -15,7 +15,7 @@ import EasyStreamCore
     #expect(event == .programAudioChanged(camA))
 }
 
-@Test func cutChangesProgramAndAdvancesPreviewToPreviousProgram() async {
+@Test func cutChangesProgramWithoutMovingPreview() async {
     let engine = SwitcherEngine()
     let camA = CameraSourceID(UUID(uuidString: "00000000-0000-0000-0000-000000000001")!)
     let camB = CameraSourceID(UUID(uuidString: "00000000-0000-0000-0000-000000000002")!)
@@ -31,9 +31,9 @@ import EasyStreamCore
 
     let state = await engine.state
     #expect(state.programSourceID == camB)
-    #expect(state.previewSourceID == camA)
+    #expect(state.previewSourceID == camB)
     #expect(state.programAudioSourceID == audioBefore)
-    #expect(events.count == 2)
+    #expect(events.count == 1)
 }
 
 @Test func programFallbackWhenActiveCameraDisconnects() async {
@@ -56,7 +56,7 @@ import EasyStreamCore
     }))
 }
 
-@Test func threeCameraTakeAdvancesPreviewToPreviousProgram() async {
+@Test func takeKeepsTheOperatorPreviewSelection() async {
     let engine = SwitcherEngine()
     let camA = CameraSourceID(UUID(uuidString: "00000000-0000-0000-0000-000000000001")!)
     let camB = CameraSourceID(UUID(uuidString: "00000000-0000-0000-0000-000000000002")!)
@@ -72,18 +72,18 @@ import EasyStreamCore
 
     let state = await engine.state
     #expect(state.programSourceID == camC)
-    #expect(state.previewSourceID == camB)
+    #expect(state.previewSourceID == camC)
     #expect(events.contains(where: {
         if case .programChanged(let id) = $0 { return id == camC }
         return false
     }))
-    #expect(events.contains(where: {
-        if case .previewChanged(let id) = $0 { return id == camB }
+    #expect(!events.contains(where: {
+        if case .previewChanged = $0 { return true }
         return false
     }))
 }
 
-@Test func firstTakeSelectsOtherCameraAsPreview() async {
+@Test func firstTakeLeavesPreviewOnTheTakenCamera() async {
     let engine = SwitcherEngine()
     let camA = CameraSourceID(UUID(uuidString: "00000000-0000-0000-0000-000000000001")!)
     let camB = CameraSourceID(UUID(uuidString: "00000000-0000-0000-0000-000000000002")!)
@@ -96,9 +96,9 @@ import EasyStreamCore
     let state = await engine.state
 
     #expect(state.programSourceID == camB)
-    #expect(state.previewSourceID == camA)
-    #expect(events.contains(where: {
-        if case .previewChanged(let id) = $0 { return id == camA }
+    #expect(state.previewSourceID == camB)
+    #expect(!events.contains(where: {
+        if case .previewChanged = $0 { return true }
         return false
     }))
 }
