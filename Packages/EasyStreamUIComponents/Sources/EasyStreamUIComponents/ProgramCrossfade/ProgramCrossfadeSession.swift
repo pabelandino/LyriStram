@@ -66,18 +66,12 @@ final class ProgramBusController {
 
         let leavingTransition = phase == .transitioning && !isTransitioning
         guard snapshot != lastSnapshot || leavingTransition else {
-            let rebinding = refreshTrackReferences(
+            routeDisplay(
                 on: host,
-                programTrack: programTrack,
-                warmTrack: warmTrack,
-                outgoingTrack: outgoingTrack,
-                incomingTrack: incomingTrack
+                onAir: isTransitioning ? nil : programTrack,
+                incoming: isTransitioning ? incomingTrack : warmTrack,
+                outgoing: isTransitioning ? outgoingTrack : nil
             )
-            if rebinding {
-                ProgramBusTrace.event(
-                    "controller refresh-only rebinding prog=\(snapshot.programTrackKey ?? "nil") in=\(snapshot.incomingTrackKey ?? "nil")"
-                )
-            }
             return
         }
 
@@ -102,8 +96,7 @@ final class ProgramBusController {
             finishTransition(
                 on: host,
                 programTrack: programTrack,
-                warmTrack: warmTrack,
-                incomingHint: incomingTrack
+                warmTrack: warmTrack
             )
             phase = programTrack != nil ? .onAir : (warmTrack != nil ? .offAirWarm : .empty)
             lastSnapshot = snapshot
@@ -114,8 +107,7 @@ final class ProgramBusController {
             applyOnAir(
                 on: host,
                 program: programTrack,
-                warm: warmTrack,
-                incomingHint: incomingTrack
+                warm: warmTrack
             )
             phase = .onAir
         } else if let warmTrack {
@@ -142,13 +134,7 @@ final class ProgramBusController {
         progress: Double,
         kind: SwitchTransitionKind
     ) {
-        if phase != .transitioning {
-            detachTrack(&attachedProgram, from: host.programRenderer)
-            host.clearMetalTransitionFrames()
-        }
-
-        attachTrack(outgoing, to: host.outgoingRenderer, storage: &attachedOutgoing)
-        attachTrack(incoming, to: host.incomingRenderer, storage: &attachedIncoming)
+        routeDisplay(on: host, onAir: nil, incoming: incoming, outgoing: outgoing)
 
         let engineFrame = ProgramTransitionEngine.frame(linearProgress: progress, kind: kind)
         host.applyTransitionFrame(engineFrame, incomingOnProgram: false)
@@ -157,22 +143,13 @@ final class ProgramBusController {
     private func finishTransition(
         on host: ProgramCrossfadeHost,
         programTrack: RTCVideoTrack?,
-        warmTrack: RTCVideoTrack?,
-        incomingHint: RTCVideoTrack?
+        warmTrack: RTCVideoTrack?
     ) {
         host.completeTransitionHandoff()
-        detachTrack(&attachedOutgoing, from: host.outgoingRenderer)
         host.clearMetalTransitionFrames()
 
         if let programTrack {
-            syncIncomingLane(on: host, incomingHint: incomingHint)
-
-            if tracksMatch(attachedIncoming, programTrack) {
-                performInstantCut(on: host, program: programTrack)
-            } else {
-                rebindProgram(on: host, program: programTrack)
-            }
-            attachWarmTrack(warmTrack, program: programTrack, on: host)
+            routeDisplay(on: host, onAir: programTrack, incoming: warmTrack, outgoing: nil)
             host.enterIdleProgramMode(preservingProgramPresentation: false, warmingTake: false)
         } else if let warmTrack {
             applyOffAir(on: host, warm: warmTrack, visibleOnProgramMonitor: false)
@@ -186,28 +163,10 @@ final class ProgramBusController {
     private func applyOnAir(
         on host: ProgramCrossfadeHost,
         program: RTCVideoTrack,
-        warm: RTCVideoTrack?,
-        incomingHint: RTCVideoTrack?
+        warm: RTCVideoTrack?
     ) {
-        syncIncomingLane(on: host, incomingHint: incomingHint)
-
-        if tracksMatch(attachedIncoming, program) {
-            performInstantCut(on: host, program: program)
-        } else if !tracksMatch(attachedProgram, program) {
-            rebindProgram(on: host, program: program)
-        }
-
-        attachWarmTrack(warm, program: program, on: host)
+        routeDisplay(on: host, onAir: program, incoming: warm, outgoing: nil)
         host.enterIdleProgramMode(preservingProgramPresentation: false, warmingTake: false)
-    }
-
-    /// Keeps the incoming lane subscribed to the hinted track (take target or warmed preview).
-    private func syncIncomingLane(
-        on host: ProgramCrossfadeHost,
-        incomingHint: RTCVideoTrack?
-    ) {
-        guard let incomingHint else { return }
-        attachTrack(incomingHint, to: host.incomingRenderer, storage: &attachedIncoming)
     }
 
     // MARK: - Off-air warm (iOS: hidden until take; Android Expo: optional PROG mirror)
@@ -217,100 +176,50 @@ final class ProgramBusController {
         warm: RTCVideoTrack,
         visibleOnProgramMonitor: Bool
     ) {
-        if phase == .onAir {
-            detachTrack(&attachedProgram, from: host.programRenderer)
-        }
-        detachTrack(&attachedOutgoing, from: host.outgoingRenderer)
-
-        attachTrack(warm, to: host.incomingRenderer, storage: &attachedIncoming)
+        routeDisplay(
+            on: host,
+            onAir: visibleOnProgramMonitor ? warm : nil,
+            incoming: warm,
+            outgoing: nil
+        )
         host.enterIdleProgramMode(preservingProgramPresentation: false, warmingTake: visibleOnProgramMonitor)
     }
 
     // MARK: - Empty
 
     private func applyEmpty(on host: ProgramCrossfadeHost) {
-        detachTrack(&attachedIncoming, from: host.incomingRenderer)
-        detachTrack(&attachedOutgoing, from: host.outgoingRenderer)
-        detachTrack(&attachedProgram, from: host.programRenderer)
+        routeDisplay(on: host, onAir: nil, incoming: nil, outgoing: nil)
         host.clearMetalVideoFrames()
         host.resetCrossfadePresentation()
         host.enterIdleProgramMode(preservingProgramPresentation: false, warmingTake: false)
     }
 
-    // MARK: - Cut / rebind
+    /// Drops the extra program/incoming/outgoing sinks once. Cuts must not rebind those renderers.
+    private var releasedMetalRenderers = false
 
-    private func performInstantCut(on host: ProgramCrossfadeHost, program: RTCVideoTrack) {
-        guard tracksMatch(attachedIncoming, program) else {
-            ProgramBusTrace.event(
-                "controller performInstantCut fallback rebind trackId=\(ProgramBusTrace.shortTrackId(program.trackId)) incomingMatch=false"
-            )
-            rebindProgram(on: host, program: program)
-            return
-        }
-
-        let hasIncomingFrame = ProgramFrameDisplayBus.shared.displaySample(for: .programIncoming) != nil
-        ProgramBusTrace.event(
-            "controller performInstantCut trackId=\(ProgramBusTrace.shortTrackId(program.trackId)) hasIncomingFrame=\(hasIncomingFrame)"
-        )
-
-        if hasIncomingFrame {
-            let allowPreviewTier = !ProgramFrameDisplayBus.shared.incomingMeetsProgramDisplayThreshold()
-            host.promoteIncomingFrameToProgram(allowPreviewTier: allowPreviewTier)
-        }
-
-        attachedIncoming?.remove(host.incomingRenderer)
-        if !tracksMatch(attachedProgram, program) {
-            attachedProgram?.remove(host.programRenderer)
-            program.add(host.programRenderer)
-        }
-        attachedProgram = program
-        attachedIncoming = nil
-
-        ProgramCrossfadeRenderer.clearFrame(in: host.incomingRenderer)
-        host.clearMetalTransitionFrames()
-        host.enterIdleProgramMode(preservingProgramPresentation: false, warmingTake: false)
-    }
-
-    private func rebindProgram(on host: ProgramCrossfadeHost, program: RTCVideoTrack) {
-        ProgramBusTrace.event(
-            "controller rebindProgram trackId=\(ProgramBusTrace.shortTrackId(program.trackId))"
-        )
+    private func releaseMetalRenderersIfNeeded(on host: ProgramCrossfadeHost) {
+        guard !releasedMetalRenderers else { return }
+        releasedMetalRenderers = true
+        detachTrack(&attachedProgram, from: host.programRenderer)
         detachTrack(&attachedOutgoing, from: host.outgoingRenderer)
         detachTrack(&attachedIncoming, from: host.incomingRenderer)
-        host.clearMetalTransitionFrames()
+    }
 
-        if attachedProgram != nil {
-            ProgramCrossfadeRenderer.detachAndClear(host.programRenderer, storage: &attachedProgram)
-        }
-
-        ProgramCrossfadeRenderer.forceAttach(
-            program,
-            to: host.programRenderer,
-            storage: &attachedProgram
+    private func routeDisplay(
+        on host: ProgramCrossfadeHost,
+        onAir: RTCVideoTrack?,
+        incoming: RTCVideoTrack?,
+        outgoing: RTCVideoTrack?
+    ) {
+        releaseMetalRenderersIfNeeded(on: host)
+        DirectorDecodedSignalCache.shared.setDisplayTracks(
+            onAir: onAir,
+            incoming: incoming,
+            outgoing: outgoing
         )
     }
 
     // MARK: - Attach helpers
-
-    private func attachWarmTrack(
-        _ warm: RTCVideoTrack?,
-        program: RTCVideoTrack,
-        on host: ProgramCrossfadeHost
-    ) {
-        guard let warm, !tracksMatch(warm, program) else {
-            detachTrack(&attachedIncoming, from: host.incomingRenderer)
-            return
-        }
-        attachTrack(warm, to: host.incomingRenderer, storage: &attachedIncoming)
-    }
-
-    private func attachTrack(
-        _ track: RTCVideoTrack,
-        to renderer: RTCVideoRenderer,
-        storage: inout RTCVideoTrack?
-    ) {
-        ProgramCrossfadeRenderer.swapAttach(track, to: renderer, storage: &storage)
-    }
 
     private func detachTrack(
         _ storage: inout RTCVideoTrack?,
@@ -333,44 +242,6 @@ final class ProgramBusController {
 
     private static func progressBucket(_ progress: Double) -> Int {
         Int((min(max(progress, 0), 1) * 240).rounded())
-    }
-
-    /// Re-subscribes renderers when WebRTC replaces a track object on the same peer connection.
-    @discardableResult
-    private func refreshTrackReferences(
-        on host: ProgramCrossfadeHost,
-        programTrack: RTCVideoTrack?,
-        warmTrack: RTCVideoTrack?,
-        outgoingTrack: RTCVideoTrack?,
-        incomingTrack: RTCVideoTrack?
-    ) -> Bool {
-        var rebinding = false
-        if let programTrack, attachedProgram !== programTrack {
-            rebinding = true
-            ProgramCrossfadeRenderer.swapAttach(
-                programTrack,
-                to: host.programRenderer,
-                storage: &attachedProgram
-            )
-        }
-        if let outgoingTrack, attachedOutgoing !== outgoingTrack {
-            rebinding = true
-            ProgramCrossfadeRenderer.swapAttach(
-                outgoingTrack,
-                to: host.outgoingRenderer,
-                storage: &attachedOutgoing
-            )
-        }
-        let incomingHint = warmTrack ?? incomingTrack
-        if let incomingHint, attachedIncoming !== incomingHint {
-            rebinding = true
-            ProgramCrossfadeRenderer.swapAttach(
-                incomingHint,
-                to: host.incomingRenderer,
-                storage: &attachedIncoming
-            )
-        }
-        return rebinding
     }
 
     private var phaseLabel: String {

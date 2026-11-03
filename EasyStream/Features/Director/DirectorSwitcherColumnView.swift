@@ -27,6 +27,7 @@ struct DirectorSwitcherColumnView: View {
                 mediaViewModel: mediaViewModel,
                 liveProgramAir: liveProgramAir
             )
+            .frame(minHeight: 0, maxHeight: .infinity)
             .layoutPriority(1)
 
             DirectorTakeBarView(
@@ -35,6 +36,7 @@ struct DirectorSwitcherColumnView: View {
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
         .background(BroadcastTheme.panelBackground)
     }
 

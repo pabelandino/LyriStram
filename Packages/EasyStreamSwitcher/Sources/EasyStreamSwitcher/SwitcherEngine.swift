@@ -93,6 +93,14 @@ public actor SwitcherEngine {
         return [.programChanged(id)]
     }
 
+    /// Clears program so the director is off air. Preview stays where the operator left it.
+    @discardableResult
+    public func clearProgram() -> [SwitcherEvent] {
+        guard snapshot.programSourceID != nil else { return [] }
+        snapshot.programSourceID = nil
+        return [.programChanged(nil)]
+    }
+
     @discardableResult
     public func setProgramAudioSource(_ id: CameraSourceID) -> SwitcherEvent? {
         guard availableSources.contains(id) else { return nil }

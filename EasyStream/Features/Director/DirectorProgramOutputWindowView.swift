@@ -21,30 +21,18 @@ struct DirectorProgramOutputWindowView: View {
         )
         .onAppear {
             store.markWindowOpen()
-#if os(macOS)
-            guard store.settings.isEnabled,
-                  let screenIndex = ProgramOutputDisplayDiscovery.validatedExternalScreenIndex(
-                    store.settings.selectedScreenIndex
-                  )
-            else {
-                store.markWindowClosed()
-                ProgramOutputWindowPlacement.dismissStaleOutputOnLaunch()
-                return
-            }
-            ProgramOutputWindowPlacement.presentFullscreen(on: screenIndex)
-#endif
         }
         .onDisappear {
             store.markWindowClosed()
-        }
-        .onChange(of: store.settings.selectedScreenIndex) { _, newIndex in
 #if os(macOS)
-            guard store.isWindowOpen, store.settings.isEnabled,
-                  let screenIndex = ProgramOutputDisplayDiscovery.validatedExternalScreenIndex(newIndex)
-            else { return }
-            ProgramOutputWindowPlacement.presentFullscreen(on: screenIndex)
+            ProgramOutputWindowPlacement.restorePresentationOptionsIfNeeded()
 #endif
         }
+#if os(macOS)
+        .background {
+            ProgramOutputScreenAnchor(screenIndex: store.settings.selectedScreenIndex)
+        }
+#endif
     }
 }
 
@@ -53,71 +41,103 @@ import AppKit
 
 enum ProgramOutputWindowPlacement {
     private static let windowIdentifier = "program-output"
+    private static var placedScreenIndex: Int?
 
     static func dismissStaleOutputOnLaunch() {
-        locateProgramWindow()?.orderOut(nil)
         NSApp.presentationOptions = []
+        for window in NSApp.windows where isProgramOutputWindow(window) {
+            window.orderOut(nil)
+        }
     }
 
-    static func presentFullscreen(on screenIndex: Int) {
+    /// Moves the output window onto another display. Never covers the director or hides its menu bar.
+    static func place(_ window: NSWindow, on screenIndex: Int) {
+        NSApp.presentationOptions = []
+        guard window != NSApp.mainWindow else { return }
         guard DirectorProgramOutputStore.shared.settings.isEnabled else { return }
         guard let validatedIndex = ProgramOutputDisplayDiscovery.validatedExternalScreenIndex(screenIndex),
               let screen = ProgramOutputDisplayDiscovery.screen(for: validatedIndex),
               screen != NSScreen.main
-        else {
-            closeOutputWindow()
-            DirectorProgramOutputStore.shared.settings.isEnabled = false
+        else { return }
+
+        applyCleanChrome(window)
+        let alreadyFillingScreen = placedScreenIndex == validatedIndex
+            && window.screen == screen
+            && window.frame.equalTo(screen.frame)
+        if alreadyFillingScreen {
             return
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            guard DirectorProgramOutputStore.shared.settings.isEnabled else { return }
-            guard let window = locateProgramWindow() else { return }
-            guard let screen = ProgramOutputDisplayDiscovery.screen(for: validatedIndex) else { return }
+        window.identifier = NSUserInterfaceItemIdentifier(windowIdentifier)
+        window.level = .floating
+        window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        window.isExcludedFromWindowsMenu = true
+        window.isMovable = false
+        window.setFrame(screen.frame, display: true, animate: false)
+        window.orderFront(nil)
+        placedScreenIndex = validatedIndex
+        directorWindow()?.makeKey()
+    }
 
-            window.identifier = NSUserInterfaceItemIdentifier(windowIdentifier)
-            window.title = ""
-            window.isReleasedWhenClosed = false
-            window.backgroundColor = .black
-            window.isOpaque = true
-            window.hasShadow = false
-            window.titleVisibility = .hidden
-            window.titlebarAppearsTransparent = true
-            window.styleMask = [.borderless]
-            window.level = .screenSaver
-            window.collectionBehavior = [
-                .canJoinAllSpaces,
-                .fullScreenAuxiliary,
-                .stationary,
-                .ignoresCycle
-            ]
-            window.isExcludedFromWindowsMenu = true
-            window.isMovable = false
-            window.isMovableByWindowBackground = false
-
-            window.setFrame(screen.frame, display: true, animate: false)
-            window.orderFrontRegardless()
-
-            NSApp.presentationOptions = [.autoHideMenuBar, .autoHideDock]
-        }
+    /// Full-bleed program. No title, toolbar, or shadow. Does not change the director's menu bar.
+    private static func applyCleanChrome(_ window: NSWindow) {
+        window.title = ""
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.titlebarSeparatorStyle = .none
+        window.styleMask.insert(.fullSizeContentView)
+        window.toolbar = nil
+        window.isReleasedWhenClosed = false
+        window.backgroundColor = .black
+        window.isOpaque = true
+        window.hasShadow = false
     }
 
     static func restorePresentationOptionsIfNeeded() {
-        let hasLiveOutput = DirectorProgramOutputStore.shared.isWindowOpen
-        if !hasLiveOutput {
-            NSApp.presentationOptions = []
-        }
+        NSApp.presentationOptions = []
     }
 
     static func closeOutputWindow() {
-        locateProgramWindow()?.orderOut(nil)
+        placedScreenIndex = nil
+        for window in NSApp.windows where isProgramOutputWindow(window) {
+            window.orderOut(nil)
+        }
         restorePresentationOptionsIfNeeded()
     }
 
-    private static func locateProgramWindow() -> NSWindow? {
-        NSApp.windows.first { window in
-            window.identifier?.rawValue == windowIdentifier
+    private static func isProgramOutputWindow(_ window: NSWindow) -> Bool {
+        window.identifier?.rawValue == windowIdentifier && window != NSApp.mainWindow
+    }
+
+    private static func directorWindow() -> NSWindow? {
+        NSApp.mainWindow ?? NSApp.windows.first { $0.identifier?.rawValue != windowIdentifier && $0.canBecomeKey }
+    }
+}
+
+/// Reads the SwiftUI output window and parks it on the selected external display.
+private struct ProgramOutputScreenAnchor: NSViewRepresentable {
+    var screenIndex: Int
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(frame: .zero)
+        context.coordinator.screenIndex = screenIndex
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.screenIndex = screenIndex
+        DispatchQueue.main.async {
+            guard let window = nsView.window else { return }
+            ProgramOutputWindowPlacement.place(window, on: context.coordinator.screenIndex)
         }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    final class Coordinator {
+        var screenIndex = 0
     }
 }
 #endif

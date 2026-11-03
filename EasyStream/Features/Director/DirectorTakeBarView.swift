@@ -8,11 +8,23 @@ struct DirectorTakeBarView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            SwitchTransitionControls(transition: $viewModel.selectedTransition)
-                .padding(.horizontal, 16)
+            HStack(spacing: 8) {
+                TakeToProgramButton(isEnabled: canTake && !viewModel.isTransitioning) {
+                    viewModel.takeToProgram()
+                }
 
-            TakeToProgramButton(isEnabled: canTake && !viewModel.isTransitioning) {
-                viewModel.takeToProgram()
+                Button {
+                    viewModel.leaveAir()
+                } label: {
+                    Label(BroadcastTerminology.leaveAirAction, systemImage: "stop.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.bordered)
+                .tint(BroadcastTheme.programRed)
+                .disabled(viewModel.programSourceID == nil)
+                .accessibilityHint(BroadcastTerminology.leaveAirDescription)
             }
             .padding(.horizontal, 16)
 

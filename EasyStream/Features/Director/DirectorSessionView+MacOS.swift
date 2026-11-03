@@ -98,10 +98,10 @@ extension DirectorSessionView {
             programOutputStore.settings.selectedScreenIndex
         ) else { return }
         programOutputStore.settings.isEnabled = true
+        programOutputStore.settings.selectedScreenIndex = screenIndex
         programOutputStore.settings.fillScreen = true
         openWindow(id: "program-output")
         programOutputStore.markWindowOpen()
-        ProgramOutputWindowPlacement.presentFullscreen(on: screenIndex)
     }
 
     func stopExternalBroadcast() {

@@ -13,15 +13,19 @@ struct DirectorProgramOutputCorePanel: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(BroadcastTheme.subtleText)
 
-            BroadcastFixedAspectContainer {
-                DirectorProgramLiveMonitorView(
-                    viewModel: viewModel,
-                    liveProgramAir: liveProgramAir
-                )
-            }
-            .animation(nil, value: viewModel.isTransitioning)
-            .animation(nil, value: viewModel.transitionProgress)
-            .animation(nil, value: viewModel.programSourceID)
+            Color.clear
+                .frame(minHeight: 0, maxHeight: .infinity)
+                .overlay {
+                    BroadcastFixedAspectContainer {
+                        DirectorProgramLiveMonitorView(
+                            viewModel: viewModel,
+                            liveProgramAir: liveProgramAir
+                        )
+                    }
+                    .animation(nil, value: viewModel.isTransitioning)
+                    .animation(nil, value: viewModel.transitionProgress)
+                    .animation(nil, value: viewModel.programSourceID)
+                }
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -38,8 +42,22 @@ struct DirectorProgramOutputCorePanel: View {
                         .padding(12)
                 }
             }
+            .overlay(alignment: .topTrailing) {
+                if viewModel.programSourceID != nil {
+                    Button {
+                        viewModel.leaveAir()
+                    } label: {
+                        Label(BroadcastTerminology.leaveAirAction, systemImage: "stop.circle.fill")
+                            .font(.caption.weight(.bold))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(BroadcastTheme.programRed)
+                    .padding(12)
+                    .accessibilityHint(BroadcastTerminology.leaveAirDescription)
+                }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
     }
 
     private var programDisplayName: String? {

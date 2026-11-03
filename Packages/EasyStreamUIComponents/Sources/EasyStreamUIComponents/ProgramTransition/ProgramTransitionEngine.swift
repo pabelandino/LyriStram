@@ -4,19 +4,13 @@ import EasyStreamCore
 enum ProgramTransitionEngine {
     static func frame(linearProgress: LinearProgress, kind: SwitchTransitionKind) -> ProgramTransitionFrame {
         let progress = min(max(linearProgress, 0), 1)
-        switch kind {
+        switch kind.presentedKind {
         case .cut:
             return CutTransitionEffect.frame(linearProgress: progress)
         case .dissolve:
             return DissolveTransitionEffect.frame(linearProgress: progress)
-        case .fade:
-            return FadeTransitionEffect.frame(linearProgress: progress)
-        case .wipe:
-            return WipeTransitionEffect.frame(linearProgress: progress)
-        case .slide:
-            return SlideTransitionEffect.frame(linearProgress: progress)
-        case .zoom:
-            return ZoomTransitionEffect.frame(linearProgress: progress)
+        default:
+            return DissolveTransitionEffect.frame(linearProgress: progress)
         }
     }
 }

@@ -14,6 +14,7 @@ public struct StableProgramVideoView: View {
     let showsEmptyWhenNoGraphics: Bool
     let hasAirGraphics: Bool
     let offAirPreviewVisibleOnProgramMonitor: Bool
+    let showsLiveResolutionBadge: Bool
 
     public init(
         programDisplayTrack: RTCVideoTrack?,
@@ -25,7 +26,8 @@ public struct StableProgramVideoView: View {
         emptyStatusMessage: String,
         showsEmptyWhenNoGraphics: Bool = true,
         hasAirGraphics: Bool = false,
-        offAirPreviewVisibleOnProgramMonitor: Bool = false
+        offAirPreviewVisibleOnProgramMonitor: Bool = false,
+        showsLiveResolutionBadge: Bool = true
     ) {
         self.programDisplayTrack = programDisplayTrack
         self.outgoingProgramTrack = outgoingProgramTrack
@@ -37,6 +39,7 @@ public struct StableProgramVideoView: View {
         self.showsEmptyWhenNoGraphics = showsEmptyWhenNoGraphics
         self.hasAirGraphics = hasAirGraphics
         self.offAirPreviewVisibleOnProgramMonitor = offAirPreviewVisibleOnProgramMonitor
+        self.showsLiveResolutionBadge = showsLiveResolutionBadge
     }
 
     public var body: some View {
@@ -56,8 +59,10 @@ public struct StableProgramVideoView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
             .overlay(alignment: .bottomTrailing) {
-                ProgramBusLiveResolutionBadge()
-                    .padding(10)
+                if showsLiveResolutionBadge {
+                    ProgramBusLiveResolutionBadge()
+                        .padding(10)
+                }
             }
 
             if programDisplayTrack == nil,

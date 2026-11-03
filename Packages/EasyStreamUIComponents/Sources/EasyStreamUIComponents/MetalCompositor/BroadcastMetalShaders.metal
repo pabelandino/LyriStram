@@ -126,6 +126,7 @@ fragment float4 broadcastCompositorFragment(
     float2 viewport = max(uniforms.viewportSize, float2(1.0));
     float2 uv = in.uv;
     float3 color = float3(0.0);
+    float covered = 0.0;
 
     if (uniforms.hasOutgoing != 0 && uniforms.outgoingOpacity > 0.001) {
         float2 outUV = uniforms.usesSpatial != 0
@@ -135,7 +136,8 @@ fragment float4 broadcastCompositorFragment(
             outgoingBGRA, outgoingY, outgoingCbCr, texSampler,
             outUV, uniforms.outgoingContentSize, viewport, uniforms.outgoingIsNV12
         );
-        color = mix(color, outgoing.rgb, uniforms.outgoingOpacity);
+        color += outgoing.rgb * uniforms.outgoingOpacity;
+        covered += uniforms.outgoingOpacity;
     }
 
     if (uniforms.hasIncoming != 0 && uniforms.incomingOpacity > 0.001) {
@@ -153,8 +155,13 @@ fragment float4 broadcastCompositorFragment(
                 incomingBGRA, incomingY, incomingCbCr, texSampler,
                 inUV, uniforms.incomingContentSize, viewport, uniforms.incomingIsNV12
             );
-            color = mix(color, incoming.rgb, incomingWeight);
+            color += incoming.rgb * incomingWeight;
+            covered += incomingWeight;
         }
+    }
+
+    if (covered > 1.001) {
+        color /= covered;
     }
 
     if (uniforms.hasOverlay != 0 && overlayBGRA.get_width() > 0) {

@@ -121,3 +121,22 @@ import EasyStreamCore
         #expect(state.programSourceID == nil)
     }
 }
+
+@Test func clearProgramDropsTheLiveSourceWithoutMovingPreview() async {
+    let engine = SwitcherEngine()
+    let camA = CameraSourceID(UUID(uuidString: "00000000-0000-0000-0000-000000000001")!)
+    let camB = CameraSourceID(UUID(uuidString: "00000000-0000-0000-0000-000000000002")!)
+
+    _ = await engine.registerSource(camA)
+    _ = await engine.registerSource(camB)
+    _ = await engine.setPreview(camB)
+    _ = await engine.cut(to: camB)
+
+    let events = await engine.clearProgram()
+    let state = await engine.state
+
+    #expect(events == [.programChanged(nil)])
+    #expect(state.programSourceID == nil)
+    #expect(state.previewSourceID == camB)
+    #expect(await engine.clearProgram().isEmpty)
+}

@@ -28,27 +28,37 @@ final class I420ToNV12Converter: @unchecked Sendable {
         guard width > 0, height > 0 else { return nil }
 
         lock.lock()
-        defer { lock.unlock() }
-
         if pool == nil || poolWidth != width || poolHeight != height {
             pool = nil
-            let attrs: [String: Any] = [
+            let bufferAttrs: [String: Any] = [
                 kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
                 kCVPixelBufferWidthKey as String: width,
                 kCVPixelBufferHeightKey as String: height,
                 kCVPixelBufferMetalCompatibilityKey as String: true,
                 kCVPixelBufferIOSurfacePropertiesKey as String: [:],
             ]
-            CVPixelBufferPoolCreate(kCFAllocatorDefault, nil, attrs as CFDictionary, &pool)
+            let poolAttrs: [String: Any] = [
+                kCVPixelBufferPoolMinimumBufferCountKey as String: 8,
+            ]
+            CVPixelBufferPoolCreate(
+                kCFAllocatorDefault,
+                poolAttrs as CFDictionary,
+                bufferAttrs as CFDictionary,
+                &pool
+            )
             poolWidth = width
             poolHeight = height
         }
 
-        guard let pool else { return nil }
+        guard let pool else {
+            lock.unlock()
+            return nil
+        }
 
         var pixelBuffer: CVPixelBuffer?
-        guard CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &pixelBuffer) == kCVReturnSuccess,
-              let pixelBuffer else {
+        let created = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &pixelBuffer)
+        lock.unlock()
+        guard created == kCVReturnSuccess, let pixelBuffer else {
             return nil
         }
 

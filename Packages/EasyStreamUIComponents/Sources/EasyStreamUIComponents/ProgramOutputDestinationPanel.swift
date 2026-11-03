@@ -50,7 +50,7 @@ public struct ProgramOutputDestinationPanel: View {
                         .foregroundStyle(.secondary)
                 } else {
                     Picker("Pantalla destino", selection: $settings.selectedScreenIndex) {
-                        ForEach(availableScreens) { screen in
+                        ForEach(availableScreens.filter { !$0.isBuiltIn }) { screen in
                             Text("\(screen.name) · \(screen.width)×\(screen.height)")
                                 .tag(screen.id)
                         }

@@ -363,7 +363,8 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
             return
         }
 
-        var binding = makeVideoTextureBinding(cache: textureCache)
+        let transition = resolvedTransition()
+        var binding = makeVideoTextureBinding(cache: textureCache, transition: transition)
 
         overlaySnapshotLock.lock()
         let overlayTexture = overlaySnapshot
@@ -397,7 +398,12 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
             incomingCbCr: binding.incomingCbCr,
             overlayBGRA: overlayTexture
         )
-        var uniforms = makeUniforms(viewportSize: viewportSize, textures: textures, binding: binding)
+        var uniforms = makeUniforms(
+            viewportSize: viewportSize,
+            textures: textures,
+            binding: binding,
+            transition: transition
+        )
         uniforms.hasOverlay = hasOverlay ? 1 : 0
 
         encoder.setRenderPipelineState(pipelineState)
@@ -436,9 +442,25 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         )
     }
 
-    private func makeVideoTextureBinding(cache: CVMetalTextureCache) -> BroadcastMetalTextureBinding {
+    private struct ResolvedTransition {
+        var isActive: Bool
+        var frame: ProgramTransitionFrame
+    }
+
+    private func resolvedTransition() -> ResolvedTransition {
         stateLock.lock()
         let transitioning = isTransitioning
+        let frame = transitionFrame
+        stateLock.unlock()
+        return ResolvedTransition(isActive: transitioning, frame: frame)
+    }
+
+    private func makeVideoTextureBinding(
+        cache: CVMetalTextureCache,
+        transition: ResolvedTransition
+    ) -> BroadcastMetalTextureBinding {
+        let transitioning = transition.isActive
+        stateLock.lock()
         let showIncomingAsProgram = idleShowsIncomingAsProgram
         stateLock.unlock()
 
@@ -479,12 +501,11 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     private func makeUniforms(
         viewportSize: CGSize,
         textures: TextureSet,
-        binding: BroadcastMetalTextureBinding
+        binding: BroadcastMetalTextureBinding,
+        transition: ResolvedTransition
     ) -> Uniforms {
-        stateLock.lock()
-        let transitioning = isTransitioning
-        let frame = transitionFrame
-        stateLock.unlock()
+        let transitioning = transition.isActive
+        let frame = transition.frame
 
         stateLock.lock()
         let showIncomingAsProgram = idleShowsIncomingAsProgram

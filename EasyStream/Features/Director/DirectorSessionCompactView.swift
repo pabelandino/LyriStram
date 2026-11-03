@@ -45,13 +45,17 @@ struct DirectorSessionCompactView: View {
                 }
             }
 
-            Section("Transición") {
-                SwitchTransitionControls(transition: $viewModel.selectedTransition)
-            }
-
             Section {
                 TakeToProgramButton(isEnabled: canTake && !viewModel.isTransitioning) {
                     viewModel.takeToProgram()
+                }
+                if viewModel.programSourceID != nil {
+                    Button {
+                        viewModel.leaveAir()
+                    } label: {
+                        Label(BroadcastTerminology.leaveAirAction, systemImage: "stop.circle.fill")
+                    }
+                    .accessibilityHint(BroadcastTerminology.leaveAirDescription)
                 }
             }
 
