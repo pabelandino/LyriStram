@@ -19,7 +19,7 @@ enum DissolveTransitionEffect: ProgramTransitionEffect {
     static let kind: SwitchTransitionKind = .dissolve
 
     static func frame(linearProgress: LinearProgress) -> ProgramTransitionFrame {
-        let t = TransitionCurveProfile.opacity.evaluate(linearProgress)
+        let t = TransitionCurve.easeInOutCubic.evaluate(linearProgress)
         let outgoingOpacity = 1 - t
         let incomingOpacity = t
         return ProgramTransitionFrame(

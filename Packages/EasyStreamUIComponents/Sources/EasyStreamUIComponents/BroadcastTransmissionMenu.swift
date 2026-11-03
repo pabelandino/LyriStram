@@ -57,6 +57,11 @@ public struct BroadcastTransmissionMenu: View {
         isExternalOutputLive || isNetworkPublishing
     }
 
+    /// Built-in display stays with the director. Output only targets another screen.
+    private var externalScreens: [ProgramOutputDisplayOption] {
+        availableScreens.filter { !$0.isBuiltIn }
+    }
+
     public var body: some View {
         Menu {
             externalDisplaySection
@@ -80,11 +85,11 @@ public struct BroadcastTransmissionMenu: View {
     @ViewBuilder
     private var externalDisplaySection: some View {
         Section("Pantalla externa") {
-            if availableScreens.isEmpty {
-                Text("No hay pantallas detectadas")
+            if externalScreens.isEmpty {
+                Text("Conecta un monitor, TV o proyector. La pantalla del director no se usa.")
             } else {
                 Picker("Pantalla", selection: $programOutputSettings.selectedScreenIndex) {
-                    ForEach(availableScreens) { screen in
+                    ForEach(externalScreens) { screen in
                         Text(screenLabel(screen)).tag(screen.id)
                     }
                 }

@@ -11,13 +11,9 @@ enum DirectorRemoteVideoTrackPolicy {
         sources: [ConnectedCameraSource],
         previewSourceID: CameraSourceID?,
         programSourceID: CameraSourceID?,
+        decodeAllConnectedFeeds: Bool,
         assignmentFor: (CameraSourceID) -> CameraSwitcherAssignment
     ) {
-        let connectedWithVideo = sources.filter {
-            $0.connectionState == .connected && $0.videoTrack != nil
-        }.count
-        let decodeAllConnectedFeeds = connectedWithVideo <= 8
-
         var activeIDs = Set<CameraSourceID>()
         for source in sources {
             activeIDs.insert(source.id)

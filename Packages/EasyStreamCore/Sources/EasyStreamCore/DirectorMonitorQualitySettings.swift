@@ -65,7 +65,7 @@ public struct DirectorMonitorQualitySettings: Codable, Sendable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         prefetchTakeTarget = try container.decodeIfPresent(Bool.self, forKey: .prefetchTakeTarget) ?? true
-        pauseIdleCameraStreams = try container.decodeIfPresent(Bool.self, forKey: .pauseIdleCameraStreams) ?? true
+        pauseIdleCameraStreams = try container.decodeIfPresent(Bool.self, forKey: .pauseIdleCameraStreams) ?? false
         idleTileSnapshotsEnabled = try container.decodeIfPresent(Bool.self, forKey: .idleTileSnapshotsEnabled)
             ?? Self.defaultIdleTileSnapshotsEnabled
         energySaverMode = try container.decodeIfPresent(Bool.self, forKey: .energySaverMode) ?? false

@@ -8,6 +8,29 @@ public struct RemoteCameraSettings: Codable, Sendable, Equatable {
     public var whiteBalance: String
     public var activeLens: String
 
+    private enum CodingKeys: String, CodingKey {
+        case isMuted, zoomFactor, exposureBias, whiteBalance, activeLens
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        // Cameras may report only the field that changed. Missing keys keep the defaults.
+        isMuted = try container.decodeIfPresent(Bool.self, forKey: .isMuted) ?? false
+        zoomFactor = try container.decodeIfPresent(Double.self, forKey: .zoomFactor) ?? 1
+        exposureBias = try container.decodeIfPresent(Float.self, forKey: .exposureBias) ?? 0
+        whiteBalance = try container.decodeIfPresent(String.self, forKey: .whiteBalance) ?? "auto"
+        activeLens = try container.decodeIfPresent(String.self, forKey: .activeLens) ?? "wide"
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(isMuted, forKey: .isMuted)
+        try container.encode(zoomFactor, forKey: .zoomFactor)
+        try container.encode(exposureBias, forKey: .exposureBias)
+        try container.encode(whiteBalance, forKey: .whiteBalance)
+        try container.encode(activeLens, forKey: .activeLens)
+    }
+
     public init(
         isMuted: Bool = false,
         zoomFactor: Double = 1,
@@ -119,6 +142,13 @@ public enum SwitchTransitionKind: String, Sendable, Codable, CaseIterable, Ident
 
     public var id: String { rawValue }
 
+    /// Operator picker: hard cut, or one smooth crossfade. Older effects fold into dissolve.
+    public static let operatorChoices: [SwitchTransitionKind] = [.cut, .dissolve]
+
+    public var presentedKind: SwitchTransitionKind {
+        self == .cut ? .cut : .dissolve
+    }
+
     public var displayName: String {
         switch self {
         case .cut: "Corte"
@@ -140,17 +170,19 @@ public struct SwitchTransition: Sendable, Equatable, Codable {
         self.duration = kind == .cut ? 0 : duration
     }
 
+    /// Fixed crossfade. The operator does not set a duration.
+    public static let dissolveDuration: TimeInterval = 0.8
+
     public static func defaultDuration(for kind: SwitchTransitionKind) -> TimeInterval {
         switch kind {
         case .cut: 0
-        case .fade: 0.8
-        case .dissolve: 0.5
+        case .fade, .dissolve: dissolveDuration
         case .wipe, .slide, .zoom: 0.7
         }
     }
 
     public static let cut = SwitchTransition(kind: .cut, duration: 0)
-    public static let dissolve = SwitchTransition(kind: .dissolve, duration: 0.5)
+    public static let dissolve = SwitchTransition(kind: .dissolve, duration: dissolveDuration)
     public static let fade = SwitchTransition(kind: .fade, duration: 0.8)
     public static let wipe = SwitchTransition(kind: .wipe, duration: 0.7)
     public static let slide = SwitchTransition(kind: .slide, duration: 0.7)

@@ -101,9 +101,7 @@ final class DirectorSessionViewModel {
         facebookSession.selectedPageID
     }
 
-    var selectedTransition: SwitchTransition = TransitionPreferencesStore.load() {
-        didSet { TransitionPreferencesStore.save(selectedTransition) }
-    }
+    let selectedTransition: SwitchTransition = .cut
 
     var inspectorSourceID: CameraSourceID?
     var outgoingProgramSourceID: CameraSourceID?
@@ -121,6 +119,8 @@ final class DirectorSessionViewModel {
     private(set) var transitionIncomingVideoTrack: RTCVideoTrack?
     /// Take target pinned by source ID through switcher handoff (cut + animated end).
     private(set) var takeHandoffSourceID: CameraSourceID?
+    /// Drops a finished take that was replaced by a newer camera change.
+    private var takeGeneration: UInt = 0
 
     private let settingsStore = CameraSettingsStore.shared
     private let discovery = DiscoveryService()
@@ -181,7 +181,6 @@ final class DirectorSessionViewModel {
         guard let previewSourceID,
               previewSourceID != programSourceID else { return nil }
 
-        // Before first take, mirror the selected PREV source on the large PROG monitor.
         if programSourceID == nil, showsOffAirPreviewOnProgramMonitor {
             return track(for: previewSourceID)
         }
@@ -191,17 +190,20 @@ final class DirectorSessionViewModel {
         return track(for: warmID)
     }
 
-    /// Program monitor reads one cached camera. It does not fall back to the previous program track.
+    /// On air shows program. Off air shows the selected preview so the monitor is not black.
     var programDisplayTrack: RTCVideoTrack? {
         if isTransitioning {
-            return outgoingProgramVideoTrack ?? track(for: monitorSourceID) ?? programVideoTrack
+            return outgoingProgramVideoTrack ?? programVideoTrack
         }
-        return track(for: monitorSourceID) ?? programVideoTrack
+        if programSourceID != nil {
+            return programVideoTrack
+        }
+        return previewVideoTrack
     }
 
-    /// The selected camera is already the program picture, so the incoming lane must not paint over it.
+    /// Before the first take, the large monitor follows the selected camera.
     var showsOffAirPreviewOnProgramMonitor: Bool {
-        false
+        programSourceID == nil && previewVideoTrack != nil
     }
 
     var activeStreamingSourceCount: Int {
@@ -329,8 +331,16 @@ final class DirectorSessionViewModel {
     }
 
     func selectPreview(_ sourceID: CameraSourceID) {
-        guard takeHandoffSourceID == nil else { return }
-        // On-air source stays on the program bus — preview lane is for the next take target only.
+        // Already live: the camera the operator picks replaces program immediately.
+        if programSourceID != nil, sourceID != programSourceID {
+            previewSourceID = sourceID
+            monitorSourceID = sourceID
+            incomingWarmPreviewSourceID = sourceID
+            syncPreviewMonitor()
+            takeToProgram(target: sourceID)
+            return
+        }
+
         guard sourceID != programSourceID else {
             syncRemoteVideoTrackPolicy()
             return
@@ -343,7 +353,9 @@ final class DirectorSessionViewModel {
         // Optimistic UI — transport/network debounced; inspector stays independent (settings scroll).
         previewSourceID = sourceID
         monitorSourceID = sourceID
-        DirectorDecodedSignalCache.shared.setLiveSelection(sourceID)
+        if programSourceID == nil {
+            DirectorDecodedSignalCache.shared.setLiveSelection(sourceID)
+        }
         syncRemoteVideoTrackPolicy()
         syncPreviewMonitor()
         // Warm the program incoming lane immediately so the next cut already has frames.
@@ -370,11 +382,40 @@ final class DirectorSessionViewModel {
     }
 
     func takeToProgram() {
-        guard !isTransitioning else { return }
-        guard takeHandoffSourceID == nil else { return }
+        guard let previewSourceID else { return }
+        takeToProgram(target: previewSourceID)
+    }
+
+    func takeToProgram(target: CameraSourceID) {
+        takeGeneration &+= 1
+        let generation = takeGeneration
         switcherQueueTail?.cancel()
         switcherQueueTail = Task { @MainActor in
-            await self.performTakeToProgram()
+            await self.performTakeToProgram(generation: generation, target: target)
+        }
+    }
+
+    /// Drops the live program. Preview stays selected for the next take.
+    func leaveAir() {
+        guard programSourceID != nil else { return }
+        takeGeneration &+= 1
+        let generation = takeGeneration
+        isTransitioning = false
+        takeHandoffSourceID = nil
+        outgoingProgramSourceID = nil
+        transitionIncomingVideoTrack = nil
+        transitionProgress = 0
+        switcherQueueTail?.cancel()
+        switcherQueueTail = Task { @MainActor in
+            let events = await switcher.clearProgram()
+            guard generation == takeGeneration else { return }
+            applySwitcherEvents(events)
+            statusMessage = "Fuera del aire"
+            if let previewSourceID {
+                DirectorDecodedSignalCache.shared.setLiveSelection(previewSourceID)
+            } else {
+                DirectorDecodedSignalCache.shared.setDisplayTracks(onAir: nil, incoming: nil, outgoing: nil)
+            }
         }
     }
 
@@ -480,92 +521,33 @@ final class DirectorSessionViewModel {
         takeToProgram()
     }
 
-    private func performTakeToProgram() async {
-        let transition = selectedTransition
-        await switcher.setPreferredTransition(transition)
-
-        guard let target = previewSourceID else { return }
-        if let programSourceID, target == programSourceID { return }
-
-        guard let incoming = await waitForVideoTrack(sourceID: target) else {
+    private func performTakeToProgram(generation: UInt, target: CameraSourceID) async {
+        let previousProgram = await switcher.state.programSourceID
+        guard generation == takeGeneration else { return }
+        guard previousProgram != target else { return }
+        guard track(for: target) != nil else {
             lastError = "La cámara en preview aún no tiene señal de video."
             statusMessage = "Espera a que la cámara conecte antes de llevarla al aire."
             return
         }
 
-        takeHandoffSourceID = target
-        transitionIncomingVideoTrack = incoming
-        incomingWarmPreviewSourceID = target
+        await switcher.setPreferredTransition(.cut)
+        guard generation == takeGeneration else { return }
+        let events = await switcher.take(to: target, transition: .cut)
+        guard generation == takeGeneration else { return }
+
+        previewSourceID = target
         monitorSourceID = target
-        DirectorDecodedSignalCache.shared.setLiveSelection(target)
-
-        if transition.kind == .cut || transition.duration <= 0 {
-            ProgramBusTrace.event(
-                "director take cut begin target=\(ProgramBusTrace.shortSourceID(target.rawValue)) prevProgram=\(ProgramBusTrace.shortSourceID(programSourceID?.rawValue)) preview=\(ProgramBusTrace.shortSourceID(previewSourceID?.rawValue))"
-            )
-            outgoingProgramSourceID = nil
-            transitionProgress = 1
-            isTransitioning = false
-
-            // Cut on the frame already decoded in preview. Do not wait for the encoder to ramp to HD.
-            ProgramFrameDisplayBus.shared.beginSubHDOnAirGracePeriod(milliseconds: 1_200)
-            _ = await ProgramFrameDisplayBus.shared.waitForIncomingDisplaySample(maxAttempts: 4, intervalMs: 4)
-
-            let events = await switcher.take(to: target, transition: transition)
-            applySwitcherEvents(events)
-            await broadcastSwitcherAssignmentsNow()
-            ProgramBusTrace.event(
-                "director take cut end program=\(ProgramBusTrace.shortSourceID(programSourceID?.rawValue)) preview=\(ProgramBusTrace.shortSourceID(previewSourceID?.rawValue)) incomingTrack=\(ProgramBusTrace.shortTrackId(incoming.trackId))"
-            )
-            await completeTakeHandoff()
-            return
-        }
-
-        outgoingProgramSourceID = programSourceID
-        isTransitioning = true
-        transitionProgress = 0
-        await Task.yield()
-
-#if os(iOS)
-        let transitionFrameRate = 30
-#else
-        let transitionFrameRate = 60
-#endif
-        await ProgramTransitionDisplayLink.animate(
-            duration: transition.duration,
-            preferredFramesPerSecond: transitionFrameRate
-        ) { [self] progress in
-            transitionProgress = progress
-        }
-
-        transitionProgress = 1
-        let events = await switcher.take(to: target, transition: transition)
-        applySwitcherEvents(events)
-        await broadcastSwitcherAssignmentsNow()
-        outgoingProgramSourceID = nil
+        incomingWarmPreviewSourceID = target
         isTransitioning = false
-        await completeTakeHandoff()
-    }
-
-    /// Lets compositor finish handoff while take target remains pinned by source ID.
-    private func completeTakeHandoff() async {
-        await Task.yield()
-        takeHandoffSourceID = nil
+        transitionProgress = 1
+        outgoingProgramSourceID = nil
         transitionIncomingVideoTrack = nil
-        syncRemoteVideoTrackPolicy()
-    }
-
-    private func waitForVideoTrack(sourceID: CameraSourceID, attempts: Int = 8) async -> RTCVideoTrack? {
-        for attempt in 0..<attempts {
-            if let track = track(for: sourceID) {
-                return track
-            }
-            if attempt == 0 {
-                broadcastSwitcherAssignments()
-            }
-            try? await Task.sleep(for: .milliseconds(100))
-        }
-        return track(for: sourceID)
+        takeHandoffSourceID = nil
+        applySwitcherEvents(events)
+        DirectorDecodedSignalCache.shared.setLiveSelection(target)
+        ProgramFrameDisplayBus.shared.beginSubHDOnAirGracePeriod(milliseconds: 1_200)
+        Task { await broadcastSwitcherAssignmentsNow() }
     }
 
     func setProgramAudioSource(_ sourceID: CameraSourceID) {
@@ -939,17 +921,13 @@ final class DirectorSessionViewModel {
     /// Idle sources stop decoding on the director — only mutates tracks whose role changed.
     private func syncRemoteVideoTrackPolicy() {
         let quality = monitorQuality.effectiveSettings()
-        let connectedFeeds = sources.filter {
-            $0.connectionState == .connected && $0.videoTrack != nil
-        }.count
-        // Small productions: every tile decodes its light live stream. Larger sets keep PREV+PROG only.
-        DirectorPreviewTileTrackPolicy.visibilityPolicy =
-            connectedFeeds <= 6 ? .allConnectedSources : .previewSourceOnly
+        DirectorPreviewTileTrackPolicy.visibilityPolicy = .allConnectedSources
 
         DirectorRemoteVideoTrackPolicy.applyDiff(
             sources: sources,
             previewSourceID: previewSourceID,
             programSourceID: programSourceID,
+            decodeAllConnectedFeeds: true,
             assignmentFor: { switcherAssignment(for: $0) }
         )
         let tracks = Dictionary(uniqueKeysWithValues: sources.map { ($0.id, $0.videoTrack) })

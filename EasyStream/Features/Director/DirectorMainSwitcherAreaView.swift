@@ -20,7 +20,7 @@ struct DirectorMainSwitcherAreaView: View {
                 viewModel: viewModel,
                 liveProgramAir: liveProgramAir
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
             .layoutPriority(1)
 
             Spacer(minLength: 0)

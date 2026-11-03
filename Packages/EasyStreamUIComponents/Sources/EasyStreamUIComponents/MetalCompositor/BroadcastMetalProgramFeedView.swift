@@ -511,6 +511,10 @@ final class BroadcastMetalProgramFeedContainerNSView: NSView, ProgramCrossfadeHo
         compositor.attach(to: compositorView)
     }
 
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         guard window != nil else { return }

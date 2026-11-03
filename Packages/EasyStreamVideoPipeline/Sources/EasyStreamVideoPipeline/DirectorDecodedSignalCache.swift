@@ -14,6 +14,9 @@ public final class DirectorDecodedSignalCache: @unchecked Sendable {
     private var sinks: [CameraSourceID: SignalSink] = [:]
     private var tracks: [CameraSourceID: RTCVideoTrack] = [:]
     private var liveSelection: CameraSourceID?
+    private var onAirTrack: RTCVideoTrack?
+    private var incomingTrack: RTCVideoTrack?
+    private var outgoingTrack: RTCVideoTrack?
 
     private init() {}
 
@@ -43,15 +46,51 @@ public final class DirectorDecodedSignalCache: @unchecked Sendable {
     public func setLiveSelection(_ sourceID: CameraSourceID?) {
         lock.lock()
         liveSelection = sourceID
+        onAirTrack = sourceID.flatMap { tracks[$0] }
         let sink = sourceID.flatMap { sinks[$0] }
         lock.unlock()
-        sink?.replayLatestToProgram()
+        sink?.replayAssignedLanes()
+    }
+
+    /// Routes already-decoded signals into program lanes. Does not add or remove WebRTC renderers.
+    public func setDisplayTracks(
+        onAir: RTCVideoTrack?,
+        incoming: RTCVideoTrack?,
+        outgoing: RTCVideoTrack?
+    ) {
+        lock.lock()
+        let changed = onAirTrack !== onAir || incomingTrack !== incoming || outgoingTrack !== outgoing
+        onAirTrack = onAir
+        incomingTrack = incoming
+        outgoingTrack = outgoing
+        if let onAir, let match = tracks.first(where: { $0.value === onAir })?.key {
+            liveSelection = match
+        }
+        let activeSinks = Array(sinks.values)
+        lock.unlock()
+        guard changed else { return }
+        for sink in activeSinks {
+            sink.replayAssignedLanes()
+        }
+    }
+
+    func lanes(for sourceID: CameraSourceID) -> [ProgramFrameBusSlot] {
+        lock.lock()
+        let track = tracks[sourceID]
+        let onAir = onAirTrack
+        let incoming = incomingTrack
+        let outgoing = outgoingTrack
+        lock.unlock()
+        guard let track else { return [] }
+        var lanes: [ProgramFrameBusSlot] = []
+        if onAir === track { lanes.append(.programOnAir) }
+        if incoming === track { lanes.append(.programIncoming) }
+        if outgoing === track { lanes.append(.programOutgoing) }
+        return lanes
     }
 
     func isLiveSelection(_ sourceID: CameraSourceID) -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return liveSelection == sourceID
+        lanes(for: sourceID).contains(.programOnAir)
     }
 
     func store(sink: SignalSink, for sourceID: CameraSourceID) {
@@ -102,15 +141,23 @@ final class SignalSink: NSObject, RTCVideoRenderer, @unchecked Sendable {
         lock.lock()
         latest = pixelBuffer
         lock.unlock()
-        guard cache?.isLiveSelection(sourceID) == true else { return }
-        ProgramFrameDisplayBus.shared.publishCachedSelection(pixelBuffer: pixelBuffer)
+        publish(pixelBuffer)
     }
 
-    func replayLatestToProgram() {
+    func replayAssignedLanes() {
         lock.lock()
         let frame = latest
         lock.unlock()
         guard let frame else { return }
-        ProgramFrameDisplayBus.shared.publishCachedSelection(pixelBuffer: frame)
+        publish(frame)
+    }
+
+    private func publish(_ pixelBuffer: CVPixelBuffer) {
+        guard let cache else { return }
+        let lanes = cache.lanes(for: sourceID)
+        guard !lanes.isEmpty else { return }
+        for lane in lanes {
+            ProgramFrameDisplayBus.shared.publish(pixelBuffer: pixelBuffer, lane: lane, enforceQualityGate: false)
+        }
     }
 }

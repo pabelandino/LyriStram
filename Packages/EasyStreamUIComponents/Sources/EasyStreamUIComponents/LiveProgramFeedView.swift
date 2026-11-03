@@ -61,7 +61,8 @@ public struct LiveProgramFeedView: View {
                 transitionKind: transitionKind,
                 emptyStatusMessage: emptyStatusMessage,
                 showsEmptyWhenNoGraphics: !isCleanBroadcastOutput,
-                hasAirGraphics: !widgetLayers.isEmpty || fullScreenResource != nil
+                hasAirGraphics: !widgetLayers.isEmpty || fullScreenResource != nil,
+                showsLiveResolutionBadge: !isCleanBroadcastOutput
             )
 
             if let fullScreen = fullScreenResource, let fileURL = fullScreenFileURL {

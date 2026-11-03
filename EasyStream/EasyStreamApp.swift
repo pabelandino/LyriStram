@@ -67,11 +67,10 @@ struct EasyStreamApp: App {
 
         Window("", id: "program-output") {
             DirectorProgramOutputWindowView()
-                .broadcastStudioWindowStyle()
+                .preferredColorScheme(.dark)
         }
         .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
-        .defaultPosition(.center)
+        .defaultSize(width: 1280, height: 720)
 #endif
     }
 }

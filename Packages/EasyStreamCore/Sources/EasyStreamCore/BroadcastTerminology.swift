@@ -17,4 +17,6 @@ public enum BroadcastTerminology {
     /// Instant switch: preview becomes program (broadcast "TAKE", not "cut the connection").
     public static let takeAction = "Al aire"
     public static let takeDescription = "Pasa la vista previa seleccionada al programa"
+    public static let leaveAirAction = "Quitar del aire"
+    public static let leaveAirDescription = "Saca el programa del aire"
 }
