@@ -37,20 +37,36 @@ final class AppCoordinator {
 
 struct RootView: View {
     @State private var coordinator = AppCoordinator()
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    /// Folded iPhone Duo and a regular iPhone are compact. The inner Duo display and iPad are regular.
+    private var offersDirector: Bool {
+        AppRoleAvailability.current(horizontalSizeClass: horizontalSizeClass).offersDirector
+    }
 
     var body: some View {
         NavigationStack {
-            if let role = coordinator.selectedRole {
+            if !offersDirector {
+                CameraSessionView()
+            } else if let role = coordinator.selectedRole {
                 sessionView(for: role)
                     .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cambiar rol") {
-                                coordinator.resetRole()
+                        if role == .camera {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button {
+                                    coordinator.resetRole()
+                                } label: {
+                                    Image(systemName: "chevron.backward")
+                                }
+                                .accessibilityLabel("Cambiar rol")
                             }
                         }
                     }
             } else {
-                RoleSelectionScreen(selectedRole: $coordinator.selectedRole)
+                RoleSelectionScreen(
+                    selectedRole: $coordinator.selectedRole,
+                    suggestedRole: .director
+                )
             }
         }
         .background(BroadcastTheme.panelBackground)
@@ -65,7 +81,7 @@ struct RootView: View {
     private func sessionView(for role: AppRole) -> some View {
         switch role {
         case .director:
-            DirectorSessionView()
+            DirectorSessionView(onLeaveRole: { coordinator.resetRole() })
         case .camera:
             CameraSessionView()
         }

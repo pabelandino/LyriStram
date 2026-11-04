@@ -13,23 +13,20 @@ struct DirectorProgramOutputCorePanel: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(BroadcastTheme.subtleText)
 
-            Color.clear
-                .frame(minHeight: 0, maxHeight: .infinity)
-                .overlay {
-                    BroadcastFixedAspectContainer {
-                        DirectorProgramLiveMonitorView(
-                            viewModel: viewModel,
-                            liveProgramAir: liveProgramAir
-                        )
-                    }
-                    .animation(nil, value: viewModel.isTransitioning)
-                    .animation(nil, value: viewModel.transitionProgress)
-                    .animation(nil, value: viewModel.programSourceID)
-                }
+            BroadcastAspectRatioLayout {
+                DirectorProgramLiveMonitorView(
+                    viewModel: viewModel,
+                    liveProgramAir: liveProgramAir
+                )
+            }
+            .frame(maxWidth: .infinity)
+            .animation(nil, value: viewModel.isTransitioning)
+            .animation(nil, value: viewModel.transitionProgress)
+            .animation(nil, value: viewModel.programSourceID)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(.red, lineWidth: 3)
+                    .strokeBorder(viewModel.programSourceID == nil ? Color.clear : Color.red, lineWidth: 3)
             }
             .overlay(alignment: .topLeading) {
                 if let name = programDisplayName {
@@ -57,7 +54,7 @@ struct DirectorProgramOutputCorePanel: View {
                 }
             }
         }
-        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private var programDisplayName: String? {

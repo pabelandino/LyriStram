@@ -1,15 +1,12 @@
 import SwiftUI
 import EasyStreamCore
 import EasyStreamUIComponents
-import EasyStreamTransport
 
-/// Unified director settings — quality, multiview monitor, and studio controls in one surface.
+/// Unified director settings — quality, multiview monitor, and live output.
 struct DirectorStudioSettingsHubView: View {
     /// Plain references — avoids re-rendering this window on every encoder/publisher stats tick.
     let viewModel: DirectorSessionViewModel
-    let mediaViewModel: BroadcastMediaViewModel
     @Bindable var previewMonitor: DirectorPreviewMonitorStore
-    @Bindable var intercomService: TeamIntercomService
 
     let initialTab: DirectorStudioSettingsTab
     let onOpenPreviewMonitor: () -> Void
@@ -32,17 +29,13 @@ struct DirectorStudioSettingsHubView: View {
 
     init(
         viewModel: DirectorSessionViewModel,
-        mediaViewModel: BroadcastMediaViewModel,
         previewMonitor: DirectorPreviewMonitorStore,
-        intercomService: TeamIntercomService,
         initialTab: DirectorStudioSettingsTab = .studio,
         onOpenPreviewMonitor: @escaping () -> Void,
         onDone: @escaping () -> Void
     ) {
         self.viewModel = viewModel
-        self.mediaViewModel = mediaViewModel
         self.previewMonitor = previewMonitor
-        self.intercomService = intercomService
         self.initialTab = initialTab
         self.onOpenPreviewMonitor = onOpenPreviewMonitor
         self.onDone = onDone
@@ -84,11 +77,7 @@ struct DirectorStudioSettingsHubView: View {
         case .monitor:
             monitorTab
         case .studio:
-            DirectorSettingsStudioTab(
-                viewModel: viewModel,
-                mediaViewModel: mediaViewModel,
-                intercomService: intercomService
-            )
+            DirectorSettingsStudioTab(viewModel: viewModel)
         }
     }
 

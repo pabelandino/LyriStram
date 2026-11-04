@@ -12,16 +12,20 @@ struct DirectorConnectAddressCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            BroadcastSectionHeader("IP para cámaras", systemImage: "network")
+            BroadcastSectionHeader("IP para cámaras Android", systemImage: "network")
+
+            Text("Sirve para que una cámara Android encuentre al director. iPhone y iPad se descubren solos.")
+                .font(.caption2)
+                .foregroundStyle(BroadcastTheme.subtleText)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(statusLine)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                .padding(.horizontal, 4)
 
             TextField("192.168.0.10", text: $draft)
                 .textFieldStyle(.roundedBorder)
-                .font(.body.monospaced())
+                .font(.caption.monospaced())
 #if os(iOS)
                 .keyboardType(.numbersAndPunctuation)
                 .textInputAutocapitalization(.never)

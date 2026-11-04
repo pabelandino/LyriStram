@@ -15,6 +15,7 @@ extension DirectorSessionView {
     var platformSwitcherLayout: some View {
         directorWorkspaceLayout
             .background(BroadcastTheme.panelBackground)
+            .environment(\.horizontalSizeClass, horizontalSizeClass)
     }
 
     @ToolbarContentBuilder

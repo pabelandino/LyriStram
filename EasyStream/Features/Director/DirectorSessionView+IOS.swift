@@ -1,14 +1,19 @@
 #if os(iOS)
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 import EasyStreamCore
 import EasyStreamUIComponents
-import UIKit
 
 extension DirectorSessionView {
     @ViewBuilder
     var platformDirectorBody: some View {
         sessionContent
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarBackButtonHidden(true)
+            .onChange(of: horizontalSizeClass) { _, _ in
+                applyInnerOrientation()
+            }
             .sheet(isPresented: $isStreamSettingsPresented) {
                 NavigationStack {
                     StreamDestinationPanel(
@@ -33,9 +38,7 @@ extension DirectorSessionView {
             .sheet(isPresented: $isStudioSettingsPresented) {
                 DirectorStudioSettingsHubView(
                     viewModel: viewModel,
-                    mediaViewModel: mediaViewModel,
                     previewMonitor: previewMonitor,
-                    intercomService: intercomService,
                     initialTab: studioSettingsInitialTab,
                     onOpenPreviewMonitor: openPreviewMonitor,
                     onDone: { isStudioSettingsPresented = false }
@@ -53,7 +56,7 @@ extension DirectorSessionView {
 
     @ViewBuilder
     var platformSwitcherLayout: some View {
-        if UIDevice.current.userInterfaceIdiom == .pad {
+        if horizontalSizeClass == .regular {
             directorWorkspaceLayout
         } else {
             compactLayout
@@ -62,25 +65,20 @@ extension DirectorSessionView {
 
     @ToolbarContentBuilder
     var platformDirectorToolbar: some ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
-            Menu {
-                Button {
-                    openStudioSettings()
-                } label: {
-                    Label("Ajustes del estudio", systemImage: "gearshape")
-                }
-                Button {
-                    openPreviewMonitor()
-                } label: {
-                    Label("Monitor", systemImage: "display.2")
-                }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-            }
+        ToolbarItem(placement: .principal) {
+            EmptyView()
         }
     }
 
-    func platformDirectorSessionDidAppear() {}
+    func platformDirectorSessionDidAppear() {
+        applyInnerOrientation()
+    }
+
+    /// Fully stretched inner Duo is landscape only. iPad director can rotate.
+    private func applyInnerOrientation() {
+        let phone = UIDevice.current.userInterfaceIdiom == .phone
+        AppOrientationPolicy.apply(phone: phone, regularWidth: horizontalSizeClass == .regular)
+    }
 
     func openStudioSettings(tab: DirectorStudioSettingsTab = .studio) {
         studioSettingsInitialTab = tab

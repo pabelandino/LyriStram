@@ -48,6 +48,9 @@ final class DirectorSessionViewModel {
     /// Camera the program monitor is reading. Independent from the next-preview tally, so a cut cannot snap the picture back.
     private(set) var monitorSourceID: CameraSourceID?
     private(set) var programAudioSourceID: CameraSourceID?
+    private(set) var selectedProgramAudioInput: DirectorProgramAudioInput?
+    private var audioInputBeforeVideo: DirectorProgramAudioInput?
+    private var audioFollowedVideoID: UUID?
     private(set) var lastError: String?
     private(set) var encoderStats = VideoEncoderStats()
     private(set) var audioEncoderStats = AudioEncoderStats()
@@ -134,6 +137,7 @@ final class DirectorSessionViewModel {
     private var streamTask: Task<Void, Never>?
     private var encoderTask: Task<Void, Never>?
     private var audioEncoderTask: Task<Void, Never>?
+    private var pictureLatencyTask: Task<Void, Never>?
     private var publisherTask: Task<Void, Never>?
     private var stuckSourceWatchTask: Task<Void, Never>?
     private var monitorQualityBroadcastTask: Task<Void, Never>?
@@ -255,6 +259,7 @@ final class DirectorSessionViewModel {
 
         observeProgramEncoder()
         observeProgramAudioEncoder()
+        observePictureLatency()
         observeBroadcastPublisher()
         restoreFacebookSession()
 
@@ -310,6 +315,7 @@ final class DirectorSessionViewModel {
         streamTask?.cancel()
         encoderTask?.cancel()
         audioEncoderTask?.cancel()
+        pictureLatencyTask?.cancel()
         publisherTask?.cancel()
         stuckSourceWatchTask?.cancel()
         monitorQualityBroadcastTask?.cancel()
@@ -325,6 +331,9 @@ final class DirectorSessionViewModel {
         monitorSourceID = nil
         programSourceID = nil
         programAudioSourceID = nil
+        selectedProgramAudioInput = nil
+        ProgramAudioMonitor.shared.setFeedsLiveVideo(false)
+        ProgramAudioMonitor.shared.setUsesLocalInput(false, uid: nil)
         outgoingProgramSourceID = nil
         transitionIncomingVideoTrack = nil
         takeHandoffSourceID = nil
@@ -566,10 +575,63 @@ final class DirectorSessionViewModel {
     }
 
     func setProgramAudioSource(_ sourceID: CameraSourceID) {
-        Task {
-            if let event = await switcher.setProgramAudioSource(sourceID) {
-                applySwitcherEvent(event)
+        selectProgramAudio(.camera(sourceID))
+    }
+
+    func selectProgramAudio(_ input: DirectorProgramAudioInput) {
+        switch input {
+        case .camera(let sourceID):
+            audioInputBeforeVideo = input
+            selectedProgramAudioInput = input
+            ProgramAudioMonitor.shared.setFeedsLiveVideo(false)
+            ProgramAudioMonitor.shared.setUsesLocalInput(false, uid: nil)
+            Task {
+                if let event = await switcher.setProgramAudioSource(sourceID) {
+                    applySwitcherEvent(event)
+                }
+                updateAudioRouting()
+                syncProgramAudioEncoder()
             }
+        case .liveVideo:
+            if selectedProgramAudioInput != .liveVideo {
+                audioInputBeforeVideo = selectedProgramAudioInput
+            }
+            selectedProgramAudioInput = input
+            ProgramAudioMonitor.shared.setUsesLocalInput(false, uid: nil)
+            ProgramAudioMonitor.shared.setFeedsLiveVideo(true)
+            updateAudioRouting()
+            syncProgramAudioEncoder()
+        case .localDevice(let uid):
+            audioInputBeforeVideo = input
+            selectedProgramAudioInput = input
+            ProgramAudioMonitor.shared.setFeedsLiveVideo(false)
+            ProgramAudioMonitor.shared.setUsesLocalInput(true, uid: uid)
+            updateAudioRouting()
+            syncProgramAudioEncoder()
+        }
+    }
+
+    /// A library video on air plays through the monitor output and the transmission.
+    /// Passing the same id again does not override a source the operator picked afterwards.
+    func syncAudioWithProgramPlate(videoID: UUID?) {
+        if let videoID {
+            guard audioFollowedVideoID != videoID else { return }
+            audioFollowedVideoID = videoID
+            selectProgramAudio(.liveVideo)
+            return
+        }
+        guard audioFollowedVideoID != nil else { return }
+        audioFollowedVideoID = nil
+        guard selectedProgramAudioInput == .liveVideo else { return }
+        if let previous = audioInputBeforeVideo, previous != .liveVideo {
+            selectProgramAudio(previous)
+        } else if let programAudioSourceID {
+            selectProgramAudio(.camera(programAudioSourceID))
+        } else {
+            selectedProgramAudioInput = nil
+            ProgramAudioMonitor.shared.setFeedsLiveVideo(false)
+            updateAudioRouting()
+            syncProgramAudioEncoder()
         }
     }
 
@@ -876,6 +938,9 @@ final class DirectorSessionViewModel {
                 }
             case .programAudioChanged(let id):
                 programAudioSourceID = id
+                if selectedProgramAudioInput == nil, let id {
+                    selectedProgramAudioInput = .camera(id)
+                }
                 updateAudioRouting()
                 syncProgramAudioEncoder()
             case .fallbackChanged, .transitionChanged:
@@ -1075,10 +1140,16 @@ final class DirectorSessionViewModel {
     }
 
     private func updateAudioRouting() {
+        let cameraAudioID: CameraSourceID?
+        if case .camera(let sourceID) = selectedProgramAudioInput {
+            cameraAudioID = sourceID
+        } else if selectedProgramAudioInput == nil {
+            cameraAudioID = programAudioSourceID
+        } else {
+            cameraAudioID = nil
+        }
         for source in sources {
-            // Decode mic audio only for the on-air source — preview tiles are video-only.
-            let onAir = source.id == programSourceID && source.id == programAudioSourceID
-            source.audioTrack?.isEnabled = onAir
+            source.audioTrack?.isEnabled = source.id == cameraAudioID
         }
     }
 
@@ -1156,13 +1227,25 @@ final class DirectorSessionViewModel {
 
     private func syncProgramAudioEncoder() {
         Task {
-            guard programAudioSourceID != nil else {
+            let hasSource = selectedProgramAudioInput != nil || programAudioSourceID != nil
+            guard hasSource else {
                 await programAudioEncoder.stop()
                 audioEncoderStats = AudioEncoderStats()
                 return
             }
             await programAudioEncoder.start()
             audioEncoderStats = await programAudioEncoder.stats()
+        }
+    }
+
+    private func observePictureLatency() {
+        pictureLatencyTask?.cancel()
+        pictureLatencyTask = Task {
+            while !Task.isCancelled {
+                let delay = await streamReceiver.videoReceptionDelayMs(for: programSourceID ?? programAudioSourceID)
+                ProgramAudioMonitor.shared.notePictureLatency(delay)
+                try? await Task.sleep(for: .seconds(1))
+            }
         }
     }
 

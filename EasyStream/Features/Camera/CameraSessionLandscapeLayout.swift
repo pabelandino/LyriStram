@@ -16,7 +16,11 @@ struct CameraSessionLandscapeLayout: View {
     let exposureBinding: Binding<Float>
     let whiteBalanceBinding: Binding<WhiteBalanceModeOption>
 
-    private let layoutKind = CameraSessionLayoutKind.current
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var layoutKind: CameraSessionLayoutKind {
+        CameraSessionLayoutKind.resolving(horizontalSizeClass)
+    }
 
     var body: some View {
         GeometryReader { geometry in

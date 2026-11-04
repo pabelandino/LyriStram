@@ -41,19 +41,20 @@ public struct ProgramAudioSourcePanel: View {
                     Button {
                         onSelect(source.id)
                     } label: {
-                        HStack(spacing: 10) {
+                        HStack(alignment: .center, spacing: 10) {
                             Image(systemName: source.id == programAudioSourceID ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(source.id == programAudioSourceID ? BroadcastTheme.audioGold : BroadcastTheme.subtleText)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(source.name)
                                     .font(.subheadline.weight(.medium))
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
                                 Text(source.isConnected ? "Conectada" : "Desconectada")
                                     .font(.caption2)
                                     .foregroundStyle(BroadcastTheme.subtleText)
                             }
-
-                            Spacer()
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
                             if source.id == programAudioSourceID {
                                 BroadcastTallyPill(BroadcastTerminology.audioShort, color: BroadcastTheme.audioGold)

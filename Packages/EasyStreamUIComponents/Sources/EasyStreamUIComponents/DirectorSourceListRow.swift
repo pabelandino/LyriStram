@@ -9,6 +9,7 @@ public struct DirectorSourceListRow: View {
     let isAudio: Bool
     let isConnected: Bool
     let connectionState: StreamConnectionState
+    let signalLevel: Int
     let isSelected: Bool
     let onSelect: () -> Void
     let onReconnect: (() -> Void)?
@@ -21,6 +22,7 @@ public struct DirectorSourceListRow: View {
         isAudio: Bool,
         isConnected: Bool,
         connectionState: StreamConnectionState = .connected,
+        signalLevel: Int = 4,
         isSelected: Bool,
         onSelect: @escaping () -> Void,
         onReconnect: (() -> Void)? = nil
@@ -32,38 +34,44 @@ public struct DirectorSourceListRow: View {
         self.isAudio = isAudio
         self.isConnected = isConnected
         self.connectionState = connectionState
+        self.signalLevel = signalLevel
         self.isSelected = isSelected
         self.onSelect = onSelect
         self.onReconnect = onReconnect
     }
 
     public var body: some View {
-        HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
             Button(action: onSelect) {
-                HStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
                     RoundedRectangle(cornerRadius: 2, style: .continuous)
                         .fill(accentBarColor)
                         .frame(width: 4)
                         .padding(.vertical, 4)
 
                     VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
+                        HStack(alignment: .top, spacing: 8) {
                             CameraPlatformBrandIcon(platform: platform, size: 18)
                             Text(name)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(BroadcastTheme.primaryText)
-                                .lineLimit(1)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            SignalStrengthView(level: signalLevel)
                         }
 
-                        HStack(spacing: 6) {
-                            if isPreview {
-                                BroadcastTallyPill(BroadcastTerminology.previewShort, color: BroadcastTheme.previewGreen)
-                            }
-                            if isProgram {
-                                BroadcastTallyPill(BroadcastTerminology.programShort, color: BroadcastTheme.programRed)
-                            }
-                            if isAudio {
-                                BroadcastTallyPill(BroadcastTerminology.audioShort, color: BroadcastTheme.audioGold)
+                        if isPreview || isProgram || isAudio {
+                            HStack(spacing: 6) {
+                                if isPreview {
+                                    BroadcastTallyPill(BroadcastTerminology.previewShort, color: BroadcastTheme.previewGreen)
+                                }
+                                if isProgram {
+                                    BroadcastTallyPill(BroadcastTerminology.programShort, color: BroadcastTheme.programRed)
+                                }
+                                if isAudio {
+                                    BroadcastTallyPill(BroadcastTerminology.audioShort, color: BroadcastTheme.audioGold)
+                                }
                             }
                         }
 
@@ -75,13 +83,6 @@ public struct DirectorSourceListRow: View {
                             )
                         }
                     }
-
-                    Spacer(minLength: 0)
-
-                    Circle()
-                        .fill(isConnected ? BroadcastTheme.previewGreen : Color.orange)
-                        .frame(width: 8, height: 8)
-                        .shadow(color: isConnected ? BroadcastTheme.previewGreen.opacity(0.6) : .clear, radius: 4)
                 }
             }
             .buttonStyle(.plain)
@@ -89,6 +90,7 @@ public struct DirectorSourceListRow: View {
             if !isConnected, let onReconnect {
                 Button("Reconectar", systemImage: "arrow.clockwise.circle.fill", action: onReconnect)
                     .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .foregroundStyle(BroadcastTheme.studioAccent)
                     .buttonStyle(.plain)
                     .help("Reconectar cámara")

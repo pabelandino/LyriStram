@@ -14,6 +14,7 @@ final class PlayoutTapAudioDevice: NSObject, RTCAudioDevice {
     private var sourceNode: AVAudioSourceNode?
     private var outputFormat: AVAudioFormat?
 
+    private var wantsLocalCapture = false
     private var _isInitialized = false
     private var _isPlayoutInitialized = false
     private var _isPlaying = false
@@ -101,6 +102,30 @@ final class PlayoutTapAudioDevice: NSObject, RTCAudioDevice {
                 return kAudioUnitErr_Uninitialized
             }
 
+            let route = ProgramAudioRouteFlags.shared.snapshot()
+            let byteCount = Int(frameCount) * Int(channels) * MemoryLayout<Int16>.size
+
+            if route.feedLiveVideo {
+                self.silence(audioBufferList, byteCount: byteCount)
+                return noErr
+            }
+
+            if route.localCapture {
+                ProgramAudioDelayBuffer.shared.setDelay(
+                    milliseconds: route.delayMs,
+                    sampleRate: sampleRate,
+                    channels: UInt32(channels)
+                )
+                let delayed = ProgramAudioDelayBuffer.shared.pull(byteCount: byteCount)
+                delayed.withUnsafeBytes { raw in
+                    if let base = raw.baseAddress, let destination = audioBufferList.pointee.mBuffers.mData {
+                        memcpy(destination, base, min(byteCount, raw.count))
+                    }
+                }
+                self.tapPCM(from: audioBufferList, frameCount: frameCount, sampleRate: sampleRate, channels: UInt32(channels))
+                return noErr
+            }
+
             var flags: AudioUnitRenderActionFlags = []
             var timestamp = AudioTimeStamp()
             let status = delegate.getPlayoutData(
@@ -110,11 +135,25 @@ final class PlayoutTapAudioDevice: NSObject, RTCAudioDevice {
                 frameCount,
                 audioBufferList
             )
+            guard status == noErr else { return status }
 
-            if status == noErr {
-                self.tapPCM(from: audioBufferList, frameCount: frameCount, sampleRate: sampleRate, channels: UInt32(channels))
+            if route.delayMs > 1 {
+                guard let rendered = self.copyPCM(from: audioBufferList, byteCount: byteCount) else { return status }
+                ProgramAudioDelayBuffer.shared.setDelay(
+                    milliseconds: route.delayMs,
+                    sampleRate: sampleRate,
+                    channels: UInt32(channels)
+                )
+                ProgramAudioDelayBuffer.shared.push(rendered)
+                let delayed = ProgramAudioDelayBuffer.shared.pull(byteCount: byteCount)
+                delayed.withUnsafeBytes { raw in
+                    if let base = raw.baseAddress, let destination = audioBufferList.pointee.mBuffers.mData {
+                        memcpy(destination, base, min(byteCount, raw.count))
+                    }
+                }
             }
 
+            self.tapPCM(from: audioBufferList, frameCount: frameCount, sampleRate: sampleRate, channels: UInt32(channels))
             return status
         }
 
@@ -125,6 +164,9 @@ final class PlayoutTapAudioDevice: NSObject, RTCAudioDevice {
         do {
             try engine.start()
             _isPlaying = true
+            if wantsLocalCapture {
+                installLocalTap()
+            }
             return true
         } catch {
             EasyStreamLog.audio.error("Failed to start playout engine: \(error.localizedDescription)")
@@ -134,6 +176,7 @@ final class PlayoutTapAudioDevice: NSObject, RTCAudioDevice {
 
     func stopPlayout() -> Bool {
         guard _isPlaying else { return true }
+        engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         if let sourceNode {
             engine.disconnectNodeOutput(sourceNode)
@@ -159,6 +202,72 @@ final class PlayoutTapAudioDevice: NSObject, RTCAudioDevice {
         return true
     }
 
+    func setLocalCaptureEnabled(_ enabled: Bool) {
+        wantsLocalCapture = enabled
+        guard _isPlaying else { return }
+        if enabled {
+            installLocalTap()
+        } else {
+            engine.inputNode.removeTap(onBus: 0)
+            ProgramAudioDelayBuffer.shared.reset()
+        }
+    }
+
+    func apply(output choice: ProgramAudioOutputChoice) {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            switch choice {
+            case .system:
+                try session.overrideOutputAudioPort(.none)
+            case .speaker:
+                try session.overrideOutputAudioPort(.speaker)
+            }
+        } catch {
+            EasyStreamLog.audio.error("Output route failed: \(error.localizedDescription)")
+        }
+    }
+
+    func selectLocalInput(uid: String?) {
+        let session = AVAudioSession.sharedInstance()
+        guard let uid, let port = session.availableInputs?.first(where: { $0.uid == uid }) else {
+            try? session.setPreferredInput(nil)
+            return
+        }
+        try? session.setPreferredInput(port)
+    }
+
+    private func installLocalTap() {
+        let input = engine.inputNode
+        input.removeTap(onBus: 0)
+        let format = input.outputFormat(forBus: 0)
+        guard format.sampleRate > 0, format.channelCount > 0 else { return }
+        input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+            guard let channel = buffer.floatChannelData else { return }
+            let frames = Int(buffer.frameLength)
+            let channels = Int(buffer.format.channelCount)
+            guard frames > 0, channels > 0 else { return }
+            var pcm = [Int16](repeating: 0, count: frames * channels)
+            for frame in 0..<frames {
+                for channelIndex in 0..<channels {
+                    let unit = max(-1, min(1, channel[channelIndex][frame]))
+                    pcm[frame * channels + channelIndex] = Int16(unit * Float(Int16.max))
+                }
+            }
+            pcm.withUnsafeBufferPointer { ProgramAudioDelayBuffer.shared.push(Data(buffer: $0)) }
+        }
+    }
+
+    private func silence(_ audioBufferList: UnsafeMutablePointer<AudioBufferList>, byteCount: Int) {
+        if let destination = audioBufferList.pointee.mBuffers.mData {
+            memset(destination, 0, byteCount)
+        }
+    }
+
+    private func copyPCM(from audioBufferList: UnsafeMutablePointer<AudioBufferList>, byteCount: Int) -> Data? {
+        guard let data = audioBufferList.pointee.mBuffers.mData, byteCount > 0 else { return nil }
+        return Data(bytes: data, count: byteCount)
+    }
+
     private func configureAudioSession() {
 #if os(iOS)
         let session = AVAudioSession.sharedInstance()
@@ -178,6 +287,7 @@ final class PlayoutTapAudioDevice: NSObject, RTCAudioDevice {
         guard byteCount > 0 else { return }
 
         let pcm = Data(bytes: data, count: byteCount)
+        ProgramAudioLevelBus.note(pcm: pcm)
         ProgramAudioTapRegistry.deliver(pcm: pcm, sampleRate: sampleRate, channels: channels, frames: frameCount)
     }
 }

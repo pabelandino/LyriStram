@@ -8,19 +8,9 @@ struct DirectorSwitcherColumnView: View {
     let viewModel: DirectorSessionViewModel
     let mediaViewModel: BroadcastMediaViewModel
     @Bindable var liveProgramAir: LiveProgramAirStore
-
     var body: some View {
         VStack(spacing: 0) {
-            DirectorStatusBar(
-                connectedCameras: viewModel.connectedSourceCount,
-                activeStreamingCameras: viewModel.activeStreamingSourceCount,
-                programName: programDisplayName,
-                programPresetLabel: viewModel.monitorQuality.progPreset.streamSpec.displayLabel,
-                programTrackId: viewModel.programVideoTrack?.trackId,
-                isLive: viewModel.connectedSourceCount > 0,
-                encoderStats: viewModel.encoderStats,
-                audioEncoderStats: viewModel.audioEncoderStats
-            )
+            previewHeader
 
             DirectorMainSwitcherAreaView(
                 viewModel: viewModel,
@@ -29,6 +19,9 @@ struct DirectorSwitcherColumnView: View {
             )
             .frame(minHeight: 0, maxHeight: .infinity)
             .layoutPriority(1)
+            .clipped()
+
+            statusBar
 
             DirectorTakeBarView(
                 viewModel: viewModel,
@@ -36,8 +29,36 @@ struct DirectorSwitcherColumnView: View {
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
         .background(BroadcastTheme.panelBackground)
+    }
+
+    private var previewHeader: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "rectangle.on.rectangle")
+                .font(.subheadline)
+                .foregroundStyle(BroadcastTheme.previewGreen)
+            Text(BroadcastTerminology.previewName)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+            Spacer(minLength: 4)
+        }
+        .padding(.horizontal, DirectorColumnHeaderMetrics.horizontalPadding)
+        .frame(height: DirectorColumnHeaderMetrics.height)
+        .frame(maxWidth: .infinity)
+        .background(BroadcastTheme.panelElevated)
+    }
+
+    private var statusBar: some View {
+        DirectorStatusBar(
+            connectedCameras: viewModel.connectedSourceCount,
+            activeStreamingCameras: viewModel.activeStreamingSourceCount,
+            programName: programDisplayName,
+            programPresetLabel: viewModel.monitorQuality.progPreset.streamSpec.displayLabel,
+            programTrackId: viewModel.programVideoTrack?.trackId,
+            isLive: viewModel.connectedSourceCount > 0,
+            encoderStats: viewModel.encoderStats,
+            audioEncoderStats: viewModel.audioEncoderStats
+        )
     }
 
     private var programDisplayName: String? {

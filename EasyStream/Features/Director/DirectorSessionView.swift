@@ -12,11 +12,13 @@ struct DirectorSessionView: View {
     @Bindable var programOutputStore = DirectorProgramOutputStore.shared
     @Bindable var liveProgramAir = LiveProgramAirStore.shared
     let identity = DeviceIdentity.current()
+    var onLeaveRole: () -> Void = {}
 
 #if os(macOS)
     @Environment(\.openWindow) var openWindow
     @Environment(\.dismissWindow) var dismissWindow
 #endif
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
     @State var isStreamSettingsPresented = false
     @State var isStudioSettingsPresented = false
@@ -65,6 +67,7 @@ struct DirectorSessionView: View {
             liveProgramAir.widgetAutoDismissHandler = { [mediaViewModel] id in
                 mediaViewModel.removeWidgetFromLive(id, closeStudioIfEditing: false)
             }
+            viewModel.syncAudioWithProgramPlate(videoID: programPlateVideoID)
             platformDirectorSessionDidAppear()
             scheduleStudioSettingsPrewarm()
         }
@@ -73,6 +76,9 @@ struct DirectorSessionView: View {
             previewMonitor.unbind()
             viewModel.stop()
             intercomService.stop()
+        }
+        .onChange(of: programPlateVideoID) { _, videoID in
+            viewModel.syncAudioWithProgramPlate(videoID: videoID)
         }
         .background {
             ProgramOutputSyncBridge(viewModel: viewModel)
@@ -107,37 +113,30 @@ struct DirectorSessionView: View {
         }
     }
 
-    /// Three fixed columns: sources | switcher | library rail.
+    private var programPlateVideoID: UUID? {
+        guard liveProgramAir.fullScreenIsLive, liveProgramAir.fullScreenResource?.kind == .video else { return nil }
+        return liveProgramAir.fullScreenResource?.id
+    }
+
+    /// Three columns when the inner display is open. Preview and program move above the crease when it is half folded.
     var directorWorkspaceLayout: some View {
-        HStack(spacing: 0) {
-            DirectorSourceSidebarView(viewModel: viewModel)
-            .frame(width: WorkspaceMetrics.sidebarWidth)
-
-            DirectorSwitcherColumnView(
-                viewModel: viewModel,
-                mediaViewModel: mediaViewModel,
-                liveProgramAir: liveProgramAir
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .layoutPriority(1)
-            .clipped()
-
-            DirectorLibraryRailView(
-                mediaViewModel: mediaViewModel,
-                onCreateWidget: presentWidgetTemplatePicker
-            )
-            .frame(width: WorkspaceMetrics.libraryRailWidth)
-                .layoutPriority(2)
-                .clipped()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
+        DirectorAdaptiveWorkspaceView(
+            viewModel: viewModel,
+            mediaViewModel: mediaViewModel,
+            intercomService: intercomService,
+            liveProgramAir: liveProgramAir,
+            onLeaveRole: onLeaveRole,
+            onCreateWidget: presentWidgetTemplatePicker,
+            onOpenSettings: { openStudioSettings() },
+            onOpenMonitor: { openPreviewMonitor() }
+        )
     }
 
     var compactLayout: some View {
         DirectorSessionCompactView(
             viewModel: viewModel,
             mediaViewModel: mediaViewModel,
+            intercomService: intercomService,
             liveProgramAir: liveProgramAir,
             onOpenSettings: { openStudioSettings() },
             onCreateWidget: presentWidgetTemplatePicker

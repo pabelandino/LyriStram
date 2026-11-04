@@ -12,12 +12,15 @@ enum DirectorPreviewGridMetrics {
 
 struct DirectorPreviewGridView: View {
     let viewModel: DirectorSessionViewModel
+    var showsTitle: Bool = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(BroadcastTerminology.previewName.uppercased())
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(BroadcastTheme.subtleText)
+        VStack(alignment: .leading, spacing: showsTitle ? 8 : 0) {
+            if showsTitle {
+                Text(BroadcastTerminology.previewName.uppercased())
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BroadcastTheme.subtleText)
+            }
 
             if viewModel.sources.isEmpty {
                 ContentUnavailableView("Sin cámaras", systemImage: "video.slash")

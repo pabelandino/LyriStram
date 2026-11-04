@@ -7,27 +7,23 @@ struct DirectorMainSwitcherAreaView: View {
     let viewModel: DirectorSessionViewModel
     let mediaViewModel: BroadcastMediaViewModel
     @Bindable var liveProgramAir: LiveProgramAirStore
-
     var body: some View {
-        VStack(spacing: 16) {
-            DirectorPreviewGridView(viewModel: viewModel)
-                .frame(height: DirectorPreviewGridMetrics.bandHeight)
+        VStack(spacing: 12) {
+            DirectorPreviewGridView(viewModel: viewModel, showsTitle: false)
+                .frame(height: DirectorPreviewGridMetrics.tileHeight + 4)
                 .fixedSize(horizontal: false, vertical: true)
-
-            Spacer(minLength: 0)
 
             DirectorProgramOutputCorePanel(
                 viewModel: viewModel,
                 liveProgramAir: liveProgramAir
             )
-            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
             .layoutPriority(1)
-
-            Spacer(minLength: 0)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black.opacity(0.92))
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(BroadcastTheme.panelBackground)
         .clipped()
         .animation(nil, value: viewModel.previewSourceID)
         .animation(nil, value: viewModel.programSourceID)

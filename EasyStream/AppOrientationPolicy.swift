@@ -15,10 +15,22 @@ public enum AppOrientationPolicy {
         supportedMask = .allButUpsideDown
     }
 
+    /// Fully open iPhone Duo inner display stays landscape. iPad keeps free rotation.
+    public static func apply(phone: Bool, regularWidth: Bool) {
+        if phone || !regularWidth {
+            lockLandscape()
+        } else {
+            unlock()
+        }
+    }
+
     private static func rotateToLandscapeIfNeeded() {
-        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let active = scenes.filter { $0.activationState == .foregroundActive }
         let prefs = UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: .landscape)
-        scene.requestGeometryUpdate(prefs) { _ in }
+        for scene in (active.isEmpty ? scenes : active) {
+            scene.requestGeometryUpdate(prefs) { _ in }
+        }
     }
 }
 #endif

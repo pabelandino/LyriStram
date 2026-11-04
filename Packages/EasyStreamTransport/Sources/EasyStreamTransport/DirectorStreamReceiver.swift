@@ -81,6 +81,22 @@ public actor DirectorStreamReceiver {
         emit(.sourceConnectionState(sourceID, .disconnected))
     }
 
+    /// Average jitter-buffer delay of the inbound video, in milliseconds.
+    public func videoReceptionDelayMs(for sourceID: CameraSourceID?) async -> Double? {
+        let connections: [RTCPeerConnection]
+        if let sourceID, let sessionID = sessionIDBySource[sourceID], let session = sessions[sessionID] {
+            connections = [session.peerConnection]
+        } else {
+            connections = sessions.values.map(\.peerConnection)
+        }
+        var slowest: Double?
+        for connection in connections {
+            guard let delay = await inboundVideoDelayMs(connection) else { continue }
+            slowest = max(slowest ?? 0, delay)
+        }
+        return slowest
+    }
+
     /// Tears down WebRTC for a source and asks the camera to negotiate a new stream.
     public func prepareReconnect(for sourceID: CameraSourceID) async throws {
         guard let sessionID = sessionIDBySource[sourceID],
@@ -92,6 +108,26 @@ public actor DirectorStreamReceiver {
         sessionIDBySource.removeValue(forKey: sourceID)
         emit(.sourceConnectionState(sourceID, .connecting))
         try await context.signaling.send(.control(.reconnectStream))
+    }
+
+    private func inboundVideoDelayMs(_ connection: RTCPeerConnection) async -> Double? {
+        await withCheckedContinuation { continuation in
+            connection.statistics { report in
+                var delayMs: Double?
+                for statistic in report.statistics.values {
+                    guard statistic.type == "inbound-rtp" else { continue }
+                    let kind = statistic.values["kind"] as? String
+                    guard kind == "video" else { continue }
+                    let jitter = (statistic.values["jitterBufferDelay"] as? NSNumber)?.doubleValue
+                    let count = (statistic.values["jitterBufferEmittedCount"] as? NSNumber)?.doubleValue
+                    if let jitter, let count, count > 0 {
+                        delayMs = (jitter / count) * 1_000
+                        break
+                    }
+                }
+                continuation.resume(returning: delayMs)
+            }
+        }
     }
 
     private func observeSignaling(_ channel: SignalingChannel) {

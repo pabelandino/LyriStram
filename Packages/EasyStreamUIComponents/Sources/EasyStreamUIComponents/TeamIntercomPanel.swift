@@ -104,6 +104,8 @@ public struct TeamIntercomPanel: View {
                                         .foregroundStyle(peer.id == targetPeerID ? BroadcastTheme.programRed : BroadcastTheme.subtleText)
                                     Label(peer.displayName, systemImage: "person.wave.2")
                                         .font(.subheadline)
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.leading)
                                     Spacer(minLength: 0)
                                 }
                                 .padding(.horizontal, 10)

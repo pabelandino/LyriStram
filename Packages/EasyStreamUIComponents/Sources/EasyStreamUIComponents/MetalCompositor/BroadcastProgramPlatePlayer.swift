@@ -149,9 +149,16 @@ public final class BroadcastProgramPlatePlayer: @unchecked Sendable {
         self.setVideoOutput(output)
         self.observeEnd(of: item, url: url)
         self.setPlaybackRunning(true)
-        player.play()
         self.publish(isVideo: true, isPlaying: true)
         self.startPump(url: url)
+        Task { @MainActor in
+            let tracks = try? await item.asset.loadTracks(withMediaType: .audio)
+            if let track = tracks?.first {
+                ProgramVideoAudioTap.install(on: item, track: track)
+            }
+            guard self.currentURL() == url else { return }
+            player.play()
+        }
     }
 
     private static func loadPreferredTransform(for url: URL) async -> CGAffineTransform {

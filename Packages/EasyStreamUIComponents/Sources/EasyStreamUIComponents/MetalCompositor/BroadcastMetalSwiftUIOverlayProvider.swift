@@ -1,6 +1,9 @@
 import Metal
 import SwiftUI
 import EasyStreamCore
+#if os(iOS)
+import UIKit
+#endif
 
 /// Renders SwiftUI widget overlays into a BGRA texture for `BroadcastMetalCompositor`.
 /// Must be called on the main thread (`ImageRenderer` requirement).
@@ -50,7 +53,7 @@ final class BroadcastMetalSwiftUIOverlayProvider: BroadcastMetalOverlayProvider 
         renderer.isOpaque = false
         renderer.proposedSize = ProposedViewSize(viewportSize)
 #if os(iOS)
-        renderer.scale = UIScreen.main.scale
+        renderer.scale = sceneDisplayScale
 #else
         renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
 #endif
@@ -74,6 +77,16 @@ final class BroadcastMetalSwiftUIOverlayProvider: BroadcastMetalOverlayProvider 
     func syncContentSignature(viewportSize: CGSize) -> String {
         contentSignature(viewportSize: viewportSize)
     }
+
+#if os(iOS)
+    /// Read from the window scene each draw. `UIScreen.main` is ambiguous when an iPhone Duo folds.
+    private var sceneDisplayScale: CGFloat {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let scene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+        let scale = scene?.traitCollection.displayScale ?? UITraitCollection.current.displayScale
+        return scale > 0 ? scale : 2
+    }
+#endif
 
     private func contentSignature(viewportSize: CGSize) -> String {
         let layerIDs = widgetLayers.map(\.id.uuidString).joined(separator: "|")

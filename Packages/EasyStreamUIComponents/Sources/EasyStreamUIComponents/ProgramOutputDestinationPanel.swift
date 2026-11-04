@@ -140,8 +140,8 @@ public enum ProgramOutputDisplayDiscovery {
         connectedScreens().enumerated().map { index, screen in
             let bounds = screen.bounds
             let scale = screen.scale
-            let builtIn = screen == UIScreen.main
-            let name = builtIn ? "Pantalla del iPad" : "Pantalla externa"
+            let builtIn = !externalDisplayScreens().contains(screen)
+            let name = builtIn ? "Pantalla integrada" : "Pantalla externa"
             return ProgramOutputDisplayOption(
                 id: index,
                 name: name,
@@ -153,43 +153,62 @@ public enum ProgramOutputDisplayDiscovery {
     }
 
     public static var hasExternalDisplay: Bool {
-        connectedScreens().contains { $0 != UIScreen.main }
+        !externalDisplayScreens().isEmpty
     }
 
     public static var isExternalDisplayMirroring: Bool {
-        guard let external = connectedScreens().first(where: { $0 != UIScreen.main }) else { return false }
+        guard let external = externalDisplayScreens().first else { return false }
         return external.mirrored != nil
     }
 
     public static func preferredExternalScreenIndex() -> Int? {
         let screens = connectedScreens()
-        guard screens.count > 1 else { return nil }
-        return screens.firstIndex { $0 != UIScreen.main }
+        let externals = externalDisplayScreens()
+        return screens.firstIndex { externals.contains($0) }
+    }
+
+    public static func preferredExternalUIScreen() -> UIScreen? {
+        externalDisplayScreens().first
     }
 
     public static func validatedExternalScreenIndex(_ index: Int) -> Int? {
         guard hasExternalDisplay else { return nil }
         let screens = connectedScreens()
-        if index >= 0, index < screens.count, screens[index] != UIScreen.main {
+        let externals = externalDisplayScreens()
+        if index >= 0, index < screens.count, externals.contains(screens[index]) {
             return index
         }
         return preferredExternalScreenIndex()
     }
 
-    private static func connectedScreens() -> [UIScreen] {
-        var screens: [UIScreen] = [UIScreen.main]
+    /// The screen of the foreground window scene. iPhone Duo moves this scene between displays when it folds.
+    private static func activeSceneScreen() -> UIScreen? {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let foreground = scenes.first { $0.activationState == .foregroundActive }
+            ?? scenes.first { $0.session.role == .windowApplication }
+            ?? scenes.first
+        return foreground?.screen
+    }
 
-        let sceneScreens = UIApplication.shared.connectedScenes
+    /// HDMI and AirPlay only. The other face of an iPhone Duo is not an external program display.
+    private static func externalDisplayScreens() -> [UIScreen] {
+        UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
+            .filter { scene in
+                let role = scene.session.role
+                return role == .windowExternalDisplay || role == .windowExternalDisplayNonInteractive
+            }
             .map { $0.screen }
-        for screen in sceneScreens where !screens.contains(screen) {
+    }
+
+    private static func connectedScreens() -> [UIScreen] {
+        var screens: [UIScreen] = []
+        if let active = activeSceneScreen() {
+            screens.append(active)
+        }
+        for screen in externalDisplayScreens() where !screens.contains(screen) {
             screens.append(screen)
         }
-
-        for screen in UIScreen.screens where !screens.contains(screen) {
-            screens.append(screen)
-        }
-
         return screens
     }
 }

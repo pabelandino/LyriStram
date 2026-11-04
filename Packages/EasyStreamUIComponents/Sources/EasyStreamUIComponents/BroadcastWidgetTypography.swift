@@ -65,7 +65,7 @@ public enum BroadcastWidgetTypography {
         }
     }
 #else
-    private static func platformFont(preset: BroadcastFontPreset, size: Double, weight: Font.Weight) -> UIFont {
+    static func platformFont(preset: BroadcastFontPreset, size: Double, weight: Font.Weight) -> UIFont {
         let resolvedSize = max(8, size)
         let uiWeight: UIFont.Weight = switch weight {
         case .bold: .bold

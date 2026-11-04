@@ -16,8 +16,8 @@ public struct BroadcastTakeButtonStyle: ButtonStyle {
         let isHighlighted = isHovered && !isPressed
 
         configuration.label
-            .font(.subheadline.weight(.semibold))
-            .padding(.horizontal, 14)
+            .font(.footnote.weight(.semibold))
+            .padding(.horizontal, 10)
             .frame(maxWidth: .infinity)
             .foregroundStyle(Color.white.opacity(isPressed ? 0.88 : 1))
             .background {

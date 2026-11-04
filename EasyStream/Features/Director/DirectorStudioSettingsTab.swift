@@ -28,7 +28,7 @@ enum DirectorStudioSettingsTab: String, CaseIterable, Identifiable, Hashable, Se
         switch self {
         case .video: "Salida en vivo"
         case .monitor: "Multiview y overlays"
-        case .studio: "Audio, emisión y cámaras"
+        case .studio: "Emisión"
         }
     }
 }

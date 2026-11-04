@@ -6,16 +6,6 @@ struct DirectorCamerasSidebarContent: View {
     let viewModel: DirectorSessionViewModel
 
     var body: some View {
-        DirectorConnectAddressCard(
-            addresses: viewModel.localIPv4Addresses,
-            port: viewModel.listeningPort,
-            activeHost: viewModel.advertisedConnectHost,
-            onApply: { viewModel.applyAdvertisedConnectHost($0) }
-        )
-        .padding(.bottom, 8)
-
-        BroadcastSectionHeader("Cámaras", systemImage: "video")
-
         if viewModel.sources.isEmpty {
             Text("Esperando cámaras…")
                 .font(.subheadline)
@@ -31,6 +21,7 @@ struct DirectorCamerasSidebarContent: View {
                     isAudio: source.id == viewModel.programAudioSourceID,
                     isConnected: source.connectionState == .connected,
                     connectionState: source.connectionState,
+                    signalLevel: signalLevel(for: source),
                     isSelected: source.id == viewModel.previewSourceID,
                     onSelect: { viewModel.selectPreview(source.id) },
                     onReconnect: source.connectionState != .connected
@@ -39,14 +30,19 @@ struct DirectorCamerasSidebarContent: View {
                 )
             }
         }
+    }
 
-        if !viewModel.devices.isEmpty {
-            BroadcastSectionHeader("En red", systemImage: "wifi")
-                .padding(.top, 8)
-            ForEach(viewModel.devices) { device in
-                DiscoveredDeviceRow(device: device)
-                    .padding(.horizontal, 4)
+    private func signalLevel(for source: ConnectedCameraSource) -> Int {
+        switch source.connectionState {
+        case .connected:
+            return 4
+        case .connecting, .signaling:
+            return 2
+        default:
+            let onNetwork = viewModel.devices.contains { device in
+                device.id == source.id.rawValue && device.isProtocolCompatible
             }
+            return onNetwork ? 1 : 0
         }
     }
 }

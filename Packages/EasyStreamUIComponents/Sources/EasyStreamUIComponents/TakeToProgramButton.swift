@@ -22,15 +22,13 @@ public struct TakeToProgramButton: View {
             UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
 #endif
             action()
-        } label: {
-            VStack(spacing: 4) {
-                Label(BroadcastTerminology.takeAction, systemImage: "arrow.up.right.square.fill")
-                    .font(.headline.weight(.bold))
-                Text(BroadcastTerminology.takeDescription)
-                    .font(.caption2)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+        }         label: {
+            Label(BroadcastTerminology.takeAction, systemImage: "arrow.up.right.square.fill")
+                .font(.footnote.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+                .frame(height: 32)
         }
         .buttonStyle(BroadcastTakeButtonStyle(isHovered: isHovered, isPressing: isPressing))
         .onHover { isHovered = $0 }

@@ -7,22 +7,28 @@ struct DirectorTakeBarView: View {
     let canTake: Bool
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 8) {
+        VStack(spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
                 TakeToProgramButton(isEnabled: canTake && !viewModel.isTransitioning) {
                     viewModel.takeToProgram()
                 }
+                .frame(maxWidth: .infinity, minHeight: 32, maxHeight: 32)
 
                 Button {
                     viewModel.leaveAir()
                 } label: {
                     Label(BroadcastTerminology.leaveAirAction, systemImage: "stop.circle.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                        .font(.footnote.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity, minHeight: 32, maxHeight: 32)
+                        .foregroundStyle(BroadcastTheme.programRed.opacity(viewModel.programSourceID == nil ? 0.45 : 1))
+                        .background {
+                            RoundedRectangle(cornerRadius: BroadcastGlassStyles.buttonCornerRadius, style: .continuous)
+                                .strokeBorder(BroadcastTheme.programRed.opacity(viewModel.programSourceID == nil ? 0.35 : 0.9), lineWidth: 1)
+                        }
                 }
-                .buttonStyle(.bordered)
-                .tint(BroadcastTheme.programRed)
+                .buttonStyle(.plain)
                 .disabled(viewModel.programSourceID == nil)
                 .accessibilityHint(BroadcastTerminology.leaveAirDescription)
             }
@@ -32,10 +38,13 @@ struct DirectorTakeBarView: View {
                 .font(.caption2)
                 .foregroundStyle(BroadcastTheme.subtleText)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 4)
         }
-        .padding(.top, 8)
+        .padding(.top, 6)
         .background(.bar)
     }
 }

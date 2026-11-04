@@ -4,11 +4,18 @@ import EasyStreamCore
 public struct RoleSelectionView: View {
     @Binding var selectedRole: AppRole?
     let suggestedRole: AppRole
+    let availableRoles: [AppRole]
     let deviceName: String
 
-    public init(selectedRole: Binding<AppRole?>, suggestedRole: AppRole, deviceName: String) {
+    public init(
+        selectedRole: Binding<AppRole?>,
+        suggestedRole: AppRole,
+        availableRoles: [AppRole] = AppRole.allCases,
+        deviceName: String
+    ) {
         _selectedRole = selectedRole
         self.suggestedRole = suggestedRole
+        self.availableRoles = availableRoles
         self.deviceName = deviceName
     }
 
@@ -41,7 +48,7 @@ public struct RoleSelectionView: View {
 
     private var roleCards: some View {
         VStack(spacing: 16) {
-            ForEach(AppRole.allCases) { role in
+            ForEach(availableRoles) { role in
                 RoleCard(
                     role: role,
                     isSuggested: role == suggestedRole,

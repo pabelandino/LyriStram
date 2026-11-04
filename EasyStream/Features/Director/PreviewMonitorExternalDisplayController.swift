@@ -86,24 +86,7 @@ final class PreviewMonitorExternalDisplayController {
     }
 
     static var preferredExternalScreen: UIScreen? {
-        allConnectedScreens().first { $0 != UIScreen.main }
-    }
-
-    static func allConnectedScreens() -> [UIScreen] {
-        var screens: [UIScreen] = [UIScreen.main]
-
-        let sceneScreens = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .map { $0.screen }
-        for screen in sceneScreens where !screens.contains(screen) {
-            screens.append(screen)
-        }
-
-        for screen in UIScreen.screens where !screens.contains(screen) {
-            screens.append(screen)
-        }
-
-        return screens
+        ProgramOutputDisplayDiscovery.preferredExternalUIScreen()
     }
 
     private static func windowScene(for screen: UIScreen) -> UIWindowScene? {

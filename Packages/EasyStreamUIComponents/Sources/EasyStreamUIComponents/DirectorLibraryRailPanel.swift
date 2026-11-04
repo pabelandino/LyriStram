@@ -9,25 +9,30 @@ public struct DirectorLibraryRailPanel<Content: View>: View {
         self.content = content
     }
 
+    @Environment(\.directorCompactChrome) private var compact
+
     public var body: some View {
         VStack(spacing: 0) {
-            HStack {
+            HStack(spacing: 6) {
                 Image(systemName: "photo.on.rectangle.angled")
+                    .font(.subheadline)
                     .foregroundStyle(BroadcastTheme.studioAccent)
                 Text("Biblioteca")
-                    .font(.headline)
-                Spacer()
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Spacer(minLength: 4)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 14)
+            .padding(.horizontal, DirectorColumnHeaderMetrics.horizontalPadding)
+            .frame(height: DirectorColumnHeaderMetrics.height)
+            .frame(maxWidth: .infinity)
             .background(BroadcastTheme.panelElevated)
 
             Divider().overlay(BroadcastTheme.workspaceDivider)
 
             ScrollView(.vertical, showsIndicators: true) {
                 content()
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, compact ? 6 : 10)
+                    .padding(.vertical, compact ? 6 : 10)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 #if os(macOS)

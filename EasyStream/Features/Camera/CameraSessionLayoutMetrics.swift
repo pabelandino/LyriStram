@@ -1,19 +1,17 @@
 #if os(iOS) || os(macOS)
 import SwiftUI
-#if os(iOS)
-import UIKit
-#endif
 
 enum CameraSessionLayoutKind {
     case phone
     case tablet
     case mac
 
-    static var current: CameraSessionLayoutKind {
+    /// Regular width is the inner iPhone Duo display and iPad. Compact width is an iPhone or the outer Duo display.
+    static func resolving(_ horizontalSizeClass: UserInterfaceSizeClass?) -> CameraSessionLayoutKind {
 #if os(macOS)
         .mac
 #else
-        UIDevice.current.userInterfaceIdiom == .phone ? .phone : .tablet
+        horizontalSizeClass == .regular ? .tablet : .phone
 #endif
     }
 }

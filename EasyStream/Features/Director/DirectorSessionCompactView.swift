@@ -1,11 +1,13 @@
 import SwiftUI
 import EasyStreamCore
 import EasyStreamUIComponents
+import EasyStreamTransport
 
 /// iPhone compact director layout — List-based fallback when workspace columns do not fit.
 struct DirectorSessionCompactView: View {
     @Bindable var viewModel: DirectorSessionViewModel
     @Bindable var mediaViewModel: BroadcastMediaViewModel
+    @Bindable var intercomService: TeamIntercomService
     @Bindable var liveProgramAir: LiveProgramAirStore
     let onOpenSettings: () -> Void
     let onCreateWidget: () -> Void
@@ -63,10 +65,13 @@ struct DirectorSessionCompactView: View {
 
             Section("Biblioteca") {
                 DirectorLibraryRailView(
+                    viewModel: viewModel,
                     mediaViewModel: mediaViewModel,
+                    intercomService: intercomService,
                     onCreateWidget: onCreateWidget
                 )
-                    .listRowInsets(EdgeInsets())
+                .frame(minHeight: 560)
+                .listRowInsets(EdgeInsets())
             }
 
             Section {
@@ -75,11 +80,6 @@ struct DirectorSessionCompactView: View {
                 }
             }
 
-            Section("En red") {
-                ForEach(viewModel.devices) { device in
-                    DiscoveredDeviceRow(device: device)
-                }
-            }
         }
 #if os(macOS)
         .listStyle(.inset)

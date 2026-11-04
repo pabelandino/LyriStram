@@ -4,6 +4,8 @@ import EasyStreamUIComponents
 
 struct RoleSelectionScreen: View {
     @Binding var selectedRole: AppRole?
+    var suggestedRole: AppRole = .director
+    var availableRoles: [AppRole] = AppRole.allCases
     @State private var draftRole: AppRole?
 
     private let identity = DeviceIdentity.current()
@@ -13,7 +15,8 @@ struct RoleSelectionScreen: View {
             VStack(spacing: 24) {
                 RoleSelectionView(
                     selectedRole: $draftRole,
-                    suggestedRole: DeviceIdentity.suggestedRole,
+                    suggestedRole: suggestedRole,
+                    availableRoles: availableRoles,
                     deviceName: identity.displayName
                 )
 
@@ -33,7 +36,8 @@ struct RoleSelectionScreen: View {
         .navigationBarTitleDisplayMode(.inline)
 #endif
         .onAppear {
-            draftRole = selectedRole ?? DeviceIdentity.suggestedRole
+            let fallback = availableRoles.contains(suggestedRole) ? suggestedRole : availableRoles.first
+            draftRole = selectedRole ?? fallback
         }
     }
 }

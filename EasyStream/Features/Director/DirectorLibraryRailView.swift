@@ -1,13 +1,34 @@
 import SwiftUI
 import EasyStreamCore
 import EasyStreamUIComponents
+import EasyStreamTransport
 
-/// Right rail — media library for quick drag/take to program.
+/// Right rail — library on top, audio and camera controls below.
 struct DirectorLibraryRailView: View {
+    @Bindable var viewModel: DirectorSessionViewModel
     @Bindable var mediaViewModel: BroadcastMediaViewModel
+    @Bindable var intercomService: TeamIntercomService
     let onCreateWidget: () -> Void
 
     var body: some View {
+        GeometryReader { proxy in
+            VStack(spacing: 0) {
+                libraryHalf
+                    .frame(height: proxy.size.height / 2)
+                Divider().overlay(BroadcastTheme.workspaceDivider)
+                DirectorRailHandySettingsView(
+                    viewModel: viewModel,
+                    mediaViewModel: mediaViewModel,
+                    intercomService: intercomService
+                )
+                .frame(height: max(0, proxy.size.height / 2 - 1))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(BroadcastTheme.panelBackground)
+    }
+
+    private var libraryHalf: some View {
         DirectorLibraryRailPanel {
             DeferredBroadcastLibraryPanel(
                 selectedKind: $mediaViewModel.selectedLibraryKind,
@@ -33,5 +54,6 @@ struct DirectorLibraryRailView: View {
                 fileURL: { mediaViewModel.fileURL(for: $0) }
             )
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }

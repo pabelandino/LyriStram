@@ -1,7 +1,6 @@
 import SwiftUI
 import EasyStreamCore
 import EasyStreamUIComponents
-import EasyStreamTransport
 #if os(macOS)
 import AppKit
 #endif
@@ -14,14 +13,12 @@ struct DirectorStudioSettingsWindowView: View {
     var body: some View {
         Group {
             if let viewModel = session.sessionViewModel,
-               let mediaViewModel = session.mediaViewModel,
-               let intercomService = session.intercomService,
+               session.mediaViewModel != nil,
+               session.intercomService != nil,
                let previewMonitor = session.previewMonitor {
                 DirectorStudioSettingsHubView(
                     viewModel: viewModel,
-                    mediaViewModel: mediaViewModel,
                     previewMonitor: previewMonitor,
-                    intercomService: intercomService,
                     initialTab: session.pendingStudioSettingsTab,
                     onOpenPreviewMonitor: {
                         session.onOpenPreviewMonitor?()

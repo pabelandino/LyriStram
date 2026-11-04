@@ -2,6 +2,7 @@ import SwiftUI
 import EasyStreamCore
 
 public struct DirectorStatusBar: View {
+    @Environment(\.directorCompactChrome) private var compact
     let connectedCameras: Int
     let activeStreamingCameras: Int
     let programName: String?
@@ -73,8 +74,8 @@ public struct DirectorStatusBar: View {
             .font(.caption.monospacedDigit())
             .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, compact ? 12 : 16)
+        .padding(.vertical, compact ? 8 : 10)
         .background(BroadcastTheme.panelElevated)
         .overlay(alignment: .bottom) {
             Rectangle()
