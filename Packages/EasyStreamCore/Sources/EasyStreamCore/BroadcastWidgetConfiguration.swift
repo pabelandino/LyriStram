@@ -77,11 +77,11 @@ public enum BroadcastLogoAnimation: String, CaseIterable, Sendable {
     public var displayName: String {
         switch self {
         case .none: "Sin animación"
-        case .rotate: "Rotación"
-        case .sphere3D: "Esfera 3D"
-        case .pulse: "Pulso"
-        case .float: "Flotante"
-        case .flip: "Volteo"
+        case .rotate: "Rotación horizontal"
+        case .sphere3D: "Rotación horizontal"
+        case .pulse: "Rotación horizontal"
+        case .float: "Rotación horizontal"
+        case .flip: "Rotación horizontal"
         }
     }
 }
@@ -90,11 +90,7 @@ extension BroadcastLogoAnimation: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let raw = try container.decode(String.self)
-        if raw == "cube3D" {
-            self = .sphere3D
-        } else {
-            self = BroadcastLogoAnimation(rawValue: raw) ?? .none
-        }
+        self = raw == "none" ? .none : .sphere3D
     }
 }
 

@@ -51,6 +51,10 @@ final class BroadcastMediaViewModel {
     var draftWidgetDisplayName = ""
     var draftWidgetID = UUID()
     var isWidgetPlacementEditing = false
+    /// Studio canvas plays the logo motion. Positioning turns it off so dragging stays steady.
+    var isWidgetMotionPreview = true
+    /// Changing this restarts the studio preview from the beginning.
+    var widgetMotionEpoch = Date()
 
     var isPhotoPickerPresented = false
     var isWidgetLogoImporterPresented = false
@@ -402,6 +406,7 @@ final class BroadcastMediaViewModel {
     }
 
     func openNewWidgetStudio(template: BroadcastWidgetTemplate) {
+        WidgetStudioWindowToken.prepare()
         draftWidgetID = UUID()
         draftWidgetConfiguration = BroadcastWidgetConfiguration(template: template)
         draftWidgetConfiguration.applyTemplateDefaults()
@@ -409,20 +414,27 @@ final class BroadcastMediaViewModel {
         editingWidgetResource = nil
         isWidgetStudioOpen = true
         isWidgetPlacementEditing = false
+        isWidgetMotionPreview = true
+        widgetMotionEpoch = Date()
     }
 
     func openWidgetStudio(for resource: BroadcastResource) {
         guard resource.kind == .widget else { return }
+        WidgetStudioWindowToken.prepare()
         editingWidgetResource = resource
         draftWidgetConfiguration = loadedConfiguration(for: resource) ?? BroadcastWidgetConfiguration()
         draftWidgetDisplayName = resource.listLabel
         isWidgetStudioOpen = true
         isWidgetPlacementEditing = false
+        isWidgetMotionPreview = true
+        widgetMotionEpoch = Date()
     }
 
     func closeWidgetStudio() {
+        WidgetStudioWindowToken.invalidate()
         isWidgetStudioOpen = false
         isWidgetPlacementEditing = false
+        isWidgetMotionPreview = false
         editingWidgetResource = nil
     }
 
@@ -432,10 +444,13 @@ final class BroadcastMediaViewModel {
 
     func enterWidgetPlayPreview() {
         isWidgetPlacementEditing = false
+        isWidgetMotionPreview = true
+        widgetMotionEpoch = Date()
     }
 
     func enterWidgetLayoutEditing() {
         isWidgetPlacementEditing = true
+        isWidgetMotionPreview = false
     }
 
     func saveDraftWidget() {
@@ -470,10 +485,6 @@ final class BroadcastMediaViewModel {
         saveDraftWidget()
         guard let resource = editingWidgetResource, liveWidgetIDs.contains(resource.id) else { return }
         refreshLiveAirBus()
-    }
-
-    func previewDraftWidget() {
-        enterWidgetPlayPreview()
     }
 
     func takeDraftWidgetLive() {

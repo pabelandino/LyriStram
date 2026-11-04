@@ -15,27 +15,25 @@ struct BroadcastWidgetStudioLogoFields: View {
                 onImportLogoFromPhotoLibrary: onImportLogoFromPhotoLibrary
             )
 
-            Picker("Animación", selection: $configuration.logoAnimation) {
-                ForEach(BroadcastLogoAnimation.allCases, id: \.self) { animation in
-                    Text(animation.displayName).tag(animation)
-                }
-            }
-#if os(macOS)
-            .pickerStyle(.radioGroup)
-#endif
+            Toggle("Rotación horizontal", isOn: Binding(
+                get: { configuration.logoAnimation != .none },
+                set: { configuration.logoAnimation = $0 ? .sphere3D : .none }
+            ))
 
             BroadcastWidgetStudioPlacementSizeControls(configuration: $configuration)
 
-            Stepper(
-                "Velocidad: \(String(format: "%.1fx", configuration.animationSpeed))",
-                value: $configuration.animationSpeed,
-                in: 0.25...3,
-                step: 0.25
-            )
+            if configuration.logoAnimation != .none {
+                Stepper(
+                    "Velocidad: \(String(format: "%.1fx", configuration.animationSpeed))",
+                    value: $configuration.animationSpeed,
+                    in: 0.25...3,
+                    step: 0.25
+                )
 
-            Text("Las animaciones corren en ráfagas con pausa (idle) entre ciclos.")
-                .font(.caption2)
-                .foregroundStyle(BroadcastTheme.subtleText)
+                Text("Gira en horizontal, hace una pausa y vuelve a girar. Play la reinicia en esta vista.")
+                    .font(.caption2)
+                    .foregroundStyle(BroadcastTheme.subtleText)
+            }
         }
     }
 }

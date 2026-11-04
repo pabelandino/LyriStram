@@ -60,9 +60,9 @@
     "semantic_hash": ""
   },
   "EasyStream/ViewModels/DirectorSessionViewModel.swift": {
-    "mtime": 1793675823.5476089,
-    "seen": 1793675881.3338912,
-    "ast_hash": "028d86cc46f3d99a8bd410b74d3fcc79",
+    "mtime": 1793676125.1631835,
+    "seen": 1793676172.2888708,
+    "ast_hash": "bb60c3267cb5de348a66e0db8407747c",
     "semantic_hash": ""
   },
   "EasyStream/ViewModels/DiscoveryViewModel.swift": {
@@ -196,12 +196,6 @@
     "seen": 1793659714.750122,
     "ast_hash": "05d21201e0174406eac006f4a39a39c3",
     "semantic_hash": "05d21201e0174406eac006f4a39a39c3"
-  },
-  "Packages/EasyStreamCore/Sources/EasyStreamCore/TransitionPreferencesStore.swift": {
-    "mtime": 1793675786.1725273,
-    "seen": 1793675881.333948,
-    "ast_hash": "4c5f30870d6fa99fb7643d67bfe47387",
-    "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/VideoEncoderTypes.swift": {
     "mtime": 1788255173.26762,
@@ -846,9 +840,9 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalCompositor.swift": {
-    "mtime": 1793675798.036142,
-    "seen": 1793675881.334105,
-    "ast_hash": "ee011a111370704d35c5039a79c41d35",
+    "mtime": 1793676116.8749297,
+    "seen": 1793676172.2890959,
+    "ast_hash": "0f30dfba4204eb6179eaad52702fdef3",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/MetalCompositor/BroadcastMetalOverlayProvider.swift": {
@@ -921,12 +915,6 @@
     "mtime": 1793667925.9219801,
     "seen": 1793667931.867574,
     "ast_hash": "9e82155d1f5a3afbdfb82f6b578d3429",
-    "semantic_hash": ""
-  },
-  "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramTransition/ProgramTransitionDisplayLink.swift": {
-    "mtime": 1793675019.0419898,
-    "seen": 1793675038.717293,
-    "ast_hash": "faee0e2014810078ee7463baec897f79",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramMetalVideoView.swift": {
@@ -1146,9 +1134,9 @@
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorTakeBarView.swift": {
-    "mtime": 1793670639.4923272,
-    "seen": 1793670759.34723,
-    "ast_hash": "22a5b8afdc98046985a168f85bd3d9ac",
+    "mtime": 1793676116.3456872,
+    "seen": 1793676172.2888598,
+    "ast_hash": "fc7aeca0448f29358605030e9d445113",
     "semantic_hash": ""
   },
   "AGENTS.md": {
@@ -1194,9 +1182,9 @@
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSessionCompactView.swift": {
-    "mtime": 1793669772.499733,
-    "seen": 1793669854.964504,
-    "ast_hash": "a6c1cfd0ec2a1e82ad7dd28aa65e7f03",
+    "mtime": 1793676116.3456836,
+    "seen": 1793676172.2888389,
+    "ast_hash": "73ea5d5837cc50007baa720885629514",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSettingsLiveGraphicsSection.swift": {
@@ -1239,12 +1227,6 @@
     "mtime": 1793295918.3720977,
     "seen": 1793296052.81509,
     "ast_hash": "6c7d8c41c8c213c0886eb1aaf406ca3d",
-    "semantic_hash": ""
-  },
-  "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/SwitchTransitionControls.swift": {
-    "mtime": 1793675787.7465363,
-    "seen": 1793675881.3341708,
-    "ast_hash": "d5dcaa8ee1301e6ed69639b03cbd5523",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/TakeToProgramButton.swift": {
@@ -2397,12 +2379,6 @@
     "mtime": 1793667925.9342554,
     "seen": 1793668546.449332,
     "ast_hash": "1520212f132a74393583df584b0c333c",
-    "semantic_hash": ""
-  },
-  "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/ProgramTransition/ProgramDissolveClock.swift": {
-    "mtime": 1793675791.096006,
-    "seen": 1793675881.3341491,
-    "ast_hash": "7c901d3e78e0ae5ed8cf5e53dcb065e1",
     "semantic_hash": ""
   }
 }

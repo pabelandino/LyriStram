@@ -15,6 +15,8 @@ import EasyStreamFacebookLogin
 struct EasyStreamApp: App {
 #if os(iOS)
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+#elseif os(macOS)
+    @NSApplicationDelegateAdaptor(MacDirectorWindowDelegate.self) private var macDelegate
 #endif
 
     init() {
@@ -53,7 +55,7 @@ struct EasyStreamApp: App {
         }
         .defaultSize(width: 760, height: 680)
 
-        Window("Widget Studio", id: "director-widget-studio") {
+        WindowGroup(id: "director-widget-studio", for: String.self) { _ in
             DirectorWidgetStudioWindowView()
                 .broadcastStudioWindowStyle()
         }

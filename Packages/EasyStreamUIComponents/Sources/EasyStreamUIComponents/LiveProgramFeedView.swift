@@ -76,11 +76,6 @@ public struct LiveProgramFeedView: View {
                     widgetPlacement: .constant(BroadcastWidgetPlacement())
                 )
             }
-
-            StableWidgetOverlayView(
-                layers: widgetLayers,
-                onWidgetLiveAutoDismiss: onWidgetLiveAutoDismiss
-            )
         }
     }
 }

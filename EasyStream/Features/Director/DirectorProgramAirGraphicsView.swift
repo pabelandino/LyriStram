@@ -3,7 +3,7 @@ import EasyStreamCore
 import EasyStreamUIComponents
 
 /// Committed on-air graphics from the frozen live bus.
-struct DirectorProgramAirGraphicsView: View {
+struct DirectorProgramAirGraphicsView: View, Equatable {
     let widgetLayers: [ProgramFeedWidgetLayer]
     let fullScreenResource: BroadcastResource?
     let fullScreenFileURL: URL?
@@ -31,5 +31,12 @@ struct DirectorProgramAirGraphicsView: View {
                 onWidgetLiveAutoDismiss: onWidgetLiveAutoDismiss
             )
         }
+    }
+
+    static func == (lhs: DirectorProgramAirGraphicsView, rhs: DirectorProgramAirGraphicsView) -> Bool {
+        lhs.widgetLayers == rhs.widgetLayers
+            && lhs.fullScreenResource == rhs.fullScreenResource
+            && lhs.fullScreenFileURL == rhs.fullScreenFileURL
+            && lhs.fullScreenIsLive == rhs.fullScreenIsLive
     }
 }

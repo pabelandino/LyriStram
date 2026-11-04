@@ -82,8 +82,6 @@ extension DirectorSessionView {
 
     func platformDirectorSessionDidAppear() {}
 
-    func platformPrewarmStudioSettingsWindowIfNeeded() {}
-
     func openStudioSettings(tab: DirectorStudioSettingsTab = .studio) {
         studioSettingsInitialTab = tab
         DirectorModalPresentation.afterYield {

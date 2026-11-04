@@ -46,7 +46,6 @@ struct DirectorStudioSettingsPrewarmShell: View {
                 onImportLogo: {},
                 onImportLogoFromPhotoLibrary: {},
                 onSave: {},
-                onPreview: {},
                 onGoLive: {},
                 onClose: {}
             )

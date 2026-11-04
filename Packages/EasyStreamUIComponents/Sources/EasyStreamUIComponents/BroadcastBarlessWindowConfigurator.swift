@@ -21,6 +21,8 @@ struct BroadcastBarlessWindowConfigurator: NSViewRepresentable {
     }
 
     private func applyBarlessChrome(to window: NSWindow) {
+        window.identifier = NSUserInterfaceItemIdentifier("director-main")
+        window.isRestorable = true
         window.appearance = NSAppearance(named: .darkAqua)
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
