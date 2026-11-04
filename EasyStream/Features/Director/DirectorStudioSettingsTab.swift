@@ -26,7 +26,7 @@ enum DirectorStudioSettingsTab: String, CaseIterable, Identifiable, Hashable, Se
 
     var subtitle: String {
         switch self {
-        case .video: "Tiles, PROG y salida"
+        case .video: "Salida en vivo"
         case .monitor: "Multiview y overlays"
         case .studio: "Audio, emisión y cámaras"
         }

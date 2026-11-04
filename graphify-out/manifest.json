@@ -1050,9 +1050,9 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/DirectorVideoQualityPanel.swift": {
-    "mtime": 1793822330.80761,
-    "seen": 1793822508.449059,
-    "ast_hash": "471f218235d28cd97f2b7d69e591bfc4",
+    "mtime": 1793825687.14838,
+    "seen": 1793825750.712223,
+    "ast_hash": "a03e08025b47625c43618c9a7649bb72",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorLibraryRailView.swift": {
@@ -1302,9 +1302,9 @@
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/PreviewMonitorSettingsForm.swift": {
-    "mtime": 1793667925.9274511,
-    "seen": 1793667931.8677518,
-    "ast_hash": "1beb38a7bb53ed29de0943aa9f266cf4",
+    "mtime": 1793825724.757619,
+    "seen": 1793825750.712268,
+    "ast_hash": "4882b7aca102758f11f16f036be59988",
     "semantic_hash": ""
   },
   "Packages/EasyStreamUIComponents/Sources/EasyStreamUIComponents/PreviewMonitorSettingsPanel.swift": {
@@ -1944,15 +1944,15 @@
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorSettingsStudioTab.swift": {
-    "mtime": 1793824279.0010731,
-    "seen": 1793824331.109281,
-    "ast_hash": "f6bddb9afc4dbf43471c6080349b56bf",
+    "mtime": 1793825701.457908,
+    "seen": 1793825750.711991,
+    "ast_hash": "c86593b746a77ba3aafd02c5d66439e1",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStudioSettingsHubComponents.swift": {
-    "mtime": 1793667925.918211,
-    "seen": 1793667931.867501,
-    "ast_hash": "57facd909509e6801c7515f56dd2baba",
+    "mtime": 1793825743.4618616,
+    "seen": 1793825750.7119958,
+    "ast_hash": "37afae74351f2957366c85371c0701aa",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStudioSettingsHubPlatformLayout.swift": {
@@ -1968,21 +1968,21 @@
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStudioSettingsHubView+MacOS.swift": {
-    "mtime": 1793295918.4129484,
-    "seen": 1793296052.8148742,
-    "ast_hash": "bb09643e5b10753df39bb984e6551b8a",
+    "mtime": 1793825688.8674197,
+    "seen": 1793825750.711999,
+    "ast_hash": "ed650a2f796c9ba5ebd9fa7dcce8ee33",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStudioSettingsHubView.swift": {
-    "mtime": 1793667925.918373,
-    "seen": 1793667931.867506,
-    "ast_hash": "da6c10771d64e2971eb0cb385967c6b6",
+    "mtime": 1793825700.746754,
+    "seen": 1793825750.712,
+    "ast_hash": "aa7c2b88069dd72758a99c655129037d",
     "semantic_hash": ""
   },
   "EasyStream/Features/Director/DirectorStudioSettingsTab.swift": {
-    "mtime": 1793295917.8776715,
-    "seen": 1793296052.814877,
-    "ast_hash": "ba5394c16da8833a772cc9c48ea47728",
+    "mtime": 1793825687.644874,
+    "seen": 1793825750.712002,
+    "ast_hash": "efe282c426e7c61673bb353a11292f9a",
     "semantic_hash": ""
   },
   "Packages/EasyStreamCore/Sources/EasyStreamCore/Program/ProgramFrameQualityGate.swift": {

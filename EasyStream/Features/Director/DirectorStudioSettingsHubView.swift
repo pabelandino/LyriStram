@@ -95,10 +95,6 @@ struct DirectorStudioSettingsHubView: View {
     private var videoTab: some View {
         ScrollView(.vertical, showsIndicators: true) {
             VStack(alignment: .leading, spacing: 14) {
-                DirectorStudioSettingsInfoCallout(
-                    text: "Los presets de calidad se aplican al pulsar «Listo». El monitor PROG no cambia mientras exploras opciones."
-                )
-
                 DirectorVideoQualityPanel(settings: $draftVideoQuality)
 
                 if hasPendingVideoChanges {
@@ -114,20 +110,10 @@ struct DirectorStudioSettingsHubView: View {
     }
 
     private var monitorTab: some View {
-#if os(iOS)
         PreviewMonitorSettingsForm(
             settings: $previewMonitor.settings,
             onOpenMonitor: onOpenPreviewMonitor
         )
-#else
-        ScrollView(.vertical, showsIndicators: true) {
-            PreviewMonitorSettingsForm(
-                settings: $previewMonitor.settings,
-                onOpenMonitor: onOpenPreviewMonitor
-            )
-            .padding(.horizontal, 4)
-        }
-#endif
     }
 
     func commitVideoQualityIfNeeded() {

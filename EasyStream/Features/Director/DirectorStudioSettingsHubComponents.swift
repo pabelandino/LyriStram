@@ -18,25 +18,6 @@ struct DirectorStudioSettingsSidebarLabel: View {
     }
 }
 
-struct DirectorStudioSettingsInfoCallout: View {
-    let text: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "info.circle")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(BroadcastTheme.subtleText)
-                .padding(.top, 1)
-
-            Text(text)
-                .font(.caption)
-                .foregroundStyle(BroadcastTheme.subtleText)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.horizontal, 2)
-    }
-}
-
 /// Defers heavy settings UI until PROG Metal has painted a few frames.
 struct DirectorStudioSettingsDeferredDetail<Content: View>: View {
     @ViewBuilder var content: () -> Content

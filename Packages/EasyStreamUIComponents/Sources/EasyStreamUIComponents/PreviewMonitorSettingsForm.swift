@@ -11,149 +11,154 @@ public struct PreviewMonitorSettingsForm: View {
     }
 
     public var body: some View {
-        Form {
-            Section {
-                Text("Abre un grid profesional en otra pantalla para ver todas las cámaras.")
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Abre un grid en otra pantalla para ver todas las cámaras.")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .listRowBackground(Color.clear)
+                    .foregroundStyle(BroadcastTheme.subtleText)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Button(action: onOpenMonitor) {
                     Label("Abrir monitor ahora", systemImage: "display.2")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: true))
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-            }
 
-            Section("Layout") {
-                Picker("Distribución", selection: $settings.layoutMode) {
-                    ForEach(PreviewMonitorLayoutMode.allCases) { mode in
-                        Text(mode.displayName).tag(mode)
+                DirectorInspectorSection("Distribución", systemImage: "rectangle.grid.2x2") {
+                    Picker("Distribución", selection: $settings.layoutMode) {
+                        ForEach(PreviewMonitorLayoutMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .pickerStyle(.menu)
-            }
 
-            Section("Pantalla") {
+                DirectorInspectorSection("Pantalla", systemImage: "display") {
+                    VStack(alignment: .leading, spacing: 12) {
 #if os(iOS)
-                externalDisplayStatusRows
+                        PreviewMonitorExternalDisplayStatus()
 #endif
-                Toggle("Abrir en segunda pantalla", isOn: $settings.openOnExternalDisplay)
-                Toggle("Paginar automáticamente", isOn: $settings.autoPaginate)
-
-                if settings.autoPaginate {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Intervalo")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack {
-                            Slider(value: $settings.pageIntervalSeconds, in: 3...15, step: 1)
-                            Text("\(Int(settings.pageIntervalSeconds))s")
-                                .font(.caption.monospacedDigit())
-                                .frame(width: 32, alignment: .trailing)
+                        PreviewMonitorToggleRow(
+                            title: "Abrir en segunda pantalla",
+                            isOn: $settings.openOnExternalDisplay
+                        )
+                        PreviewMonitorToggleRow(
+                            title: "Paginar automáticamente",
+                            isOn: $settings.autoPaginate
+                        )
+                        if settings.autoPaginate {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Intervalo")
+                                    .font(.subheadline)
+                                    .foregroundStyle(BroadcastTheme.primaryText)
+                                HStack(spacing: 12) {
+                                    Slider(value: $settings.pageIntervalSeconds, in: 3...15, step: 1)
+                                    Text("\(Int(settings.pageIntervalSeconds)) s")
+                                        .font(.body.monospacedDigit())
+                                        .frame(width: 44, alignment: .trailing)
+                                }
+                            }
                         }
                     }
                 }
-            }
 
-            Section("Overlays") {
-                overlayToggle("Nombre de cámara", keyPath: \.showCameraName)
-                overlayToggle("Índice de fuente", keyPath: \.showSourceIndex)
-                overlayToggle("Tally PVW/PRG/AUDIO", keyPath: \.showTallyBadges)
-                overlayToggle("Resaltar preview", keyPath: \.highlightPreviewSource)
-                overlayToggle("Resaltar programa", keyPath: \.highlightProgramSource)
-                overlayToggle("Estado de conexión", keyPath: \.showConnectionStatus)
-                overlayToggle("Indicador de audio", keyPath: \.showAudioIndicator)
-                overlayToggle("Guías de safe area", keyPath: \.showSafeAreaGuides)
-                overlayToggle("Programa grande en grid", keyPath: \.showProgramInGrid)
-            }
-
-            Section("Colores tally") {
-                colorPresetRow("Preview", color: .previewGreen) {
-                    settings.appearance.previewBorder = .previewGreen
-                }
-                colorPresetRow("Programa", color: .programRed) {
-                    settings.appearance.programBorder = .programRed
-                }
-                colorPresetRow("Audio", color: .audioGold) {
-                    settings.appearance.audioAccent = .audioGold
+                DirectorInspectorSection("Información en cada cámara", systemImage: "text.below.photo") {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 280), spacing: 12, alignment: .leading)],
+                        alignment: .leading,
+                        spacing: 8
+                    ) {
+                        overlayToggle("Nombre de cámara", keyPath: \.showCameraName)
+                        overlayToggle("Índice de fuente", keyPath: \.showSourceIndex)
+                        overlayToggle("Tally PVW/PRG/AUDIO", keyPath: \.showTallyBadges)
+                        overlayToggle("Resaltar preview", keyPath: \.highlightPreviewSource)
+                        overlayToggle("Resaltar programa", keyPath: \.highlightProgramSource)
+                        overlayToggle("Estado de conexión", keyPath: \.showConnectionStatus)
+                        overlayToggle("Indicador de audio", keyPath: \.showAudioIndicator)
+                        overlayToggle("Guías de safe area", keyPath: \.showSafeAreaGuides)
+                        overlayToggle("Programa grande en grid", keyPath: \.showProgramInGrid)
+                    }
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Separación")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    HStack {
+                DirectorInspectorSection("Separación", systemImage: "square.dashed") {
+                    HStack(spacing: 12) {
                         Slider(value: $settings.appearance.cellGap, in: 0...12, step: 1)
-                        Text("\(Int(settings.appearance.cellGap))pt")
-                            .font(.caption.monospacedDigit())
-                            .frame(width: 36, alignment: .trailing)
+                        Text("\(Int(settings.appearance.cellGap)) pt")
+                            .font(.body.monospacedDigit())
+                            .frame(width: 52, alignment: .trailing)
                     }
                 }
             }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-#if os(iOS)
-        .formStyle(.grouped)
-#endif
     }
 
-#if os(iOS)
-    @ViewBuilder
-    private var externalDisplayStatusRows: some View {
-        if ProgramOutputDisplayDiscovery.hasExternalDisplay {
-            ForEach(ProgramOutputDisplayDiscovery.availableScreens().filter { !$0.isBuiltIn }) { screen in
-                LabeledContent(screen.name) {
-                    Text("\(screen.width)×\(screen.height)")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            if ProgramOutputDisplayDiscovery.isExternalDisplayMirroring {
-                Label {
-                    Text("Duplicación activa: el monitor no será independiente. En Ajustes del iPad → Pantalla, elige «Extender».")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } icon: {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                }
-            }
-        } else {
-            Text("Conecta un monitor por USB-C o HDMI. Si no aparece, revisa el cable o el adaptador.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-
-        Text("Para un monitor multiview independiente, usa «Extender pantalla» (no «Duplicar») en Ajustes del iPad.")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .listRowBackground(Color.clear)
-    }
-#endif
-
-    private func overlayToggle(_ title: String, keyPath: WritableKeyPath<PreviewMonitorOverlayOptions, Bool>) -> some View {
-        Toggle(title, isOn: Binding(
-            get: { settings.overlays[keyPath: keyPath] },
-            set: { settings.overlays[keyPath: keyPath] = $0 }
-        ))
-    }
-
-    private func colorPresetRow(_ title: String, color: PreviewMonitorRGBColor, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                Circle()
-                    .fill(color.swiftUIColor)
-                    .frame(width: 14, height: 14)
-                Text(title)
-                Spacer()
-                Image(systemName: "checkmark.circle")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .buttonStyle(.plain)
+    private func overlayToggle(
+        _ title: String,
+        keyPath: WritableKeyPath<PreviewMonitorOverlayOptions, Bool>
+    ) -> some View {
+        PreviewMonitorToggleRow(
+            title: title,
+            isOn: Binding(
+                get: { settings.overlays[keyPath: keyPath] },
+                set: { settings.overlays[keyPath: keyPath] = $0 }
+            )
+        )
     }
 }
 
-/// Legacy alias — use `PreviewMonitorInspectorSummary` + `PreviewMonitorSettingsSheet`.
+private struct PreviewMonitorToggleRow: View {
+    let title: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(title, isOn: $isOn)
+            .font(.subheadline)
+            .toggleStyle(.switch)
+            .tint(BroadcastTheme.studioAccent)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+#if os(iOS)
+private struct PreviewMonitorExternalDisplayStatus: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if ProgramOutputDisplayDiscovery.hasExternalDisplay {
+                ForEach(ProgramOutputDisplayDiscovery.availableScreens().filter { !$0.isBuiltIn }) { screen in
+                    LabeledContent(screen.name) {
+                        Text("\(screen.width)×\(screen.height)")
+                            .font(.body.monospacedDigit())
+                            .foregroundStyle(BroadcastTheme.subtleText)
+                    }
+                }
+
+                if ProgramOutputDisplayDiscovery.isExternalDisplayMirroring {
+                    Label {
+                        Text("Duplicación activa: el monitor no será independiente. En Ajustes del iPad → Pantalla, elige «Extender».")
+                            .font(.subheadline)
+                            .foregroundStyle(BroadcastTheme.subtleText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                    }
+                }
+            } else {
+                Text("Conecta un monitor por USB-C o HDMI. Si no aparece, revisa el cable o el adaptador.")
+                    .font(.subheadline)
+                    .foregroundStyle(BroadcastTheme.subtleText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Text("Para un monitor independiente, usa «Extender pantalla» y no «Duplicar».")
+                .font(.subheadline)
+                .foregroundStyle(BroadcastTheme.subtleText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+#endif

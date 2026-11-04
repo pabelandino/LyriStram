@@ -1,50 +1,6 @@
 import SwiftUI
 import EasyStreamCore
 
-// MARK: - Settings helpers
-
-private struct BroadcastSettingsToggleRow: View {
-    let title: String
-    let subtitle: String
-    let systemImage: String
-    @Binding var isOn: Bool
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(BroadcastTheme.liveAmber)
-                .frame(width: 28, height: 28)
-                .background(BroadcastTheme.liveAmber.opacity(0.14), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                .padding(.top, 1)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(BroadcastTheme.primaryText)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(BroadcastTheme.subtleText)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 8)
-
-            Toggle(title, isOn: $isOn)
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .tint(BroadcastTheme.studioAccent)
-        }
-        .padding(12)
-        .background(BroadcastTheme.panelBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(BroadcastTheme.panelBorder, lineWidth: 1)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
 private struct BroadcastSettingsInfoCallout: View {
     let text: String
 
@@ -75,34 +31,9 @@ public struct DirectorVideoQualityPanel: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            BroadcastSettingsToggleRow(
-                title: "Modo ahorro de energía",
-                subtitle: "Opción apagada por defecto. Al activarla baja el costo de las tiles. El monitor y el directo siguen en la calidad alta que elijas.",
-                systemImage: "leaf.fill",
-                isOn: $settings.energySaverMode
+            BroadcastSettingsInfoCallout(
+                text: "Este preset se guarda para la salida en vivo. YouTube y Facebook lo usarán cuando estén conectados. No cambia la imagen del director."
             )
-
-            qualitySummaryStrip
-
-            BroadcastQualityDropdown(
-                title: "Tiles preview",
-                systemImage: "rectangle.grid.2x2.fill",
-                options: PreviewTilePreset.allCases,
-                selection: $settings.previewPreset,
-                label: { $0.title },
-                chips: { previewChips(for: $0) }
-            )
-
-            BroadcastQualityDropdown(
-                title: "Monitor PROG",
-                systemImage: "tv.fill",
-                options: ProgramMonitorPreset.directorSettingsOptions,
-                selection: $settings.progPreset,
-                label: { $0.title },
-                chips: { progChips(for: $0) }
-            )
-
-            Divider().overlay(BroadcastTheme.workspaceDivider)
 
             BroadcastQualityDropdown(
                 title: "Salida en vivo",
@@ -113,94 +44,8 @@ public struct DirectorVideoQualityPanel: View {
                 chips: { outputChips(for: $0) },
                 tags: { $0.platforms }
             )
-
-            Divider().overlay(BroadcastTheme.workspaceDivider)
-
-            BroadcastSettingsToggleRow(
-                title: "Pausar cámaras en espera",
-                subtitle: "Las idle no envían video WebRTC — bajo consumo en iPhone/iPad. Preview y PROG sin cambios.",
-                systemImage: "moon.fill",
-                isOn: $settings.pauseIdleCameraStreams
-            )
-
-            BroadcastSettingsToggleRow(
-                title: "Snapshots en tiles idle",
-                subtitle: "Cada cámara idle envía un JPEG ~cada 3.5 s para ver todas en multiview. En macOS activo por defecto.",
-                systemImage: "photo.on.rectangle.angled",
-                isOn: $settings.idleTileSnapshotsEnabled
-            )
-
-            BroadcastSettingsToggleRow(
-                title: "Precalentar corte",
-                subtitle: "La cámara en preview envía video a resolución PROG y el bus incoming lo decodifica antes del take — cortes instantáneos en HD.",
-                systemImage: "bolt.fill",
-                isOn: $settings.prefetchTakeTarget
-            )
-
-            BroadcastSettingsInfoCallout(
-                text: "Live en PREV + PROG; idle muestra snapshot JPEG. Al conectar, el director recorre las cámaras una vez para llenar las miniaturas."
-            )
-        }
-    }
-
-    private var qualitySummaryStrip: some View {
-        HStack(spacing: 10) {
-            summaryTile(
-                label: "Tiles",
-                value: settings.previewPreset.streamSpec.displayLabel,
-                tint: BroadcastTheme.previewGreen
-            )
-            summaryTile(
-                label: "PROG",
-                value: settings.progPreset.streamSpec.displayLabel,
-                tint: BroadcastTheme.programRed
-            )
-            summaryTile(
-                label: "Salida",
-                value: settings.outputPreset.encoderConfiguration.displayLabel,
-                tint: BroadcastTheme.studioAccent
-            )
-        }
-    }
-
-    private func summaryTile(label: String, value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label.uppercased())
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(tint)
-            Text(value)
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(BroadcastTheme.primaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(tint.opacity(0.22), lineWidth: 1)
-        }
-    }
-
-    private func previewChips(for preset: PreviewTilePreset) -> [BroadcastSpecChipModel] {
-        let spec = preset.streamSpec
-        return [
-            BroadcastSpecChipModel(spec.resolutionLabel, tint: BroadcastTheme.previewGreen),
-            BroadcastSpecChipModel("\(spec.frameRate) fps"),
-            BroadcastSpecChipModel(spec.bitrateMbpsLabel)
-        ]
-    }
-
-    private func progChips(for preset: ProgramMonitorPreset) -> [BroadcastSpecChipModel] {
-        let spec = preset.streamSpec
-        return [
-            BroadcastSpecChipModel(spec.resolutionLabel, tint: BroadcastTheme.programRed),
-            BroadcastSpecChipModel("\(spec.frameRate) fps"),
-            BroadcastSpecChipModel(spec.bitrateMbpsLabel)
-        ]
     }
 
     private func outputChips(for preset: StreamOutputPreset) -> [BroadcastSpecChipModel] {

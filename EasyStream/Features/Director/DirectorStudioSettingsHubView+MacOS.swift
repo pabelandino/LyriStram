@@ -35,7 +35,7 @@ struct DirectorStudioSettingsHubMacLayout<DetailContent: View>: View {
 extension View {
     @ViewBuilder
     func directorStudioSettingsHubWindowSizing() -> some View {
-        frame(minWidth: 720, minHeight: 640)
+        frame(minWidth: 980, minHeight: 680)
     }
 }
 #endif

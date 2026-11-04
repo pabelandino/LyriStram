@@ -11,7 +11,11 @@ struct DirectorSettingsStudioTab: View {
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
-            VStack(alignment: .leading, spacing: 14) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 420), spacing: 14, alignment: .top)],
+                alignment: .leading,
+                spacing: 14
+            ) {
                 DirectorInspectorSection("Audio de programa", systemImage: "waveform") {
                     ProgramAudioSourcePanel(
                         sources: viewModel.sources.map {
