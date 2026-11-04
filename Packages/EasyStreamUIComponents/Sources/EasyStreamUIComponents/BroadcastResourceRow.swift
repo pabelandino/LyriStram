@@ -38,53 +38,46 @@ public struct BroadcastResourceRow: View {
     }
 
     public var body: some View {
-        HStack(spacing: 8) {
-            BroadcastResourceThumbnail(resource: resource, fileURL: fileURL)
-                .frame(width: 44, height: 28)
-                .clipShape(RoundedRectangle(cornerRadius: 5))
+        HStack(spacing: 6) {
+            HStack(spacing: 6) {
+                BroadcastResourceThumbnail(resource: resource, fileURL: fileURL)
+                    .frame(width: 44, height: 28)
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(resource.listLabel)
-                        .font(.subheadline.weight(.medium))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text(resource.listLabel)
+                            .font(.subheadline.weight(.medium))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
 
-                    if isLiveOnAir {
-                        BroadcastCompactLiveBadge()
+                        if isLiveOnAir {
+                            BroadcastCompactLiveBadge()
+                        }
                     }
-                }
 
-                Text(resource.kind.title)
-                    .font(.caption2)
-                    .foregroundStyle(BroadcastTheme.subtleText)
-                    .lineLimit(1)
+                    Text(resource.kind.title)
+                        .font(.caption2)
+                        .foregroundStyle(BroadcastTheme.subtleText)
+                        .lineLimit(1)
+                }
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             }
-            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-            .layoutPriority(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onSelect)
 
-            Menu {
-                Button("Seleccionar") { onSelect() }
-                if let onEdit {
-                    Button("Editar en Studio") { onEdit() }
-                }
-                if isLiveOnAir, let onRemoveFromProgram {
-                    Button("Quitar del aire", role: .destructive) { onRemoveFromProgram() }
-                } else {
-                    Button("Al aire") { onTakeToProgram() }
-                }
-                Button("Renombrar") { onRename() }
-                Divider()
-                Button("Eliminar", role: .destructive) { onDelete() }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(BroadcastTheme.subtleText)
-                    .frame(width: 24, height: 24)
-                    .contentShape(Rectangle())
+            airButton
+
+            if let onEdit {
+                rowIconButton(
+                    systemImage: "slider.horizontal.3",
+                    help: "Editar en Widget Studio",
+                    action: onEdit
+                )
+            } else {
+                overflowMenu
             }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
@@ -92,8 +85,62 @@ public struct BroadcastResourceRow: View {
             isActive ? BroadcastTheme.programRed.opacity(0.12) : BroadcastTheme.panelElevated,
             in: RoundedRectangle(cornerRadius: 8)
         )
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onSelect)
+    }
+
+    private var overflowMenu: some View {
+        Menu {
+            Button("Seleccionar") { onSelect() }
+            if isLiveOnAir, let onRemoveFromProgram {
+                Button("Quitar del aire", role: .destructive) { onRemoveFromProgram() }
+            } else {
+                Button("Al aire") { onTakeToProgram() }
+            }
+            Button("Renombrar") { onRename() }
+            Divider()
+            Button("Eliminar", role: .destructive) { onDelete() }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(BroadcastTheme.subtleText)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+    }
+
+    private var airButton: some View {
+        rowIconButton(
+            systemImage: isLiveOnAir ? "minus.circle" : "dot.radiowaves.left.and.right",
+            help: isLiveOnAir ? "Quitar del aire" : "Al aire",
+            tint: isLiveOnAir ? BroadcastTheme.programRed : BroadcastTheme.liveAmber,
+            action: {
+                if isLiveOnAir {
+                    onRemoveFromProgram?()
+                } else {
+                    onTakeToProgram()
+                }
+            }
+        )
+    }
+
+    private func rowIconButton(
+        systemImage: String,
+        help: String,
+        tint: Color = BroadcastTheme.subtleText,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        .fixedSize()
+        .help(help)
+        .accessibilityLabel(help)
     }
 }
 

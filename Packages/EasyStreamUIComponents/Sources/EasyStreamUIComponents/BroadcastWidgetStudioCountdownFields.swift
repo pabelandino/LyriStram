@@ -6,15 +6,11 @@ struct BroadcastWidgetStudioCountdownFields: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Color")
-                    .font(.caption)
-                TextField("Hex", text: Binding(
-                    get: { configuration.accentColorHex ?? "007AFF" },
-                    set: { configuration.accentColorHex = $0 }
-                ))
-                .textFieldStyle(.roundedBorder)
-            }
+            BroadcastWidgetStudioSharedControls.colorWellRow(
+                "Color",
+                optionalHex: $configuration.accentColorHex,
+                fallback: "007AFF"
+            )
             Stepper(
                 "Segundos: \(configuration.countdownSeconds)",
                 value: $configuration.countdownSeconds,

@@ -33,6 +33,7 @@ final class BroadcastMediaViewModel {
     var selectedWidgetPlaylistID: UUID?
 
     var liveWidgetIDs: Set<UUID> = []
+    private var tickerExitIDs: Set<UUID> = []
     var liveFullScreenGraphicID: UUID?
     var previewFullScreenGraphicID: UUID?
 
@@ -453,7 +454,8 @@ final class BroadcastMediaViewModel {
         isWidgetMotionPreview = false
     }
 
-    func saveDraftWidget() {
+    @discardableResult
+    func saveDraftWidget() -> Bool {
         do {
             syncTickerFields()
 
@@ -475,8 +477,10 @@ final class BroadcastMediaViewModel {
             if let saved = editingWidgetResource {
                 editingWidgetResource = widgetResources.first { $0.id == saved.id }
             }
+            return true
         } catch {
             lastError = error.localizedDescription
+            return false
         }
     }
 
@@ -500,6 +504,7 @@ final class BroadcastMediaViewModel {
             takeFullScreenLive(resource)
             return
         }
+        tickerExitIDs.remove(resource.id)
         liveWidgetIDs.insert(resource.id)
         refreshLiveAirBus()
     }
@@ -511,11 +516,31 @@ final class BroadcastMediaViewModel {
     }
 
     func removeWidgetFromLive(_ id: UUID, closeStudioIfEditing: Bool = true) {
+        if tickerExitIDs.contains(id) {
+            tickerExitIDs.remove(id)
+        } else if tickerCanExit(id), BroadcastMetalSpriteBus.shared.beginExit(sourceID: id) {
+            tickerExitIDs.insert(id)
+            let closeStudio = closeStudioIfEditing
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(500))
+                guard tickerExitIDs.contains(id) else { return }
+                removeWidgetFromLive(id, closeStudioIfEditing: closeStudio)
+            }
+            return
+        }
         liveWidgetIDs.remove(id)
         if closeStudioIfEditing, editingWidgetResource?.id == id {
             closeWidgetStudio()
         }
         refreshLiveAirBus()
+    }
+
+    private func tickerCanExit(_ id: UUID) -> Bool {
+        guard liveWidgetIDs.contains(id),
+              let resource = widgetResources.first(where: { $0.id == id }),
+              let configuration = loadedConfiguration(for: resource) else { return false }
+        let template = configuration.resolvedTemplate
+        return template == .ticker || template == .textBanner
     }
 
     func removeFullScreenFromLive() {
@@ -536,6 +561,7 @@ final class BroadcastMediaViewModel {
     func deleteResource(_ resource: BroadcastResource) {
         do {
             let wasLive = liveWidgetIDs.contains(resource.id) || liveFullScreenGraphicID == resource.id
+            tickerExitIDs.remove(resource.id)
             try resourceRepository.delete(resource)
             liveWidgetIDs.remove(resource.id)
             if liveFullScreenGraphicID == resource.id {
@@ -563,8 +589,7 @@ final class BroadcastMediaViewModel {
 
     func takeResourceToProgram(_ resource: BroadcastResource) {
         if resource.kind == .widget {
-            openWidgetStudio(for: resource)
-            takeDraftWidgetLive()
+            takeWidgetLive(resource)
         } else {
             takeFullScreenLive(resource)
         }

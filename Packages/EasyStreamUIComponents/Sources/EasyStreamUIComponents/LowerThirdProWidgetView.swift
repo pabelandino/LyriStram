@@ -5,92 +5,140 @@ struct LowerThirdProWidgetView: View {
     let configuration: BroadcastWidgetConfiguration
     let logoURL: URL?
     let isLive: Bool
+    let allowsMotion: Bool
     var onLiveSequenceEnded: (() -> Void)?
 
-    @State private var phase: SequencePhase = .offscreen
-
-    enum SequencePhase: Equatable {
-        case offscreen, onscreen
-    }
+    @Environment(\.logoMotionEpoch) private var motionEpoch
+    @State private var logoOn = true
+    @State private var barsOn = [true, true, true]
 
     var body: some View {
-        content
-            .offset(y: phase == .onscreen ? 0 : 90)
-            .opacity(phase == .onscreen ? 1 : 0)
-            .onAppear { restartSequenceIfNeeded() }
-            .onChange(of: isLive) { _, live in
-                if live { restartSequenceIfNeeded() } else { phase = .onscreen }
-            }
-            .onChange(of: phase) { _, newPhase in
-                guard newPhase == .offscreen, isLive, configuration.autoPlaySequence else { return }
-                onLiveSequenceEnded?()
-            }
+        GeometryReader { geo in
+            let fitted = LowerThirdLayout.fittedSize(in: geo.size)
+            stage
+                .frame(width: fitted.width, height: fitted.height)
+                .position(x: geo.size.width / 2, y: geo.size.height / 2)
+        }
+        .onChange(of: playToken, initial: true) { _, _ in
+            prepare()
+        }
+        .task(id: playToken) {
+            await runSequence()
+        }
     }
 
-    private var content: some View {
-        HStack(spacing: 14) {
-            CachedWidgetLogoView(logoURL: logoURL) { image in
-                image
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 52, height: 52)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            } placeholder: {
-                Color.clear.frame(width: 52, height: 52)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(configuration.title)
-                    .font(BroadcastWidgetTypography.font(
-                        configuration.titleFont,
-                        size: configuration.titleFontSize,
-                        weight: .bold
-                    ))
-                    .foregroundStyle(BroadcastWidgetColors.color(hex: configuration.resolvedTitleColorHex))
-                if let subtitle = configuration.subtitle, !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(BroadcastWidgetTypography.font(
-                            configuration.subtitleFont,
-                            size: configuration.subtitleFontSize
-                        ))
-                        .foregroundStyle(BroadcastWidgetColors.color(hex: configuration.resolvedSubtitleColorHex))
-                }
-            }
-            Spacer(minLength: 0)
+    @ViewBuilder
+    private var stage: some View {
+        switch configuration.resolvedLowerThirdStyle {
+        case .angular:
+            LowerThirdAngularBarsView(
+                configuration: configuration,
+                logoURL: logoURL,
+                logoShown: logoOn,
+                barsShown: barsOn
+            )
+        case .titlePlate:
+            LowerThirdTitlePlateView(
+                configuration: configuration,
+                logoURL: logoURL,
+                logoShown: logoOn,
+                barsShown: barsOn
+            )
+        case .guest, .guestPlain:
+            LowerThirdGuestPlateView(
+                configuration: configuration,
+                logoURL: logoURL,
+                logoShown: logoOn,
+                barsShown: barsOn
+            )
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
-        .background {
-            Group {
-                if configuration.resolvedUseLowerThirdGradient {
-                    BroadcastWidgetColors.gradient(
-                        configuration.resolvedLowerThirdGradient(fallbackAccent: configuration.accentColorHex)
-                    )
-                } else {
-                    BroadcastWidgetColors.color(hex: configuration.accentColorHex).opacity(0.92)
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-        .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
     }
 
-    private func restartSequenceIfNeeded() {
-        guard configuration.autoPlaySequence, isLive else {
-            phase = .onscreen
+    private var playToken: String {
+        let third = configuration.lowerThirdThirdLine
+        return "\(allowsMotion)-\(configuration.autoPlaySequence)-\(configuration.resolvedLowerThirdStyle.rawValue)-\(third)-\(motionEpoch.timeIntervalSinceReferenceDate)"
+    }
+
+    private var shouldAnimate: Bool {
+        allowsMotion && configuration.autoPlaySequence
+    }
+
+    private var sequence: LowerThirdSequence {
+        LowerThirdSequence.make(
+            style: configuration.resolvedLowerThirdStyle,
+            hasThirdLine: !configuration.lowerThirdThirdLine.isEmpty,
+            animateIn: configuration.animateInSeconds,
+            hold: configuration.holdDurationSeconds,
+            animateOut: configuration.animateOutSeconds
+        )
+    }
+
+    private func prepare() {
+        if shouldAnimate {
+            logoOn = false
+            barsOn = [false, false, false]
+        } else {
+            logoOn = true
+            barsOn = [true, true, true]
+        }
+    }
+
+    private func runSequence() async {
+        guard shouldAnimate else { return }
+        do {
+            try await Task.sleep(for: .milliseconds(40))
+        } catch {
             return
         }
+        guard !Task.isCancelled else { return }
 
-        phase = .offscreen
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(60))
-            withAnimation(.spring(response: configuration.animateInSeconds, dampingFraction: 0.82)) {
-                phase = .onscreen
-            }
-            try? await Task.sleep(for: .seconds(configuration.holdDurationSeconds))
-            withAnimation(.easeInOut(duration: configuration.animateOutSeconds)) {
-                phase = .offscreen
+        let timeline = sequence
+        let start = Date()
+        guard await wait(until: timeline.logo.enterDelay, from: start) else { return }
+        withAnimation(.easeOut(duration: timeline.logo.enterDuration)) {
+            logoOn = true
+        }
+        for index in timeline.bars.indices {
+            guard await wait(until: timeline.bars[index].enterDelay, from: start) else { return }
+            let duration = timeline.bars[index].enterDuration
+            withAnimation(.easeOut(duration: duration)) {
+                barsOn[index] = true
             }
         }
+        for index in timeline.bars.indices {
+            guard await wait(until: timeline.bars[index].exitDelay, from: start) else { return }
+            let duration = timeline.bars[index].exitDuration
+            withAnimation(.easeIn(duration: duration)) {
+                barsOn[index] = false
+            }
+        }
+        guard await wait(until: timeline.logo.exitDelay, from: start) else { return }
+        withAnimation(.easeIn(duration: timeline.logo.exitDuration)) {
+            logoOn = false
+        }
+        guard await wait(until: timeline.totalDuration, from: start) else { return }
+        if isLive {
+            onLiveSequenceEnded?()
+            return
+        }
+        do {
+            try await Task.sleep(for: .milliseconds(280))
+        } catch {
+            return
+        }
+        logoOn = true
+        barsOn = [true, true, true]
+    }
+
+    private func wait(until delay: Double, from start: Date) async -> Bool {
+        let remain = delay - Date().timeIntervalSince(start)
+        if remain > 0.01 {
+            do {
+                try await Task.sleep(for: .seconds(remain))
+            } catch {
+                return false
+            }
+        }
+        return !Task.isCancelled
     }
 }

@@ -64,6 +64,16 @@ public enum BroadcastFontPreset: String, Codable, CaseIterable, Sendable {
         case .boldDisplay: "Display bold"
         }
     }
+
+    /// Default system and display faces read as a news crawl. An explicit family stays.
+    public var newsCrawlFace: BroadcastFontPreset {
+        switch self {
+        case .serif, .monospaced, .rounded, .condensed:
+            self
+        case .system, .boldDisplay:
+            .condensed
+        }
+    }
 }
 
 public enum BroadcastLogoAnimation: String, CaseIterable, Sendable {
@@ -90,7 +100,11 @@ extension BroadcastLogoAnimation: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let raw = try container.decode(String.self)
-        self = raw == "none" ? .none : .sphere3D
+        if raw == "cube3D" {
+            self = .sphere3D
+        } else {
+            self = BroadcastLogoAnimation(rawValue: raw) ?? .none
+        }
     }
 }
 
@@ -136,10 +150,10 @@ public struct BroadcastWidgetPlacement: Codable, Equatable, Sendable {
     )
 
     public static let lowerThird = BroadcastWidgetPlacement(
-        normalizedCenterX: 0.5,
-        normalizedCenterY: 0.82,
-        widthFraction: 0.88,
-        heightFraction: 0.18
+        normalizedCenterX: 0.40,
+        normalizedCenterY: 0.78,
+        widthFraction: 0.62,
+        heightFraction: 0.26
     )
 }
 
@@ -223,10 +237,56 @@ public struct BroadcastWidgetConfiguration: Codable, Equatable, Sendable {
     public var animateInSeconds: Double
     public var animateOutSeconds: Double
     public var autoPlaySequence: Bool
+    /// Absent on widgets saved before the lower-third variants. Nil resolves to angular bars.
+    public var lowerThirdStyle: BroadcastLowerThirdStyle?
+
+    public var resolvedLowerThirdStyle: BroadcastLowerThirdStyle {
+        lowerThirdStyle ?? .angular
+    }
+
+    /// Gold line on the angular plate. Legacy saves stored the title in `tickerText`; that duplicate stays hidden until a style is chosen.
+    public var lowerThirdThirdLine: String {
+        let line = tickerText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !line.isEmpty else { return "" }
+        if lowerThirdStyle == nil,
+           line == title.trimmingCharacters(in: .whitespacesAndNewlines) {
+            return ""
+        }
+        return line
+    }
+
+    public mutating func applyLowerThirdStyleColors() {
+        switch resolvedLowerThirdStyle {
+        case .angular:
+            accentColorHex = "E6A817"
+            titleColorHex = "1C1C1C"
+            subtitleColorHex = "FFFFFF"
+            if tickerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                tickerText = "Línea inferior"
+            }
+        case .titlePlate:
+            accentColorHex = "F5C400"
+            titleColorHex = "FFFFFF"
+            subtitleColorHex = "1C1C1C"
+        case .guest, .guestPlain:
+            accentColorHex = "3DFF8A"
+            titleColorHex = "111111"
+            subtitleColorHex = "FFFFFF"
+            if (subtitle ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                subtitle = "Próximo invitado"
+            }
+        }
+    }
 
     public var clockShowsSeconds: Bool
     public var clockShowsDate: Bool
     public var clockUse24Hour: Bool
+    /// Nil keeps the plate for clocks saved before the toggle existed.
+    public var clockShowsBackground: Bool?
+
+    public var resolvedClockShowsBackground: Bool {
+        clockShowsBackground ?? true
+    }
 
     public var countdownTargetDate: Date?
     public var countdownSeconds: Int
@@ -269,9 +329,11 @@ public struct BroadcastWidgetConfiguration: Codable, Equatable, Sendable {
         self.animateInSeconds = 0.65
         self.animateOutSeconds = 0.55
         self.autoPlaySequence = true
+        self.lowerThirdStyle = .angular
         self.clockShowsSeconds = true
         self.clockShowsDate = false
         self.clockUse24Hour = true
+        self.clockShowsBackground = true
         self.countdownTargetDate = nil
         self.countdownSeconds = 60
         self.countdownAnimation = .fadeScale
@@ -286,7 +348,7 @@ public struct BroadcastWidgetConfiguration: Codable, Equatable, Sendable {
         case .lowerThirdPro, .lowerThird:
             .lowerThird
         case .clock:
-            BroadcastWidgetPlacement(normalizedCenterX: 0.88, normalizedCenterY: 0.1, widthFraction: 0.28, heightFraction: 0.12)
+            BroadcastWidgetPlacement(normalizedCenterX: 0.84, normalizedCenterY: 0.1, widthFraction: 0.28, heightFraction: 0.12)
         case .countdown:
             BroadcastWidgetPlacement(normalizedCenterX: 0.5, normalizedCenterY: 0.5, widthFraction: 0.5, heightFraction: 0.35)
         }
@@ -298,12 +360,18 @@ public struct BroadcastWidgetConfiguration: Codable, Equatable, Sendable {
         case .animatedLogo, .logo:
             logoAnimation = .sphere3D
         case .ticker, .textBanner:
+            titleFont = titleFont.newsCrawlFace
             if tickerText.isEmpty { tickerText = title }
             tickerTexts = [tickerText]
             if tickerBackgroundHex == nil { tickerBackgroundHex = "CC000000" }
             if tickerTextColorHex == nil { tickerTextColorHex = "FFFFFF" }
         case .lowerThirdPro, .lowerThird:
             autoPlaySequence = true
+            if lowerThirdStyle == nil { lowerThirdStyle = .angular }
+            if tickerText.trimmingCharacters(in: .whitespacesAndNewlines) == title.trimmingCharacters(in: .whitespacesAndNewlines) {
+                tickerText = ""
+            }
+            applyLowerThirdStyleColors()
         case .clock:
             titleFont = .monospaced
         case .countdown:

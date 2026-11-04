@@ -209,6 +209,9 @@ public final class BroadcastResourceRepository: BroadcastResourceRepositoryProto
         if configuration.tickerText.isEmpty {
             configuration.tickerText = configuration.tickerTexts.first ?? configuration.title
         }
+        if configuration.resolvedTemplate == .clock {
+            nudgeLegacyClockTowardTheRight(&configuration)
+        }
         return configuration
     }
 
@@ -277,6 +280,16 @@ public final class BroadcastResourceRepository: BroadcastResourceRepositoryProto
 
         guard let data = try? JSONEncoder().encode(index) else { return }
         try? data.write(to: indexURL, options: .atomic)
+    }
+
+    /// Older clocks sat on the right edge or were pulled too far left. A saved custom spot is left alone.
+    private func nudgeLegacyClockTowardTheRight(_ configuration: inout BroadcastWidgetConfiguration) {
+        let x = configuration.placement.normalizedCenterX
+        let y = configuration.placement.normalizedCenterY
+        guard y <= 0.16 else { return }
+        let isLegacyCorner = abs(x - 0.78) < 0.012 || abs(x - 0.88) < 0.012
+        guard isLegacyCorner else { return }
+        configuration.placement.normalizedCenterX = 0.84
     }
 
     private func removeIndexEntry(for fileName: String) {

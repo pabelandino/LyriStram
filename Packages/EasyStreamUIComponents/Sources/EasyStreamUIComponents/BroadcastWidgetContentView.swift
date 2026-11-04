@@ -37,6 +37,7 @@ public struct BroadcastWidgetContentView: View {
                 configuration: configuration,
                 logoURL: logoURL,
                 isLive: isLive,
+                allowsMotion: allowsMotion,
                 onLiveSequenceEnded: onLiveSequenceEnded
             )
         case .clock:

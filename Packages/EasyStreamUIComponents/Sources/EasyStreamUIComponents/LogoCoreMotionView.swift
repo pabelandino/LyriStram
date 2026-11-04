@@ -198,16 +198,6 @@ enum LogoMotionGraphics {
     }
 
     static func cgColor(hex: String) -> CGColor {
-        var raw = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        if raw.hasPrefix("#") { raw.removeFirst() }
-        guard raw.count >= 6, let value = UInt64(String(raw.prefix(6)), radix: 16) else {
-            return CGColor(gray: 0.45, alpha: 1)
-        }
-        return CGColor(
-            red: CGFloat((value >> 16) & 0xFF) / 255,
-            green: CGFloat((value >> 8) & 0xFF) / 255,
-            blue: CGFloat(value & 0xFF) / 255,
-            alpha: 1
-        )
+        BroadcastMetalSpriteBus.cgColor(hex: hex, alpha: 1)
     }
 }

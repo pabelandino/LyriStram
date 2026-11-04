@@ -8,13 +8,32 @@ struct BroadcastWidgetStudioLowerThirdFields: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            TextField("Título", text: $configuration.title)
+            Picker("Variante", selection: Binding(
+                get: { configuration.resolvedLowerThirdStyle },
+                set: { style in
+                    configuration.lowerThirdStyle = style
+                    configuration.applyLowerThirdStyleColors()
+                }
+            )) {
+                ForEach(BroadcastLowerThirdStyle.allCases, id: \.self) { style in
+                    Text(style.displayName).tag(style)
+                }
+            }
+            Text("Al aire entra, espera y sale solo. Vuelve a verse solo si lo agregas otra vez.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            TextField(titlePrompt, text: $configuration.title)
                 .textFieldStyle(.roundedBorder)
-            TextField("Subtítulo", text: Binding(
+            TextField(subtitlePrompt, text: Binding(
                 get: { configuration.subtitle ?? "" },
                 set: { configuration.subtitle = $0.isEmpty ? nil : $0 }
             ))
             .textFieldStyle(.roundedBorder)
+            if configuration.resolvedLowerThirdStyle == .angular {
+                TextField("Línea inferior", text: $configuration.tickerText)
+                    .textFieldStyle(.roundedBorder)
+            }
 
             BroadcastWidgetStudioSharedControls.colorWellRow(
                 "Color título",
@@ -43,16 +62,18 @@ struct BroadcastWidgetStudioLowerThirdFields: View {
                 )
             } else {
                 BroadcastWidgetStudioSharedControls.colorWellRow(
-                    "Color fondo",
+                    accentPrompt,
                     optionalHex: $configuration.accentColorHex,
-                    fallback: "007AFF"
+                    fallback: "E6A817"
                 )
             }
 
-            BroadcastWidgetStudioOptionalLogoImportControl(
-                onImportLogo: onImportLogo,
-                onImportLogoFromPhotoLibrary: onImportLogoFromPhotoLibrary
-            )
+            if configuration.resolvedLowerThirdStyle != .guestPlain {
+                BroadcastWidgetStudioOptionalLogoImportControl(
+                    onImportLogo: onImportLogo,
+                    onImportLogoFromPhotoLibrary: onImportLogoFromPhotoLibrary
+                )
+            }
 
             Toggle("Secuencia automática", isOn: $configuration.autoPlaySequence)
             Stepper(
@@ -65,6 +86,30 @@ struct BroadcastWidgetStudioLowerThirdFields: View {
                 titleLabel: "Fuente título",
                 includeSubtitle: true
             )
+        }
+    }
+
+    private var titlePrompt: String {
+        switch configuration.resolvedLowerThirdStyle {
+        case .angular: "Título"
+        case .titlePlate: "Título principal"
+        case .guest, .guestPlain: "Nombre"
+        }
+    }
+
+    private var subtitlePrompt: String {
+        switch configuration.resolvedLowerThirdStyle {
+        case .angular: "Subtítulo"
+        case .titlePlate: "Texto del recuadro"
+        case .guest, .guestPlain: "Presentación"
+        }
+    }
+
+    private var accentPrompt: String {
+        switch configuration.resolvedLowerThirdStyle {
+        case .angular: "Color de acento"
+        case .titlePlate: "Color del recuadro"
+        case .guest, .guestPlain: "Color de la barra"
         }
     }
 }

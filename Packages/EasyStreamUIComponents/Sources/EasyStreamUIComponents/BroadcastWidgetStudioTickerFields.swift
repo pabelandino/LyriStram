@@ -58,11 +58,6 @@ struct BroadcastWidgetStudioTickerFields: View {
                 in: 30...200,
                 step: 5
             )
-            BroadcastWidgetStudioFontControls(
-                configuration: $configuration,
-                titleLabel: "Fuente del ticker",
-                includeSubtitle: false
-            )
         }
     }
 }

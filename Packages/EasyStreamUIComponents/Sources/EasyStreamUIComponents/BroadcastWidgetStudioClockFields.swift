@@ -9,11 +9,17 @@ struct BroadcastWidgetStudioClockFields: View {
             Toggle("Mostrar segundos", isOn: $configuration.clockShowsSeconds)
             Toggle("Mostrar fecha", isOn: $configuration.clockShowsDate)
             Toggle("Formato 24 h", isOn: $configuration.clockUse24Hour)
+            Toggle("Mostrar fondo", isOn: Binding(
+                get: { configuration.resolvedClockShowsBackground },
+                set: { configuration.clockShowsBackground = $0 }
+            ))
             BroadcastWidgetStudioFontControls(
                 configuration: $configuration,
-                titleLabel: "Fuente reloj",
-                includeSubtitle: configuration.clockShowsDate
+                titleLabel: "Fuente de la hora",
+                includeSubtitle: configuration.clockShowsDate,
+                sizeLabel: "Tamaño de la hora"
             )
+            BroadcastWidgetStudioPlacementSizeControls(configuration: $configuration)
         }
     }
 }

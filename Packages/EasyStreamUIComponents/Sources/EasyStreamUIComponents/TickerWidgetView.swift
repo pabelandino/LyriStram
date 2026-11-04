@@ -5,9 +5,12 @@ struct TickerWidgetView: View {
     let configuration: BroadcastWidgetConfiguration
 
     private var displayText: String {
-        configuration.tickerText.isEmpty
+        let raw = configuration.tickerText.isEmpty
             ? (configuration.tickerTexts.first ?? configuration.title)
             : configuration.tickerText
+        let line = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !line.isEmpty else { return " " }
+        return line.hasSuffix(" ") ? line : line + " "
     }
 
     var body: some View {
@@ -15,13 +18,21 @@ struct TickerWidgetView: View {
             text: displayText,
             speed: configuration.tickerSpeed,
             font: BroadcastWidgetTypography.platformFont(
-                preset: configuration.titleFont,
-                size: configuration.titleFontSize,
-                weight: .semibold
+                preset: .condensed,
+                size: 28,
+                weight: .bold
             ),
             textColor: LogoMotionGraphics.cgColor(hex: configuration.resolvedTickerTextColorHex),
-            backgroundColor: LogoMotionGraphics.cgColor(hex: configuration.resolvedTickerBackgroundHex)
+            backgroundColor: configuration.resolvedUseTickerGradient
+                ? nil
+                : LogoMotionGraphics.cgColor(hex: configuration.resolvedTickerBackgroundHex),
+            gradientStart: configuration.resolvedUseTickerGradient
+                ? LogoMotionGraphics.cgColor(hex: configuration.tickerGradient.startColorHex)
+                : nil,
+            gradientEnd: configuration.resolvedUseTickerGradient
+                ? LogoMotionGraphics.cgColor(hex: configuration.tickerGradient.endColorHex)
+                : nil,
+            gradientAngle: configuration.tickerGradient.angleDegrees
         )
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }

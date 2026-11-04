@@ -178,11 +178,17 @@ struct SpriteUniforms {
     float2 size;
     float angle;
     float uvOffsetX;
+    float offsetX;
+    float opacity;
+    float scale;
+    float offsetY;
+    float uvScaleX;
 };
 
 struct SpriteOut {
     float4 position [[position]];
     float2 uv;
+    float opacity;
 };
 
 vertex SpriteOut broadcastSpriteVertex(
@@ -198,19 +204,20 @@ vertex SpriteOut broadcastSpriteVertex(
         float2(0.0, 1.0), float2(1.0, 0.0), float2(1.0, 1.0)
     };
 
-    float2 pixel = corners[vertexID] * uniforms.size;
+    float2 pixel = corners[vertexID] * uniforms.size * max(uniforms.scale, 0.0);
     float c = cos(uniforms.angle);
     float z = pixel.x * sin(uniforms.angle);
     float perspective = 1.0 / (1.0 + z / 700.0);
     float2 rotated = float2(pixel.x * c * perspective, pixel.y * perspective);
-    float2 pos = uniforms.center + rotated;
+    float2 pos = uniforms.center + rotated + float2(uniforms.offsetX, uniforms.offsetY);
     float2 viewport = max(uniforms.viewport, float2(1.0));
     float2 ndc = float2(pos.x / viewport.x * 2.0 - 1.0, 1.0 - pos.y / viewport.y * 2.0);
 
     SpriteOut out;
     out.position = float4(ndc, 0.0, 1.0);
-    out.uv = float2(uvs[vertexID].x, 1.0 - uvs[vertexID].y);
+    out.uv = float2(uvs[vertexID].x * max(uniforms.uvScaleX, 0.0001), 1.0 - uvs[vertexID].y);
     out.uv.x += uniforms.uvOffsetX;
+    out.opacity = uniforms.opacity;
     return out;
 }
 
@@ -221,8 +228,8 @@ fragment float4 broadcastSpriteFragment(
 ) {
     float2 uv = in.uv;
     uv.x = fract(uv.x);
-    if (sprite.get_width() == 0) {
+    if (sprite.get_width() == 0 || in.opacity <= 0.001) {
         return float4(0.0);
     }
-    return sprite.sample(texSampler, uv);
+    return sprite.sample(texSampler, uv) * in.opacity;
 }

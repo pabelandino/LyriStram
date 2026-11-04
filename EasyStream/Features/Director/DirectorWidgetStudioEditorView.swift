@@ -53,12 +53,21 @@ struct DirectorWidgetStudioEditorView: View {
                     onEnterLayoutMode: { mediaViewModel.enterWidgetLayoutEditing() },
                     onImportLogo: { mediaViewModel.requestWidgetLogoImport() },
                     onImportLogoFromPhotoLibrary: { mediaViewModel.requestWidgetLogoImportFromPhotoLibrary() },
-                    onSave: { mediaViewModel.saveDraftWidget() },
+                    onSave: {
+                        if mediaViewModel.saveDraftWidget() {
+                            mediaViewModel.closeWidgetStudio()
+                        }
+                    },
                     onGoLive: { mediaViewModel.takeDraftWidgetLive() },
                     onApplyToLive: { mediaViewModel.applyDraftToLiveAir() },
                     onRemoveFromLive: {
                         if let id = mediaViewModel.editingWidgetResource?.id {
                             mediaViewModel.removeWidgetFromLive(id)
+                        }
+                    },
+                    onDelete: {
+                        if let resource = mediaViewModel.editingWidgetResource {
+                            mediaViewModel.deleteResource(resource)
                         }
                     },
                     onClose: onClose

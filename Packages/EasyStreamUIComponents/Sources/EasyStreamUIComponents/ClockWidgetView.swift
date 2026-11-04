@@ -6,7 +6,7 @@ struct ClockWidgetView: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            VStack(alignment: .trailing, spacing: 2) {
+            VStack(alignment: .center, spacing: 2) {
                 Text(timeString(for: context.date))
                     .font(BroadcastWidgetTypography.font(
                         configuration.titleFont,
@@ -26,7 +26,14 @@ struct ClockWidgetView: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .padding(.trailing, 10)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .background {
+                if configuration.resolvedClockShowsBackground {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(.black.opacity(0.55))
+                }
+            }
         }
     }
 

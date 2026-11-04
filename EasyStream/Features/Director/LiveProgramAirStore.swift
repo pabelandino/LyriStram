@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import QuartzCore
 import EasyStreamCore
 import EasyStreamUIComponents
 
@@ -18,6 +19,9 @@ final class LiveProgramAirStore {
     private(set) var revision: UInt64 = 0
 
     var widgetAutoDismissHandler: ((UUID) -> Void)?
+
+    @ObservationIgnored private var lowerThirdExitTask: Task<Void, Never>?
+    @ObservationIgnored private var lowerThirdStartedAt: [UUID: CFTimeInterval] = [:]
 
     private init() {}
 
@@ -64,11 +68,57 @@ final class LiveProgramAirStore {
         revision &+= 1
 
         BroadcastMetalSpriteBus.shared.publish(widgetLayers)
+        scheduleLowerThirdExit(for: widgetLayers)
         DirectorProgramOutputStore.shared.syncAirGraphics(
             widgetLayers: widgetLayers,
             fullScreenResource: fullScreenResource,
             fullScreenFileURL: fullScreenFileURL,
             fullScreenIsLive: fullScreenIsLive
         )
+    }
+
+    /// One sleep for the whole lower-third timeline. The shader owns the frames.
+    /// Adding or removing another graphic must not restart a lower third that is already counting down.
+    private func scheduleLowerThirdExit(for layers: [ProgramFeedWidgetLayer]) {
+        lowerThirdExitTask?.cancel()
+        let now = CACurrentMediaTime()
+        var timed: [(UUID, Double)] = []
+        var stillLive: [UUID: CFTimeInterval] = [:]
+        for layer in layers {
+            let template = layer.configuration.resolvedTemplate
+            guard template == .lowerThird || template == .lowerThirdPro else { continue }
+            let sequence = LowerThirdSequence.make(
+                style: layer.configuration.resolvedLowerThirdStyle,
+                hasThirdLine: !layer.configuration.lowerThirdThirdLine.isEmpty,
+                animateIn: layer.configuration.animateInSeconds,
+                hold: layer.configuration.holdDurationSeconds,
+                animateOut: layer.configuration.animateOutSeconds
+            )
+            let started = lowerThirdStartedAt[layer.id] ?? now
+            stillLive[layer.id] = started
+            timed.append((layer.id, sequence.totalDuration + 0.4 - (now - started)))
+        }
+        lowerThirdStartedAt = stillLive
+        guard !timed.isEmpty else {
+            lowerThirdExitTask = nil
+            return
+        }
+        lowerThirdExitTask = Task { @MainActor in
+            let ordered = timed.sorted { $0.1 < $1.1 }
+            var elapsed = 0.0
+            for item in ordered {
+                let wait = item.1 - elapsed
+                if wait > 0 {
+                    do {
+                        try await Task.sleep(for: .seconds(wait))
+                    } catch {
+                        return
+                    }
+                }
+                guard !Task.isCancelled else { return }
+                elapsed = max(elapsed, item.1)
+                requestWidgetAutoDismiss(item.0)
+            }
+        }
     }
 }

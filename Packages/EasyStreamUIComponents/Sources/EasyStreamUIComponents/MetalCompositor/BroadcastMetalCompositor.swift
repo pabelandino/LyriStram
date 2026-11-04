@@ -39,6 +39,11 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         var size: SIMD2<Float> = .zero
         var angle: Float = 0
         var uvOffsetX: Float = 0
+        var offsetX: Float = 0
+        var opacity: Float = 1
+        var scale: Float = 1
+        var offsetY: Float = 0
+        var uvScaleX: Float = 1
     }
 
     private struct TextureSet {
@@ -234,13 +239,14 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         guard !suspended else { return }
 
         let now = CACurrentMediaTime()
+        let timepieceChanged = BroadcastMetalSpriteBus.shared.refreshTimepieces()
         let generation = ProgramFrameDisplayBus.shared.currentDisplayGeneration()
         presentLock.lock()
         let generationChanged = generation != lastPresentedGeneration
         let motionDue = !generationChanged
             && now - lastMotionPresentTime >= (1.0 / 30.0)
             && BroadcastMetalSpriteBus.shared.presentsMotion()
-        if (!generationChanged && !motionDue) || presentQueued {
+        if (!generationChanged && !motionDue && !timepieceChanged) || presentQueued {
             presentLock.unlock()
             return
         }
@@ -528,6 +534,7 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         let viewportPixels = SIMD2(Float(viewport.width), Float(viewport.height))
         for sprite in sprites {
             var uniforms = spriteUniforms(for: sprite.bitmap, viewport: viewportPixels, time: time)
+            if uniforms.opacity < 0.004 { continue }
             encoder.setVertexBytes(&uniforms, length: MemoryLayout<SpriteUniforms>.stride, index: 0)
             encoder.setFragmentTexture(sprite.texture, index: 0)
             encoder.setFragmentSamplerState(samplerState, index: 0)
@@ -585,14 +592,67 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
                 width = side * aspect
             }
         }
+        let motion = sequenceMotion(for: bitmap, time: time, pieceWidth: width, pieceHeight: height)
+        let crawl = crawlWindow(for: bitmap, viewportWidth: width, viewportHeight: height, time: time)
         return SpriteUniforms(
             viewport: viewport,
             center: SIMD2(bitmap.centerX * viewport.x, bitmap.centerY * viewport.y),
             size: SIMD2(width, height),
             angle: rotationAngle(time: time, spin: bitmap.spinDuration, pause: bitmap.pauseDuration),
-            uvOffsetX: bitmap.scrollUVPerSecond > 0
-                ? Float(time * Double(bitmap.scrollUVPerSecond)).truncatingRemainder(dividingBy: 1)
+            uvOffsetX: crawl.offset,
+            offsetX: motion.offsetX,
+            opacity: motion.opacity,
+            scale: motion.scale,
+            offsetY: motion.offsetY,
+            uvScaleX: crawl.scale
+        )
+    }
+
+    /// A news crawl shows a 1:1 slice of a long strip. `scrollUVPerSecond` is points per second.
+    private func crawlWindow(
+        for bitmap: BroadcastMetalSpriteBus.Bitmap,
+        viewportWidth: Float,
+        viewportHeight: Float,
+        time: CFTimeInterval
+    ) -> (offset: Float, scale: Float) {
+        guard bitmap.matchesTextScale, bitmap.width > 0, viewportHeight > 1 else {
+            let offset = bitmap.scrollUVPerSecond > 0
+                ? Float((time * Double(bitmap.scrollUVPerSecond)).truncatingRemainder(dividingBy: 1))
                 : 0
+            return (offset, 1)
+        }
+        let texel = max(viewportHeight / Float(bitmap.height), 0.001)
+        let scale = Float(bitmap.height) * viewportWidth / (viewportHeight * Float(bitmap.width))
+        let texelsPerSecond = Double(bitmap.scrollUVPerSecond) / Double(texel)
+        let fraction = (time * texelsPerSecond / Double(bitmap.width)).truncatingRemainder(dividingBy: 1)
+        return (Float(fraction), scale)
+    }
+
+    private func sequenceMotion(
+        for bitmap: BroadcastMetalSpriteBus.Bitmap,
+        time: CFTimeInterval,
+        pieceWidth: Float,
+        pieceHeight: Float
+    ) -> (offsetX: Float, offsetY: Float, opacity: Float, scale: Float) {
+        guard bitmap.playsSequence else { return (0, 0, 1, 1) }
+        let cue = LowerThirdCue(
+            enterDelay: Double(bitmap.enterDelay),
+            enterDuration: Double(bitmap.enterDuration),
+            exitDelay: Double(bitmap.exitDelay),
+            exitDuration: Double(bitmap.exitDuration),
+            slideFraction: Double(bitmap.slideFraction),
+            enterScale: Double(bitmap.enterScale)
+        )
+        let sample = cue.sample(elapsed: time - bitmap.sequenceStart)
+        let shift = Float(sample.offsetFraction)
+        if bitmap.slidesVertically {
+            return (0, shift * pieceHeight, Float(sample.opacity), 1)
+        }
+        return (
+            shift * pieceWidth,
+            0,
+            Float(sample.opacity),
+            Float(sample.scale)
         )
     }
 

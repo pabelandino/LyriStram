@@ -57,12 +57,15 @@ public enum BroadcastWidgetTypography {
             return NSFont.monospacedSystemFont(ofSize: resolvedSize, weight: nsWeight)
         case .serif:
             return NSFont(name: "Times New Roman", size: resolvedSize) ?? NSFont.systemFont(ofSize: resolvedSize, weight: nsWeight)
+        case .condensed:
+            return NSFont(name: "HelveticaNeue-CondensedBold", size: resolvedSize)
+                ?? NSFont.boldSystemFont(ofSize: resolvedSize)
         default:
             return NSFont.systemFont(ofSize: resolvedSize, weight: nsWeight)
         }
     }
 #else
-    static func platformFont(preset: BroadcastFontPreset, size: Double, weight: Font.Weight) -> UIFont {
+    private static func platformFont(preset: BroadcastFontPreset, size: Double, weight: Font.Weight) -> UIFont {
         let resolvedSize = max(8, size)
         let uiWeight: UIFont.Weight = switch weight {
         case .bold: .bold
@@ -76,6 +79,9 @@ public enum BroadcastWidgetTypography {
             return UIFont.monospacedSystemFont(ofSize: resolvedSize, weight: uiWeight)
         case .serif:
             return UIFont(name: "Times New Roman", size: resolvedSize) ?? UIFont.systemFont(ofSize: resolvedSize, weight: uiWeight)
+        case .condensed:
+            return UIFont(name: "HelveticaNeue-CondensedBold", size: resolvedSize)
+                ?? UIFont.boldSystemFont(ofSize: resolvedSize)
         default:
             return UIFont.systemFont(ofSize: resolvedSize, weight: uiWeight)
         }

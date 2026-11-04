@@ -5,6 +5,7 @@ struct BroadcastWidgetStudioFontControls: View {
     @Binding var configuration: BroadcastWidgetConfiguration
     let titleLabel: String
     let includeSubtitle: Bool
+    var sizeLabel: String = "Tamaño"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {

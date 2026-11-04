@@ -17,6 +17,7 @@ public struct BroadcastWidgetStudioPanel: View {
     let onGoLive: () -> Void
     let onApplyToLive: () -> Void
     let onRemoveFromLive: () -> Void
+    let onDelete: () -> Void
     let onClose: () -> Void
 
     public init(
@@ -35,6 +36,7 @@ public struct BroadcastWidgetStudioPanel: View {
         onGoLive: @escaping () -> Void,
         onApplyToLive: @escaping () -> Void = {},
         onRemoveFromLive: @escaping () -> Void = {},
+        onDelete: @escaping () -> Void = {},
         onClose: @escaping () -> Void
     ) {
         self._configuration = configuration
@@ -52,8 +54,11 @@ public struct BroadcastWidgetStudioPanel: View {
         self.onGoLive = onGoLive
         self.onApplyToLive = onApplyToLive
         self.onRemoveFromLive = onRemoveFromLive
+        self.onDelete = onDelete
         self.onClose = onClose
     }
+
+    @State private var confirmsDelete = false
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -228,6 +233,21 @@ public struct BroadcastWidgetStudioPanel: View {
                 }
                 .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.liveAmber, isProminent: true))
             }
+
+            if isEditingExisting {
+                Button(role: .destructive) {
+                    confirmsDelete = true
+                } label: {
+                    Label("Eliminar", systemImage: "trash")
+                }
+                .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.programRed, isProminent: false))
+            }
+        }
+        .alert("Eliminar widget", isPresented: $confirmsDelete) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Eliminar", role: .destructive, action: onDelete)
+        } message: {
+            Text("Se quita de la biblioteca y del aire.")
         }
     }
 }
