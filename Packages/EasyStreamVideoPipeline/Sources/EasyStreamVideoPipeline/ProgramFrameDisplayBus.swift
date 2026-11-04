@@ -33,6 +33,10 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
     )
 
     private let rampGraceLock = NSLock()
+    private let generationLock = NSLock()
+    /// Bumps when a lane changes. The compositor reads this off the main thread and
+    /// presents at most one frame, so menus are not woken on every display refresh.
+    private var displayGeneration: UInt64 = 0
     /// After a preview-tier promote, accept live sub-HD frames on the on-air lane until HD lands.
     private var subHDOnAirGraceDeadline: DispatchTime?
 
@@ -74,6 +78,7 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
             || format == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
 
         NativeProgramFrameBus.push(lane: lane, pixelBuffer: pixelBuffer, isNV12: isNV12)
+        noteDisplayChanged()
 
         if let sample = displaySample(for: lane) {
             ProgramBusTrace.lanePublish(
@@ -96,6 +101,12 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
     }
 
     // MARK: - Display
+
+    public func currentDisplayGeneration() -> UInt64 {
+        generationLock.lock()
+        defer { generationLock.unlock() }
+        return displayGeneration
+    }
 
     public func displaySample(for lane: ProgramFrameBusSlot) -> Sample? {
         guard let native = NativeProgramFrameBus.copyDisplayFrame(for: lane) else { return nil }
@@ -196,13 +207,22 @@ public final class ProgramFrameDisplayBus: @unchecked Sendable {
 
     public func clearTransitionLanes() {
         NativeProgramFrameBus.clearTransitionLanes()
+        noteDisplayChanged()
     }
 
     public func clearAllLanes() {
         NativeProgramFrameBus.clearAll()
+        noteDisplayChanged()
     }
 
     public func clearOnAirLane() {
         NativeProgramFrameBus.clearOnAirLane()
+        noteDisplayChanged()
+    }
+
+    private func noteDisplayChanged() {
+        generationLock.lock()
+        displayGeneration &+= 1
+        generationLock.unlock()
     }
 }

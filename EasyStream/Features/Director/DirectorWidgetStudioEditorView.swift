@@ -29,6 +29,8 @@ struct DirectorWidgetStudioEditorView: View {
                 displayName: mediaViewModel.draftWidgetDisplayName,
                 logoURL: mediaViewModel.editingWidgetResource.flatMap { mediaViewModel.logoURL(for: $0) },
                 isPlacementEditing: mediaViewModel.isWidgetPlacementEditing,
+                allowsMotion: mediaViewModel.isWidgetMotionPreview && !mediaViewModel.isWidgetPlacementEditing,
+                motionEpoch: mediaViewModel.widgetMotionEpoch,
                 placement: $mediaViewModel.draftWidgetConfiguration.placement
             )
         }
@@ -52,7 +54,6 @@ struct DirectorWidgetStudioEditorView: View {
                     onImportLogo: { mediaViewModel.requestWidgetLogoImport() },
                     onImportLogoFromPhotoLibrary: { mediaViewModel.requestWidgetLogoImportFromPhotoLibrary() },
                     onSave: { mediaViewModel.saveDraftWidget() },
-                    onPreview: { mediaViewModel.previewDraftWidget() },
                     onGoLive: { mediaViewModel.takeDraftWidgetLive() },
                     onApplyToLive: { mediaViewModel.applyDraftToLiveAir() },
                     onRemoveFromLive: {
@@ -75,7 +76,10 @@ private struct WidgetStudioDraftPreviewSurface: View {
     let displayName: String
     let logoURL: URL?
     let isPlacementEditing: Bool
+    let allowsMotion: Bool
+    let motionEpoch: Date
     @Binding var placement: BroadcastWidgetPlacement
+    @State private var previewLayerID = UUID()
 
     var body: some View {
         ZStack {
@@ -83,7 +87,7 @@ private struct WidgetStudioDraftPreviewSurface: View {
             PreviewWidgetOverlayView(
                 layers: [
                     ProgramFeedWidgetLayer(
-                        id: UUID(),
+                        id: previewLayerID,
                         configuration: configuration,
                         logoURL: logoURL,
                         isLive: false,
@@ -92,8 +96,9 @@ private struct WidgetStudioDraftPreviewSurface: View {
                 ],
                 isPlacementEditing: isPlacementEditing,
                 editingPlacement: $placement,
-                allowsMotion: false
+                allowsMotion: allowsMotion
             )
+            .environment(\.logoMotionEpoch, motionEpoch)
             if isPlacementEditing {
                 VStack {
                     Spacer()

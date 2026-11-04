@@ -6,7 +6,9 @@ import UIKit
 import CoreVideo
 #endif
 
-/// Drives PROG compositor draws on the display refresh interval (Apple-recommended path).
+/// Vsync clock for the program picture. The callback stays off the main thread on macOS.
+/// Drawing is scheduled by the compositor only when a new frame exists, so menus and
+/// windows keep the main run loop.
 final class BroadcastMetalDisplayLinkDriver: @unchecked Sendable {
     var preferredFramesPerSecond: Int = 60
     var onFrame: (() -> Void)?
@@ -43,9 +45,7 @@ final class BroadcastMetalDisplayLinkDriver: @unchecked Sendable {
             let driver = Unmanaged<BroadcastMetalDisplayLinkDriver>
                 .fromOpaque(userInfo)
                 .takeUnretainedValue()
-            DispatchQueue.main.async {
-                driver.onFrame?()
-            }
+            driver.onFrame?()
             return kCVReturnSuccess
         }
         CVDisplayLinkSetOutputCallback(

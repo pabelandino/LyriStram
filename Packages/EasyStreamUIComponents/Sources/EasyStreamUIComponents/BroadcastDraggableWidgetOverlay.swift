@@ -32,6 +32,17 @@ public struct BroadcastDraggableWidgetOverlay<Content: View>: View {
     }
 
     public var body: some View {
+        if isEditing {
+            editingCanvas
+        } else {
+            WidgetLivePlacementLayout(placement: placement, sizing: contentSizing) {
+                content()
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
+    private var editingCanvas: some View {
         GeometryReader { geometry in
             let canvasSize = geometry.size
             let rect = WidgetPlacementGeometry.rect(

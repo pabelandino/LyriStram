@@ -9,7 +9,8 @@ import EasyStreamVideoPipeline
 /// Shared GPU compositor for program video transitions and widget overlay layers.
 ///
 /// Presentation follows Apple's guidance:
-/// - `CVDisplayLink` / `CADisplayLink` drives draws on vsync
+/// - `CVDisplayLink` / `CADisplayLink` notices vsync off the menu run loop
+/// - A draw is queued only when a new picture or sprite motion is waiting, and never stacked
 /// - `CVMetalTexture` + `CVPixelBuffer` retained until `MTLCommandBuffer` completes
 /// - Skip draw when compositor is suspended (no program source)
 final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
@@ -32,6 +33,14 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         var hasOverlay: Int32 = 0
     }
 
+    private struct SpriteUniforms {
+        var viewport: SIMD2<Float> = .zero
+        var center: SIMD2<Float> = .zero
+        var size: SIMD2<Float> = .zero
+        var angle: Float = 0
+        var uvOffsetX: Float = 0
+    }
+
     private struct TextureSet {
         var outgoingBGRA: MTLTexture?
         var outgoingY: MTLTexture?
@@ -45,6 +54,7 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     private let device: MTLDevice
     private let commandQueue: MTLCommandQueue
     private var pipelineState: MTLRenderPipelineState?
+    private var spritePipelineState: MTLRenderPipelineState?
     private var textureCache: CVMetalTextureCache?
     private var samplerState: MTLSamplerState?
 
@@ -64,8 +74,14 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     private var overlaySnapshot: MTLTexture?
     private var overlayAnimationTimer: Timer?
     private var drawScheduled = false
+    private let presentLock = NSLock()
+    private var presentQueued = false
+    private var lastPresentedGeneration: UInt64 = 0
+    private var lastMotionPresentTime: CFTimeInterval = 0
     private var isCompositorSuspended = false
     private var hasPresentedVideoFrame = false
+    private var spriteGeneration: UInt64 = .max
+    private var gpuSprites: [(texture: MTLTexture, bitmap: BroadcastMetalSpriteBus.Bitmap)] = []
 
     private let displayLinkDriver = BroadcastMetalDisplayLinkDriver()
 
@@ -96,6 +112,7 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         samplerState = device.makeSamplerState(descriptor: samplerDescriptor)
 
         buildPipeline()
+        buildSpritePipeline()
 
         displayLinkDriver.onFrame = { [weak self] in
             self?.displayLinkTick()
@@ -207,21 +224,60 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         }
     }
 
+    /// Runs on the display-link thread. Touches AppKit only after a new picture is waiting.
     private func displayLinkTick() {
-        guard let view = mtkView else { return }
         let suspended: Bool = {
             stateLock.lock()
             defer { stateLock.unlock() }
             return isCompositorSuspended
         }()
         guard !suspended else { return }
-        performDraw(on: view)
+
+        let now = CACurrentMediaTime()
+        let generation = ProgramFrameDisplayBus.shared.currentDisplayGeneration()
+        presentLock.lock()
+        let generationChanged = generation != lastPresentedGeneration
+        let motionDue = !generationChanged
+            && now - lastMotionPresentTime >= (1.0 / 30.0)
+            && BroadcastMetalSpriteBus.shared.presentsMotion()
+        if (!generationChanged && !motionDue) || presentQueued {
+            presentLock.unlock()
+            return
+        }
+        presentQueued = true
+        presentLock.unlock()
+
+        let present: () -> Void = { [weak self] in
+            self?.presentLatestPicture()
+        }
+        if Thread.isMainThread {
+            present()
+        } else {
+            DispatchQueue.main.async(execute: present)
+        }
+    }
+
+    private func presentLatestPicture() {
+        let generationAtStart = ProgramFrameDisplayBus.shared.currentDisplayGeneration()
+        if let view = mtkView {
+            performDraw(on: view)
+        }
+        presentLock.lock()
+        lastPresentedGeneration = generationAtStart
+        if BroadcastMetalSpriteBus.shared.presentsMotion() {
+            lastMotionPresentTime = CACurrentMediaTime()
+        }
+        presentQueued = false
+        presentLock.unlock()
     }
 
     private func requestDraw() {
         DispatchQueue.main.async {
             guard let view = self.mtkView else { return }
             self.performDraw(on: view)
+            self.presentLock.lock()
+            self.lastPresentedGeneration = ProgramFrameDisplayBus.shared.currentDisplayGeneration()
+            self.presentLock.unlock()
         }
     }
 
@@ -343,6 +399,24 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         pipelineState = try? device.makeRenderPipelineState(descriptor: descriptor)
     }
 
+    private func buildSpritePipeline() {
+        guard let library = Self.loadMetalLibrary(device: device),
+              let vertex = library.makeFunction(name: "broadcastSpriteVertex"),
+              let fragment = library.makeFunction(name: "broadcastSpriteFragment") else {
+            return
+        }
+        let descriptor = MTLRenderPipelineDescriptor()
+        descriptor.vertexFunction = vertex
+        descriptor.fragmentFunction = fragment
+        descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+        descriptor.colorAttachments[0].isBlendingEnabled = true
+        descriptor.colorAttachments[0].sourceRGBBlendFactor = .one
+        descriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
+        descriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
+        descriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
+        spritePipelineState = try? device.makeRenderPipelineState(descriptor: descriptor)
+    }
+
     private static func loadMetalLibrary(device: MTLDevice) -> MTLLibrary? {
         #if SWIFT_PACKAGE
         if let library = try? device.makeDefaultLibrary(bundle: Bundle.module) {
@@ -372,8 +446,10 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
 
         let hasOverlay = overlayTexture != nil
         logCompositorDraw(binding: binding)
+        let sprites = gpuSpritesForDraw()
+        let hasVideo = binding.hasOutgoingVideo || binding.hasIncomingVideo
 
-        guard binding.hasOutgoingVideo || binding.hasIncomingVideo else {
+        guard hasVideo || !sprites.isEmpty else {
             binding.releaseAfterGPU()
             return
         }
@@ -383,44 +459,53 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
             passDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 1)
         }
 
+        let viewportSize = view.drawableSize
+        if !hasVideo {
+            passDescriptor.colorAttachments[0].loadAction = .clear
+            passDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 1)
+        }
         guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: passDescriptor) else {
             binding.releaseAfterGPU()
             return
         }
 
-        let viewportSize = view.drawableSize
-        var textures = TextureSet(
-            outgoingBGRA: binding.outgoingBGRA,
-            outgoingY: binding.outgoingY,
-            outgoingCbCr: binding.outgoingCbCr,
-            incomingBGRA: binding.incomingBGRA,
-            incomingY: binding.incomingY,
-            incomingCbCr: binding.incomingCbCr,
-            overlayBGRA: overlayTexture
-        )
-        var uniforms = makeUniforms(
-            viewportSize: viewportSize,
-            textures: textures,
-            binding: binding,
-            transition: transition
-        )
-        uniforms.hasOverlay = hasOverlay ? 1 : 0
+        if hasVideo {
+            var textures = TextureSet(
+                outgoingBGRA: binding.outgoingBGRA,
+                outgoingY: binding.outgoingY,
+                outgoingCbCr: binding.outgoingCbCr,
+                incomingBGRA: binding.incomingBGRA,
+                incomingY: binding.incomingY,
+                incomingCbCr: binding.incomingCbCr,
+                overlayBGRA: overlayTexture
+            )
+            var uniforms = makeUniforms(
+                viewportSize: viewportSize,
+                textures: textures,
+                binding: binding,
+                transition: transition
+            )
+            uniforms.hasOverlay = hasOverlay ? 1 : 0
 
-        encoder.setRenderPipelineState(pipelineState)
-        encoder.setFragmentBytes(&uniforms, length: MemoryLayout<Uniforms>.stride, index: 0)
-        encoder.setFragmentTexture(textures.outgoingBGRA, index: 0)
-        encoder.setFragmentTexture(textures.outgoingY, index: 1)
-        encoder.setFragmentTexture(textures.outgoingCbCr, index: 2)
-        encoder.setFragmentTexture(textures.incomingBGRA, index: 3)
-        encoder.setFragmentTexture(textures.incomingY, index: 4)
-        encoder.setFragmentTexture(textures.incomingCbCr, index: 5)
-        encoder.setFragmentTexture(textures.overlayBGRA, index: 6)
-        encoder.setFragmentSamplerState(samplerState, index: 0)
-        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+            encoder.setRenderPipelineState(pipelineState)
+            encoder.setFragmentBytes(&uniforms, length: MemoryLayout<Uniforms>.stride, index: 0)
+            encoder.setFragmentTexture(textures.outgoingBGRA, index: 0)
+            encoder.setFragmentTexture(textures.outgoingY, index: 1)
+            encoder.setFragmentTexture(textures.outgoingCbCr, index: 2)
+            encoder.setFragmentTexture(textures.incomingBGRA, index: 3)
+            encoder.setFragmentTexture(textures.incomingY, index: 4)
+            encoder.setFragmentTexture(textures.incomingCbCr, index: 5)
+            encoder.setFragmentTexture(textures.overlayBGRA, index: 6)
+            encoder.setFragmentSamplerState(samplerState, index: 0)
+            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+        }
+
+        drawSprites(sprites, encoder: encoder, viewport: viewportSize)
         encoder.endEncoding()
 
         commandBuffer.addCompletedHandler { [binding] _ in
             binding.releaseAfterGPU()
+            withExtendedLifetime(sprites) {}
         }
 
         commandBuffer.present(drawable)
@@ -429,6 +514,96 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         if binding.hasOutgoingVideo {
             hasPresentedVideoFrame = true
         }
+    }
+
+    private func drawSprites(
+        _ sprites: [(texture: MTLTexture, bitmap: BroadcastMetalSpriteBus.Bitmap)],
+        encoder: MTLRenderCommandEncoder,
+        viewport: CGSize
+    ) {
+        guard !sprites.isEmpty, let spritePipelineState, let samplerState else { return }
+
+        encoder.setRenderPipelineState(spritePipelineState)
+        let time = CACurrentMediaTime()
+        let viewportPixels = SIMD2(Float(viewport.width), Float(viewport.height))
+        for sprite in sprites {
+            var uniforms = spriteUniforms(for: sprite.bitmap, viewport: viewportPixels, time: time)
+            encoder.setVertexBytes(&uniforms, length: MemoryLayout<SpriteUniforms>.stride, index: 0)
+            encoder.setFragmentTexture(sprite.texture, index: 0)
+            encoder.setFragmentSamplerState(samplerState, index: 0)
+            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+        }
+    }
+
+    private func gpuSpritesForDraw() -> [(texture: MTLTexture, bitmap: BroadcastMetalSpriteBus.Bitmap)] {
+        let snapshot = BroadcastMetalSpriteBus.shared.current()
+        guard snapshot.generation != spriteGeneration else { return gpuSprites }
+        spriteGeneration = snapshot.generation
+        gpuSprites = snapshot.bitmaps.compactMap { bitmap in
+            guard let texture = makeSpriteTexture(bitmap) else { return nil }
+            return (texture, bitmap)
+        }
+        return gpuSprites
+    }
+
+    private func makeSpriteTexture(_ bitmap: BroadcastMetalSpriteBus.Bitmap) -> MTLTexture? {
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(
+            pixelFormat: .rgba8Unorm,
+            width: bitmap.width,
+            height: bitmap.height,
+            mipmapped: false
+        )
+        descriptor.usage = [.shaderRead]
+        guard let texture = device.makeTexture(descriptor: descriptor) else { return nil }
+        bitmap.rgba.withUnsafeBytes { raw in
+            guard let base = raw.baseAddress else { return }
+            texture.replace(
+                region: MTLRegionMake2D(0, 0, bitmap.width, bitmap.height),
+                mipmapLevel: 0,
+                withBytes: base,
+                bytesPerRow: bitmap.width * 4
+            )
+        }
+        return texture
+    }
+
+    private func spriteUniforms(
+        for bitmap: BroadcastMetalSpriteBus.Bitmap,
+        viewport: SIMD2<Float>,
+        time: CFTimeInterval
+    ) -> SpriteUniforms {
+        var width = bitmap.widthFraction * viewport.x
+        var height = bitmap.heightFraction * viewport.y
+        if bitmap.uniformSquare {
+            let side = min(width, height)
+            let aspect = Float(bitmap.width) / Float(max(bitmap.height, 1))
+            if aspect >= 1 {
+                width = side
+                height = side / aspect
+            } else {
+                height = side
+                width = side * aspect
+            }
+        }
+        return SpriteUniforms(
+            viewport: viewport,
+            center: SIMD2(bitmap.centerX * viewport.x, bitmap.centerY * viewport.y),
+            size: SIMD2(width, height),
+            angle: rotationAngle(time: time, spin: bitmap.spinDuration, pause: bitmap.pauseDuration),
+            uvOffsetX: bitmap.scrollUVPerSecond > 0
+                ? Float(time * Double(bitmap.scrollUVPerSecond)).truncatingRemainder(dividingBy: 1)
+                : 0
+        )
+    }
+
+    private func rotationAngle(time: CFTimeInterval, spin: Float, pause: Float) -> Float {
+        guard spin > 0 else { return 0 }
+        let cycle = Double(spin + pause)
+        let phase = time.truncatingRemainder(dividingBy: cycle)
+        if phase < Double(spin) {
+            return Float((phase / Double(spin)) * 2 * Double.pi)
+        }
+        return 0
     }
 
     private func layerFrame(for lane: ProgramFrameBusSlot) -> BroadcastMetalVideoFrame.LayerFrame {

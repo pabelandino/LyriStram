@@ -176,8 +176,6 @@ struct DirectorSessionView: View {
             await DirectorModalPresentation.deferHeavyUI()
             shouldPrewarmStudioSettings = false
             DirectorWorkspaceSession.shared.markSettingsUIPrewarmed()
-            platformPrewarmStudioSettingsWindowIfNeeded()
-            platformPrewarmWidgetStudioWindowIfNeeded()
         }
     }
 }

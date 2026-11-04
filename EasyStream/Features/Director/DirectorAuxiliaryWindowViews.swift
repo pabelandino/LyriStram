@@ -2,6 +2,9 @@ import SwiftUI
 import EasyStreamCore
 import EasyStreamUIComponents
 import EasyStreamTransport
+#if os(macOS)
+import AppKit
+#endif
 
 #if os(macOS)
 struct DirectorStudioSettingsWindowView: View {
@@ -41,7 +44,7 @@ struct DirectorStudioSettingsWindowView: View {
 }
 
 struct DirectorWidgetStudioWindowView: View {
-    private var session = DirectorWorkspaceSession.shared
+    @Bindable private var session = DirectorWorkspaceSession.shared
     @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
@@ -49,14 +52,12 @@ struct DirectorWidgetStudioWindowView: View {
             if let mediaViewModel = session.mediaViewModel, mediaViewModel.isWidgetStudioOpen {
                 DirectorWidgetStudioEditorView(mediaViewModel: mediaViewModel) {
                     mediaViewModel.closeWidgetStudio()
-                    dismissWindow(id: "director-widget-studio")
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Cerrar") {
                             mediaViewModel.closeWidgetStudio()
-                            dismissWindow(id: "director-widget-studio")
                         }
                     }
                 }
@@ -70,10 +71,39 @@ struct DirectorWidgetStudioWindowView: View {
                 .background(BroadcastTheme.panelBackground)
             }
         }
+        .background {
+            WidgetStudioWindowChrome()
+        }
+        .onChange(of: session.mediaViewModel?.isWidgetStudioOpen ?? false) { _, isOpen in
+            // Dismiss this window only. dismissWindow(id:) from the director closes the director.
+            if !isOpen {
+                dismissWindow()
+            }
+        }
         .onDisappear {
             guard session.mediaViewModel?.isWidgetStudioOpen == true else { return }
             session.mediaViewModel?.closeWidgetStudio()
         }
+    }
+}
+
+/// Keeps a restored Widget Studio window from replacing the director on the next launch.
+private struct WidgetStudioWindowChrome: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(frame: .zero)
+        DispatchQueue.main.async { mark(view) }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async { mark(nsView) }
+    }
+
+    private func mark(_ view: NSView) {
+        guard let window = view.window else { return }
+        guard window.identifier != DirectorMainWindowRecovery.directorWindowID else { return }
+        window.title = "Widget Studio"
+        window.isRestorable = false
     }
 }
 

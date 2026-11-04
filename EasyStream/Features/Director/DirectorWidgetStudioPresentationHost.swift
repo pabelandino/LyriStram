@@ -8,7 +8,6 @@ struct DirectorWidgetStudioPresentationHost: View {
 
 #if os(macOS)
     @Environment(\.openWindow) private var openWindow
-    @Environment(\.dismissWindow) private var dismissWindow
 #endif
 
     var body: some View {
@@ -16,12 +15,9 @@ struct DirectorWidgetStudioPresentationHost: View {
         Color.clear
             .frame(width: 0, height: 0)
             .onChange(of: mediaViewModel.isWidgetStudioOpen) { _, isOpen in
-                if isOpen {
-                    DirectorModalPresentation.afterYield {
-                        openWindow(id: "director-widget-studio")
-                    }
-                } else {
-                    dismissWindow(id: "director-widget-studio")
+                guard isOpen, let token = WidgetStudioWindowToken.value else { return }
+                DirectorModalPresentation.afterYield {
+                    openWindow(id: "director-widget-studio", value: token)
                 }
             }
 #else
@@ -67,28 +63,14 @@ struct DirectorWidgetStudioPresentationHost: View {
 #if os(macOS)
 extension DirectorSessionView {
     func platformOpenWidgetStudioWindow() {
+        let token = WidgetStudioWindowToken.prepare()
         DirectorModalPresentation.afterYield {
-            openWindow(id: "director-widget-studio")
-        }
-    }
-
-    func platformPrewarmWidgetStudioWindowIfNeeded() {
-        guard !DirectorWorkspaceSession.shared.hasPrewarmedWidgetStudioUI else { return }
-        guard !programOutputStore.isWindowOpen, !viewModel.isPublishing else { return }
-
-        openWindow(id: "director-widget-studio")
-        Task { @MainActor in
-            await DirectorModalPresentation.deferHeavyUI()
-            await DirectorModalPresentation.deferHeavyUI()
-            dismissWindow(id: "director-widget-studio")
-            DirectorWorkspaceSession.shared.markWidgetStudioUIPrewarmed()
+            openWindow(id: "director-widget-studio", value: token)
         }
     }
 }
 #else
 extension DirectorSessionView {
     func platformOpenWidgetStudioWindow() {}
-
-    func platformPrewarmWidgetStudioWindowIfNeeded() {}
 }
 #endif

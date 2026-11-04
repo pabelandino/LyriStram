@@ -14,7 +14,6 @@ public struct BroadcastWidgetStudioPanel: View {
     let onImportLogo: () -> Void
     let onImportLogoFromPhotoLibrary: () -> Void
     let onSave: () -> Void
-    let onPreview: () -> Void
     let onGoLive: () -> Void
     let onApplyToLive: () -> Void
     let onRemoveFromLive: () -> Void
@@ -33,7 +32,6 @@ public struct BroadcastWidgetStudioPanel: View {
         onImportLogo: @escaping () -> Void,
         onImportLogoFromPhotoLibrary: @escaping () -> Void = {},
         onSave: @escaping () -> Void,
-        onPreview: @escaping () -> Void,
         onGoLive: @escaping () -> Void,
         onApplyToLive: @escaping () -> Void = {},
         onRemoveFromLive: @escaping () -> Void = {},
@@ -51,7 +49,6 @@ public struct BroadcastWidgetStudioPanel: View {
         self.onImportLogo = onImportLogo
         self.onImportLogoFromPhotoLibrary = onImportLogoFromPhotoLibrary
         self.onSave = onSave
-        self.onPreview = onPreview
         self.onGoLive = onGoLive
         self.onApplyToLive = onApplyToLive
         self.onRemoveFromLive = onRemoveFromLive
@@ -203,8 +200,8 @@ public struct BroadcastWidgetStudioPanel: View {
             }
 
             Text(isEditingPlacement
-                 ? "Modo posicionar: arrastra y redimensiona en la vista previa."
-                 : "Modo play: sin agarraderos. Usa «Preview» para ver animaciones en PROG.")
+                 ? "Modo posicionar: arrastra y redimensiona. La animación está detenida."
+                 : "Modo play: la animación corre en esta vista, sin agarraderos.")
                 .font(.caption2)
                 .foregroundStyle(BroadcastTheme.subtleText)
         }
@@ -212,12 +209,8 @@ public struct BroadcastWidgetStudioPanel: View {
 
     private var actionButtons: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Button("Guardar", action: onSave)
-                    .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: false))
-                Button("Preview", action: onPreview)
-                    .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: false))
-            }
+            Button("Guardar", action: onSave)
+                .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: false))
 
             if isLiveOnAir {
                 Button(action: onApplyToLive) {

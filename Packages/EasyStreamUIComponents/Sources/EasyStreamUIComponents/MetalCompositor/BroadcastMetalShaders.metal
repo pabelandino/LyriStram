@@ -171,3 +171,58 @@ fragment float4 broadcastCompositorFragment(
 
     return float4(color, 1.0);
 }
+
+struct SpriteUniforms {
+    float2 viewport;
+    float2 center;
+    float2 size;
+    float angle;
+    float uvOffsetX;
+};
+
+struct SpriteOut {
+    float4 position [[position]];
+    float2 uv;
+};
+
+vertex SpriteOut broadcastSpriteVertex(
+    uint vertexID [[vertex_id]],
+    constant SpriteUniforms &uniforms [[buffer(0)]]
+) {
+    float2 corners[6] = {
+        float2(-0.5, -0.5), float2( 0.5, -0.5), float2(-0.5,  0.5),
+        float2(-0.5,  0.5), float2( 0.5, -0.5), float2( 0.5,  0.5)
+    };
+    float2 uvs[6] = {
+        float2(0.0, 0.0), float2(1.0, 0.0), float2(0.0, 1.0),
+        float2(0.0, 1.0), float2(1.0, 0.0), float2(1.0, 1.0)
+    };
+
+    float2 pixel = corners[vertexID] * uniforms.size;
+    float c = cos(uniforms.angle);
+    float z = pixel.x * sin(uniforms.angle);
+    float perspective = 1.0 / (1.0 + z / 700.0);
+    float2 rotated = float2(pixel.x * c * perspective, pixel.y * perspective);
+    float2 pos = uniforms.center + rotated;
+    float2 viewport = max(uniforms.viewport, float2(1.0));
+    float2 ndc = float2(pos.x / viewport.x * 2.0 - 1.0, 1.0 - pos.y / viewport.y * 2.0);
+
+    SpriteOut out;
+    out.position = float4(ndc, 0.0, 1.0);
+    out.uv = float2(uvs[vertexID].x, 1.0 - uvs[vertexID].y);
+    out.uv.x += uniforms.uvOffsetX;
+    return out;
+}
+
+fragment float4 broadcastSpriteFragment(
+    SpriteOut in [[stage_in]],
+    texture2d<float, access::sample> sprite [[texture(0)]],
+    sampler texSampler [[sampler(0)]]
+) {
+    float2 uv = in.uv;
+    uv.x = fract(uv.x);
+    if (sprite.get_width() == 0) {
+        return float4(0.0);
+    }
+    return sprite.sample(texSampler, uv);
+}

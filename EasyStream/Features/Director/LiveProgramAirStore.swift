@@ -63,6 +63,7 @@ final class LiveProgramAirStore {
         fullScreenIsLive = newFullScreenLive
         revision &+= 1
 
+        BroadcastMetalSpriteBus.shared.publish(widgetLayers)
         DirectorProgramOutputStore.shared.syncAirGraphics(
             widgetLayers: widgetLayers,
             fullScreenResource: fullScreenResource,

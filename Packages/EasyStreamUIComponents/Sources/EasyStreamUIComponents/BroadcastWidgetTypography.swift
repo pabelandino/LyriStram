@@ -43,7 +43,7 @@ public enum BroadcastWidgetTypography {
     }
 
 #if os(macOS)
-    private static func platformFont(preset: BroadcastFontPreset, size: Double, weight: Font.Weight) -> NSFont {
+    static func platformFont(preset: BroadcastFontPreset, size: Double, weight: Font.Weight) -> NSFont {
         let resolvedSize = max(8, size)
         let nsWeight: NSFont.Weight = switch weight {
         case .bold: .bold
@@ -62,7 +62,7 @@ public enum BroadcastWidgetTypography {
         }
     }
 #else
-    private static func platformFont(preset: BroadcastFontPreset, size: Double, weight: Font.Weight) -> UIFont {
+    static func platformFont(preset: BroadcastFontPreset, size: Double, weight: Font.Weight) -> UIFont {
         let resolvedSize = max(8, size)
         let uiWeight: UIFont.Weight = switch weight {
         case .bold: .bold
