@@ -172,6 +172,7 @@ final class DirectorSessionViewModel {
 
     /// Incoming lane wired into the compositor (handoff pin or debounced preview warm — single entry point).
     var programBusIncomingTrack: RTCVideoTrack? {
+        if fullScreenMediaCoversProgram { return nil }
         if isTransitioning {
             return transitionIncomingVideoTrack
         }
@@ -192,6 +193,7 @@ final class DirectorSessionViewModel {
 
     /// On air shows program. Off air shows the selected preview so the monitor is not black.
     var programDisplayTrack: RTCVideoTrack? {
+        if fullScreenMediaCoversProgram { return nil }
         if isTransitioning {
             return outgoingProgramVideoTrack ?? programVideoTrack
         }
@@ -203,7 +205,19 @@ final class DirectorSessionViewModel {
 
     /// Before the first take, the large monitor follows the selected camera.
     var showsOffAirPreviewOnProgramMonitor: Bool {
-        programSourceID == nil && previewVideoTrack != nil
+        if fullScreenMediaCoversProgram { return false }
+        return programSourceID == nil && previewVideoTrack != nil
+    }
+
+    /// An image or video on air owns the program picture. Preview must not bleed through.
+    private var fullScreenMediaCoversProgram: Bool {
+        LiveProgramAirStore.shared.fullScreenIsLive
+    }
+
+    /// Drops the live camera so a full-screen image or video is what the program transmits.
+    func yieldProgramPictureToMedia() {
+        guard programSourceID != nil else { return }
+        leaveAir()
     }
 
     var activeStreamingSourceCount: Int {
@@ -522,6 +536,7 @@ final class DirectorSessionViewModel {
     }
 
     private func performTakeToProgram(generation: UInt, target: CameraSourceID) async {
+        DirectorWorkspaceSession.shared.mediaViewModel?.releaseProgramMediaForCameraTake()
         let previousProgram = await switcher.state.programSourceID
         guard generation == takeGeneration else { return }
         guard previousProgram != target else { return }

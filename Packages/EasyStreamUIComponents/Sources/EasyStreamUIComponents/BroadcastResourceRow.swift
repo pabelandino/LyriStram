@@ -10,8 +10,6 @@ public struct BroadcastResourceRow: View {
     let onEdit: (() -> Void)?
     let onTakeToProgram: () -> Void
     let onRemoveFromProgram: (() -> Void)?
-    let onRename: () -> Void
-    let onDelete: () -> Void
 
     public init(
         resource: BroadcastResource,
@@ -21,9 +19,7 @@ public struct BroadcastResourceRow: View {
         onSelect: @escaping () -> Void,
         onEdit: (() -> Void)?,
         onTakeToProgram: @escaping () -> Void,
-        onRemoveFromProgram: (() -> Void)? = nil,
-        onRename: @escaping () -> Void,
-        onDelete: @escaping () -> Void
+        onRemoveFromProgram: (() -> Void)? = nil
     ) {
         self.resource = resource
         self.fileURL = fileURL
@@ -33,8 +29,6 @@ public struct BroadcastResourceRow: View {
         self.onEdit = onEdit
         self.onTakeToProgram = onTakeToProgram
         self.onRemoveFromProgram = onRemoveFromProgram
-        self.onRename = onRename
-        self.onDelete = onDelete
     }
 
     public var body: some View {
@@ -75,8 +69,6 @@ public struct BroadcastResourceRow: View {
                     help: "Editar en Widget Studio",
                     action: onEdit
                 )
-            } else {
-                overflowMenu
             }
         }
         .padding(.horizontal, 8)
@@ -85,28 +77,6 @@ public struct BroadcastResourceRow: View {
             isActive ? BroadcastTheme.programRed.opacity(0.12) : BroadcastTheme.panelElevated,
             in: RoundedRectangle(cornerRadius: 8)
         )
-    }
-
-    private var overflowMenu: some View {
-        Menu {
-            Button("Seleccionar") { onSelect() }
-            if isLiveOnAir, let onRemoveFromProgram {
-                Button("Quitar del aire", role: .destructive) { onRemoveFromProgram() }
-            } else {
-                Button("Al aire") { onTakeToProgram() }
-            }
-            Button("Renombrar") { onRename() }
-            Divider()
-            Button("Eliminar", role: .destructive) { onDelete() }
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(BroadcastTheme.subtleText)
-                .frame(width: 22, height: 22)
-                .contentShape(Rectangle())
-        }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
     }
 
     private var airButton: some View {

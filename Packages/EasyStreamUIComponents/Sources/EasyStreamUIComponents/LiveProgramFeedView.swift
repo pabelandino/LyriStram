@@ -61,21 +61,9 @@ public struct LiveProgramFeedView: View {
                 transitionKind: transitionKind,
                 emptyStatusMessage: emptyStatusMessage,
                 showsEmptyWhenNoGraphics: !isCleanBroadcastOutput,
-                hasAirGraphics: !widgetLayers.isEmpty || fullScreenResource != nil,
-                showsLiveResolutionBadge: !isCleanBroadcastOutput
+                hasAirGraphics: !widgetLayers.isEmpty || (fullScreenResource != nil && fullScreenFileURL != nil),
+                showsLiveResolutionBadge: !isCleanBroadcastOutput && !fullScreenIsLive
             )
-
-            if let fullScreen = fullScreenResource, let fileURL = fullScreenFileURL {
-                BroadcastResourceDisplayView(
-                    resource: fullScreen,
-                    fileURL: fileURL,
-                    widgetConfiguration: nil,
-                    logoURL: nil,
-                    isLive: fullScreenIsLive,
-                    isEditingWidget: false,
-                    widgetPlacement: .constant(BroadcastWidgetPlacement())
-                )
-            }
         }
     }
 }

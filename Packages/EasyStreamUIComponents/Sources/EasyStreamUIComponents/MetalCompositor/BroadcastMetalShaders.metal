@@ -233,3 +233,41 @@ fragment float4 broadcastSpriteFragment(
     }
     return sprite.sample(texSampler, uv) * in.opacity;
 }
+
+struct PlateUniforms {
+    float2 viewport;
+    float2 uvOrigin;
+    float2 uvRight;
+    float2 uvDown;
+};
+
+vertex SpriteOut broadcastPlateVertex(
+    uint vertexID [[vertex_id]],
+    constant PlateUniforms &uniforms [[buffer(0)]]
+) {
+    float2 unit[6] = {
+        float2(0.0, 0.0), float2(1.0, 0.0), float2(0.0, 1.0),
+        float2(0.0, 1.0), float2(1.0, 0.0), float2(1.0, 1.0)
+    };
+    float2 viewport = max(uniforms.viewport, float2(1.0));
+    float2 pos = unit[vertexID] * viewport;
+    float2 ndc = float2(pos.x / viewport.x * 2.0 - 1.0, 1.0 - pos.y / viewport.y * 2.0);
+
+    SpriteOut out;
+    out.position = float4(ndc, 0.0, 1.0);
+    out.uv = uniforms.uvOrigin + unit[vertexID].x * uniforms.uvRight + unit[vertexID].y * uniforms.uvDown;
+    out.opacity = 1.0;
+    return out;
+}
+
+fragment float4 broadcastPlateFragment(
+    SpriteOut in [[stage_in]],
+    texture2d<float, access::sample> plate [[texture(0)]],
+    sampler texSampler [[sampler(0)]]
+) {
+    if (plate.get_width() == 0) {
+        return float4(0.0);
+    }
+    float4 color = plate.sample(texSampler, saturate(in.uv));
+    return float4(color.rgb, 1.0);
+}

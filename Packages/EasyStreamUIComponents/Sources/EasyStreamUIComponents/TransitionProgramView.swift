@@ -47,21 +47,15 @@ public struct TransitionProgramView: View {
     }
 
     public var body: some View {
-        Group {
-            if programTrack != nil || previewTrack != nil || isTransitioning {
-                ProgramMonitorViewFactory.programVideoSurface(
-                    programTrack: programTrack,
-                    outgoingTrack: isTransitioning ? outgoingTrack : nil,
-                    incomingTrack: previewTrack,
-                    isTransitioning: isTransitioning,
-                    progress: progress,
-                    kind: kind,
-                    offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
-                )
-            } else {
-                Color.black
-            }
-        }
+        ProgramMonitorViewFactory.programVideoSurface(
+            programTrack: programTrack,
+            outgoingTrack: isTransitioning ? outgoingTrack : nil,
+            incomingTrack: previewTrack,
+            isTransitioning: isTransitioning,
+            progress: progress,
+            kind: kind,
+            offAirPreviewVisibleOnProgramMonitor: offAirPreviewVisibleOnProgramMonitor
+        )
         .animation(nil, value: isTransitioning)
         .animation(nil, value: progress)
     }

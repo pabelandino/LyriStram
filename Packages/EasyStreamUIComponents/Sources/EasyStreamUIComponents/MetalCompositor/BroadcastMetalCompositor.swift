@@ -46,6 +46,13 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         var uvScaleX: Float = 1
     }
 
+    private struct PlateUniforms {
+        var viewport: SIMD2<Float> = .zero
+        var uvOrigin: SIMD2<Float> = .zero
+        var uvRight: SIMD2<Float> = SIMD2(1, 0)
+        var uvDown: SIMD2<Float> = SIMD2(0, 1)
+    }
+
     private struct TextureSet {
         var outgoingBGRA: MTLTexture?
         var outgoingY: MTLTexture?
@@ -60,6 +67,7 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     private let commandQueue: MTLCommandQueue
     private var pipelineState: MTLRenderPipelineState?
     private var spritePipelineState: MTLRenderPipelineState?
+    private var platePipelineState: MTLRenderPipelineState?
     private var textureCache: CVMetalTextureCache?
     private var samplerState: MTLSamplerState?
 
@@ -82,11 +90,14 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     private let presentLock = NSLock()
     private var presentQueued = false
     private var lastPresentedGeneration: UInt64 = 0
+    private var lastPresentedPlateGeneration: UInt64 = 0
     private var lastMotionPresentTime: CFTimeInterval = 0
     private var isCompositorSuspended = false
     private var hasPresentedVideoFrame = false
     private var spriteGeneration: UInt64 = .max
     private var gpuSprites: [(texture: MTLTexture, bitmap: BroadcastMetalSpriteBus.Bitmap)] = []
+    private var plateTexture: MTLTexture?
+    private var uploadedPlateGeneration: UInt64 = 0
 
     private let displayLinkDriver = BroadcastMetalDisplayLinkDriver()
 
@@ -118,9 +129,14 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
 
         buildPipeline()
         buildSpritePipeline()
+        buildPlatePipeline()
 
         displayLinkDriver.onFrame = { [weak self] in
             self?.displayLinkTick()
+        }
+        BroadcastProgramPlateBus.shared.addListener { [weak self] in
+            self?.setCompositorSuspended(false)
+            self?.requestDraw()
         }
     }
 
@@ -241,12 +257,15 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         let now = CACurrentMediaTime()
         let timepieceChanged = BroadcastMetalSpriteBus.shared.refreshTimepieces()
         let generation = ProgramFrameDisplayBus.shared.currentDisplayGeneration()
+        let plate = BroadcastProgramPlateBus.shared.status()
         presentLock.lock()
         let generationChanged = generation != lastPresentedGeneration
+        let plateChanged = plate.generation != lastPresentedPlateGeneration
+        let graphicsMoving = BroadcastMetalSpriteBus.shared.presentsMotion() || plate.animating
         let motionDue = !generationChanged
             && now - lastMotionPresentTime >= (1.0 / 30.0)
-            && BroadcastMetalSpriteBus.shared.presentsMotion()
-        if (!generationChanged && !motionDue && !timepieceChanged) || presentQueued {
+            && graphicsMoving
+        if (!generationChanged && !motionDue && !timepieceChanged && !plateChanged) || presentQueued {
             presentLock.unlock()
             return
         }
@@ -270,7 +289,8 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         }
         presentLock.lock()
         lastPresentedGeneration = generationAtStart
-        if BroadcastMetalSpriteBus.shared.presentsMotion() {
+        lastPresentedPlateGeneration = BroadcastProgramPlateBus.shared.status().generation
+        if BroadcastMetalSpriteBus.shared.presentsMotion() || BroadcastProgramPlateBus.shared.status().animating {
             lastMotionPresentTime = CACurrentMediaTime()
         }
         presentQueued = false
@@ -283,6 +303,7 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
             self.performDraw(on: view)
             self.presentLock.lock()
             self.lastPresentedGeneration = ProgramFrameDisplayBus.shared.currentDisplayGeneration()
+            self.lastPresentedPlateGeneration = BroadcastProgramPlateBus.shared.status().generation
             self.presentLock.unlock()
         }
     }
@@ -313,7 +334,12 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         idleShowsIncomingAsProgram = false
         stateLock.unlock()
         hasPresentedVideoFrame = false
-        setCompositorSuspended(true)
+        let plateVisible = BroadcastProgramPlateBus.shared.status().hasFrame
+        let spritesVisible = !BroadcastMetalSpriteBus.shared.current().bitmaps.isEmpty
+        setCompositorSuspended(!(plateVisible || spritesVisible))
+        if plateVisible || spritesVisible {
+            requestDraw()
+        }
     }
 
     func clearTransitionVideoFrames() {
@@ -423,6 +449,24 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         spritePipelineState = try? device.makeRenderPipelineState(descriptor: descriptor)
     }
 
+    private func buildPlatePipeline() {
+        guard let library = Self.loadMetalLibrary(device: device),
+              let vertex = library.makeFunction(name: "broadcastPlateVertex"),
+              let fragment = library.makeFunction(name: "broadcastPlateFragment") else {
+            return
+        }
+        let descriptor = MTLRenderPipelineDescriptor()
+        descriptor.vertexFunction = vertex
+        descriptor.fragmentFunction = fragment
+        descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+        descriptor.colorAttachments[0].isBlendingEnabled = true
+        descriptor.colorAttachments[0].sourceRGBBlendFactor = .one
+        descriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
+        descriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
+        descriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
+        platePipelineState = try? device.makeRenderPipelineState(descriptor: descriptor)
+    }
+
     private static func loadMetalLibrary(device: MTLDevice) -> MTLLibrary? {
         #if SWIFT_PACKAGE
         if let library = try? device.makeDefaultLibrary(bundle: Bundle.module) {
@@ -454,8 +498,9 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         logCompositorDraw(binding: binding)
         let sprites = gpuSpritesForDraw()
         let hasVideo = binding.hasOutgoingVideo || binding.hasIncomingVideo
+        let hasPlate = BroadcastProgramPlateBus.shared.status().hasFrame
 
-        guard hasVideo || !sprites.isEmpty else {
+        guard hasVideo || !sprites.isEmpty || hasPlate else {
             binding.releaseAfterGPU()
             return
         }
@@ -506,11 +551,13 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
             encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
         }
 
+        let plateRetain = drawProgramPlate(encoder: encoder, viewport: viewportSize, cache: textureCache)
         drawSprites(sprites, encoder: encoder, viewport: viewportSize)
         encoder.endEncoding()
 
-        commandBuffer.addCompletedHandler { [binding] _ in
+        commandBuffer.addCompletedHandler { [binding, plateRetain] _ in
             binding.releaseAfterGPU()
+            withExtendedLifetime(plateRetain) {}
             withExtendedLifetime(sprites) {}
         }
 
@@ -520,6 +567,176 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         if binding.hasOutgoingVideo {
             hasPresentedVideoFrame = true
         }
+    }
+
+    private func drawProgramPlate(
+        encoder: MTLRenderCommandEncoder,
+        viewport: CGSize,
+        cache: CVMetalTextureCache
+    ) -> (CVPixelBuffer, CVMetalTexture)? {
+        if let sample = BroadcastProgramPlateBus.shared.currentVideoSample() {
+            plateTexture = nil
+            return drawVideoPlate(sample: sample, encoder: encoder, viewport: viewport, cache: cache)
+        }
+        guard let spritePipelineState, let samplerState else { return nil }
+        let status = BroadcastProgramPlateBus.shared.status()
+        guard status.hasFrame else {
+            plateTexture = nil
+            uploadedPlateGeneration = status.generation
+            return nil
+        }
+        if let update = BroadcastProgramPlateBus.shared.frame(ifGenerationDiffersFrom: uploadedPlateGeneration) {
+            plateTexture = makeRawTexture(rgba: update.frame.rgba, width: update.frame.width, height: update.frame.height)
+            uploadedPlateGeneration = update.generation
+        }
+        guard let plateTexture else { return nil }
+        let plate = BroadcastMetalSpriteBus.Bitmap(
+            rgba: Data(),
+            width: plateTexture.width,
+            height: plateTexture.height,
+            centerX: 0.5,
+            centerY: 0.5,
+            widthFraction: 1,
+            heightFraction: 1,
+            uniformSquare: false,
+            spinDuration: 0,
+            pauseDuration: 0,
+            scrollUVPerSecond: 0
+        )
+        var uniforms = spriteUniforms(for: plate, viewport: SIMD2(Float(viewport.width), Float(viewport.height)), time: CACurrentMediaTime())
+        guard uniforms.opacity >= 0.004 else { return nil }
+        encoder.setRenderPipelineState(spritePipelineState)
+        encoder.setVertexBytes(&uniforms, length: MemoryLayout<SpriteUniforms>.stride, index: 0)
+        encoder.setFragmentTexture(plateTexture, index: 0)
+        encoder.setFragmentSamplerState(samplerState, index: 0)
+        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+        return nil
+    }
+
+    private func drawVideoPlate(
+        sample: BroadcastProgramPlateBus.VideoSample,
+        encoder: MTLRenderCommandEncoder,
+        viewport: CGSize,
+        cache: CVMetalTextureCache
+    ) -> (CVPixelBuffer, CVMetalTexture)? {
+        guard let platePipelineState, let samplerState else { return nil }
+        guard let bound = makePlateBGRA(from: sample.pixelBuffer, cache: cache) else { return nil }
+        var uniforms = plateUniforms(for: sample, viewport: viewport)
+        encoder.setRenderPipelineState(platePipelineState)
+        encoder.setVertexBytes(&uniforms, length: MemoryLayout<PlateUniforms>.stride, index: 0)
+        encoder.setFragmentTexture(bound.texture, index: 0)
+        encoder.setFragmentSamplerState(samplerState, index: 0)
+        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+        return (sample.pixelBuffer, bound.cvTexture)
+    }
+
+    private func makePlateBGRA(
+        from pixelBuffer: CVPixelBuffer,
+        cache: CVMetalTextureCache
+    ) -> (texture: MTLTexture, cvTexture: CVMetalTexture)? {
+        let width = CVPixelBufferGetWidth(pixelBuffer)
+        let height = CVPixelBufferGetHeight(pixelBuffer)
+        guard width > 1, height > 1 else { return nil }
+        var cvTexture: CVMetalTexture?
+        let status = CVMetalTextureCacheCreateTextureFromImage(
+            kCFAllocatorDefault,
+            cache,
+            pixelBuffer,
+            nil,
+            .bgra8Unorm,
+            width,
+            height,
+            0,
+            &cvTexture
+        )
+        guard status == kCVReturnSuccess,
+              let cvTexture,
+              let texture = CVMetalTextureGetTexture(cvTexture) else {
+            return nil
+        }
+        return (texture, cvTexture)
+    }
+
+    /// Maps the encoded buffer through its display transform and aspect-fills the viewport.
+    /// Texture (0, 0) is the top-left of the buffer, matching the camera picture.
+    private func plateUniforms(
+        for sample: BroadcastProgramPlateBus.VideoSample,
+        viewport: CGSize
+    ) -> PlateUniforms {
+        let width = CGFloat(CVPixelBufferGetWidth(sample.pixelBuffer))
+        let height = CGFloat(CVPixelBufferGetHeight(sample.pixelBuffer))
+        var uniforms = PlateUniforms(
+            viewport: SIMD2(Float(viewport.width), Float(viewport.height))
+        )
+        guard width > 1, height > 1, viewport.width > 1, viewport.height > 1 else { return uniforms }
+
+        let transform = sample.displayTransform
+        let determinant = transform.a * transform.d - transform.b * transform.c
+        let inverse = abs(determinant) > 0.0001 ? transform.inverted() : .identity
+        let mapped = [
+            CGPoint.zero,
+            CGPoint(x: width, y: 0),
+            CGPoint(x: 0, y: height),
+            CGPoint(x: width, y: height)
+        ].map { $0.applying(transform) }
+        let minX = mapped.map(\.x).min() ?? 0
+        let maxX = mapped.map(\.x).max() ?? width
+        let minY = mapped.map(\.y).min() ?? 0
+        let maxY = mapped.map(\.y).max() ?? height
+        let displayWidth = max(maxX - minX, 1)
+        let displayHeight = max(maxY - minY, 1)
+
+        var topLeft = CGPoint(x: minX, y: minY)
+        var topRight = CGPoint(x: maxX, y: minY)
+        var bottomLeft = CGPoint(x: minX, y: maxY)
+        let viewAspect = viewport.width / viewport.height
+        let videoAspect = displayWidth / displayHeight
+        if videoAspect > viewAspect {
+            let visibleWidth = displayHeight * viewAspect
+            let inset = (displayWidth - visibleWidth) / 2
+            topLeft.x += inset
+            topRight.x = topLeft.x + visibleWidth
+            bottomLeft.x += inset
+        } else if videoAspect < viewAspect {
+            let visibleHeight = displayWidth / viewAspect
+            let inset = (displayHeight - visibleHeight) / 2
+            topLeft.y += inset
+            topRight.y += inset
+            bottomLeft.y = topLeft.y + visibleHeight
+        }
+
+        func textureUV(_ point: CGPoint) -> SIMD2<Float> {
+            let pixel = point.applying(inverse)
+            return SIMD2(Float(pixel.x / width), Float(pixel.y / height))
+        }
+
+        let origin = textureUV(topLeft)
+        uniforms.uvOrigin = origin
+        uniforms.uvRight = textureUV(topRight) - origin
+        uniforms.uvDown = textureUV(bottomLeft) - origin
+        return uniforms
+    }
+
+    private func makeRawTexture(rgba: Data, width: Int, height: Int) -> MTLTexture? {
+        guard width > 0, height > 0, rgba.count >= width * height * 4 else { return nil }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(
+            pixelFormat: .rgba8Unorm,
+            width: width,
+            height: height,
+            mipmapped: false
+        )
+        descriptor.usage = [.shaderRead]
+        guard let texture = device.makeTexture(descriptor: descriptor) else { return nil }
+        rgba.withUnsafeBytes { raw in
+            guard let base = raw.baseAddress else { return }
+            texture.replace(
+                region: MTLRegionMake2D(0, 0, width, height),
+                mipmapLevel: 0,
+                withBytes: base,
+                bytesPerRow: width * 4
+            )
+        }
+        return texture
     }
 
     private func drawSprites(

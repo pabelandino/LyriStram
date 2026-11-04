@@ -94,66 +94,51 @@ public enum BroadcastMediaThumbnailLoader {
 public struct DeferredBroadcastLibraryPanel: View {
     @Binding var selectedKind: BroadcastResourceKind
     let resources: [BroadcastResource]
-    let playlists: [BroadcastPlaylist]
-    let selectedPlaylistID: UUID?
     let activeResourceIDs: Set<UUID>
     let editingResourceID: UUID?
     let searchText: String
     let onSearchChange: (String) -> Void
-    let onSelectPlaylist: (UUID?) -> Void
     let onImport: (BroadcastResourceKind) -> Void
     let onCreateWidget: () -> Void
     let onEditWidget: (BroadcastResource) -> Void
     let onSelectResource: (BroadcastResource) -> Void
     let onTakeToProgram: (BroadcastResource) -> Void
     let onRemoveFromProgram: (BroadcastResource) -> Void
-    let onDeleteResource: (BroadcastResource) -> Void
-    let onRenameResource: (BroadcastResource, String) -> Void
     let fileURL: (BroadcastResource) -> URL
 
     @State private var isPanelReady = false
 
     private var loadToken: String {
-        "\(selectedKind.rawValue)|\(resources.count)|\(searchText)|\(selectedPlaylistID?.uuidString ?? "")"
+        "\(selectedKind.rawValue)|\(resources.count)|\(searchText)"
     }
 
     public init(
         selectedKind: Binding<BroadcastResourceKind>,
         resources: [BroadcastResource],
-        playlists: [BroadcastPlaylist],
-        selectedPlaylistID: UUID?,
         activeResourceIDs: Set<UUID>,
         editingResourceID: UUID?,
         searchText: String,
         onSearchChange: @escaping (String) -> Void,
-        onSelectPlaylist: @escaping (UUID?) -> Void,
         onImport: @escaping (BroadcastResourceKind) -> Void,
         onCreateWidget: @escaping () -> Void,
         onEditWidget: @escaping (BroadcastResource) -> Void,
         onSelectResource: @escaping (BroadcastResource) -> Void,
         onTakeToProgram: @escaping (BroadcastResource) -> Void,
         onRemoveFromProgram: @escaping (BroadcastResource) -> Void,
-        onDeleteResource: @escaping (BroadcastResource) -> Void,
-        onRenameResource: @escaping (BroadcastResource, String) -> Void,
         fileURL: @escaping (BroadcastResource) -> URL
     ) {
         self._selectedKind = selectedKind
         self.resources = resources
-        self.playlists = playlists
-        self.selectedPlaylistID = selectedPlaylistID
         self.activeResourceIDs = activeResourceIDs
         self.editingResourceID = editingResourceID
         self.searchText = searchText
         self.onSearchChange = onSearchChange
-        self.onSelectPlaylist = onSelectPlaylist
         self.onImport = onImport
         self.onCreateWidget = onCreateWidget
         self.onEditWidget = onEditWidget
         self.onSelectResource = onSelectResource
         self.onTakeToProgram = onTakeToProgram
         self.onRemoveFromProgram = onRemoveFromProgram
-        self.onDeleteResource = onDeleteResource
-        self.onRenameResource = onRenameResource
         self.fileURL = fileURL
     }
 
@@ -163,21 +148,16 @@ public struct DeferredBroadcastLibraryPanel: View {
                 BroadcastMediaLibraryPanel(
                     selectedKind: $selectedKind,
                     resources: resources,
-                    playlists: playlists,
-                    selectedPlaylistID: selectedPlaylistID,
                     activeResourceIDs: activeResourceIDs,
                     editingResourceID: editingResourceID,
                     searchText: searchText,
                     onSearchChange: onSearchChange,
-                    onSelectPlaylist: onSelectPlaylist,
                     onImport: onImport,
                     onCreateWidget: onCreateWidget,
                     onEditWidget: onEditWidget,
                     onSelectResource: onSelectResource,
                     onTakeToProgram: onTakeToProgram,
                     onRemoveFromProgram: onRemoveFromProgram,
-                    onDeleteResource: onDeleteResource,
-                    onRenameResource: onRenameResource,
                     fileURL: fileURL
                 )
                 .transition(.opacity)

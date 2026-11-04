@@ -26,11 +26,6 @@ struct DirectorSettingsLiveGraphicsSection: View {
                     )
                 }
 
-                if mediaViewModel.isPlaylistPlaying {
-                    Button("Siguiente en playlist", action: mediaViewModel.playNextInQueue)
-                    Button("Detener playlist", role: .destructive, action: mediaViewModel.stopPlaylistPlayback)
-                }
-
                 if !mediaViewModel.liveWidgets.isEmpty || mediaViewModel.liveFullScreenGraphicID != nil {
                     Button("Quitar todos", role: .destructive) {
                         mediaViewModel.clearAllGraphicsFromProgram()

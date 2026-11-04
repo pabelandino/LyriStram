@@ -44,8 +44,7 @@ struct DirectorSettingsStudioTab: View {
                 }
 
                 if !mediaViewModel.liveWidgets.isEmpty
-                    || mediaViewModel.fullScreenGraphicResource != nil
-                    || mediaViewModel.isPlaylistPlaying {
+                    || mediaViewModel.fullScreenGraphicResource != nil {
                     DirectorSettingsLiveGraphicsSection(mediaViewModel: mediaViewModel)
                 }
 

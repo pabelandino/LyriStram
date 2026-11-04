@@ -85,7 +85,7 @@ public struct ProgramFeedView: View {
             if programDisplayTrack == nil,
                incomingProgramTrack == nil,
                widgetLayers.isEmpty,
-               fullScreenResource == nil {
+               !(fullScreenIsLive && fullScreenResource != nil && fullScreenFileURL != nil) {
                 ContentUnavailableView {
                     Label("Sin programa", systemImage: "tv.slash")
                 } description: {
@@ -95,18 +95,6 @@ public struct ProgramFeedView: View {
                 .foregroundStyle(.white.opacity(0.7))
             }
 
-            if let fullScreen = fullScreenResource, let fileURL = fullScreenFileURL {
-                BroadcastResourceDisplayView(
-                    resource: fullScreen,
-                    fileURL: fileURL,
-                    widgetConfiguration: nil,
-                    logoURL: nil,
-                    isLive: fullScreenIsLive,
-                    isEditingWidget: false,
-                    widgetPlacement: .constant(BroadcastWidgetPlacement())
-                )
-                .background(Color.black.opacity(0.01))
-            }
 
             ForEach(widgetLayers) { layer in
                 if layer.isEditing, let placement = editingPlacement {

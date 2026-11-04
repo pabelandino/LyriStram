@@ -8,7 +8,6 @@ struct DirectorSessionView: View {
     @State var viewModel = DirectorSessionViewModel()
     @State var mediaViewModel = BroadcastMediaViewModel()
     @State var intercomService = TeamIntercomService()
-    @State var sidebarTab: DirectorSidebarTab = .cameras
     @Bindable var previewMonitor = DirectorPreviewMonitorStore.shared
     @Bindable var programOutputStore = DirectorProgramOutputStore.shared
     @Bindable var liveProgramAir = LiveProgramAirStore.shared
@@ -94,23 +93,6 @@ struct DirectorSessionView: View {
                 )
             }
         }
-        .sheet(isPresented: $mediaViewModel.isPlaylistEditorPresented) {
-            if let playlist = mediaViewModel.editingPlaylist {
-                BroadcastPlaylistEditorSheet(
-                    name: playlist.name,
-                    kind: playlist.kind,
-                    itemIDs: playlist.itemIDs,
-                    allResources: mediaViewModel.allResources,
-                    onSave: { name, kind, itemIDs in
-                        var updated = playlist
-                        updated.name = name
-                        updated.kind = kind
-                        updated.itemIDs = itemIDs
-                        mediaViewModel.savePlaylist(updated)
-                    }
-                )
-            }
-        }
         .sheet(isPresented: $mediaViewModel.isWidgetTemplatePickerPresented) {
             BroadcastWidgetTemplatePickerSheet { template in
                 mediaViewModel.openNewWidgetStudio(template: template)
@@ -128,11 +110,7 @@ struct DirectorSessionView: View {
     /// Three fixed columns: sources | switcher | library rail.
     var directorWorkspaceLayout: some View {
         HStack(spacing: 0) {
-            DirectorSourceSidebarView(
-                sidebarTab: $sidebarTab,
-                viewModel: viewModel,
-                mediaViewModel: mediaViewModel
-            )
+            DirectorSourceSidebarView(viewModel: viewModel)
             .frame(width: WorkspaceMetrics.sidebarWidth)
 
             DirectorSwitcherColumnView(

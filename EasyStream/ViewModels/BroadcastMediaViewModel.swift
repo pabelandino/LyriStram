@@ -22,28 +22,16 @@ final class BroadcastMediaViewModel {
     var imageResources: [BroadcastResource] = []
     var videoResources: [BroadcastResource] = []
     var widgetResources: [BroadcastResource] = []
-    var playlists: [BroadcastPlaylist] = []
 
     var selectedLibraryKind: BroadcastResourceKind = .image
     var librarySearchText = "" {
         didSet { invalidateFilteredResourcesCache() }
     }
-    var selectedImagePlaylistID: UUID?
-    var selectedVideoPlaylistID: UUID?
-    var selectedWidgetPlaylistID: UUID?
 
     var liveWidgetIDs: Set<UUID> = []
     private var tickerExitIDs: Set<UUID> = []
     var liveFullScreenGraphicID: UUID?
     var previewFullScreenGraphicID: UUID?
-
-    var activePlaylistID: UUID?
-    var playlistQueue: [BroadcastResource] = []
-    var playlistQueueIndex = 0
-    var isPlaylistPlaying = false
-
-    var isPlaylistEditorPresented = false
-    var editingPlaylist: BroadcastPlaylist?
 
     var isWidgetTemplatePickerPresented = false
     var isWidgetStudioOpen = false
@@ -65,11 +53,18 @@ final class BroadcastMediaViewModel {
     var lastError: String?
 
     private let resourceRepository = BroadcastResourceRepository()
-    private let playlistRepository = BroadcastPlaylistRepository()
     private var widgetConfigurationCache: [UUID: BroadcastWidgetConfiguration] = [:]
     private var filteredResourcesCache: [BroadcastResourceKind: [BroadcastResource]] = [:]
 
     var isEditingExistingWidget: Bool { editingWidgetResource != nil }
+
+    init() {
+        BroadcastProgramPlatePlayer.shared.onFailure = { message in
+            Task { @MainActor in
+                DirectorWorkspaceSession.shared.mediaViewModel?.lastError = message
+            }
+        }
+    }
 
     var allResources: [BroadcastResource] {
         imageResources + videoResources + widgetResources
@@ -178,17 +173,11 @@ final class BroadcastMediaViewModel {
         )
     }
 
-    var playlistQueueLabel: String? {
-        guard isPlaylistPlaying, playlistQueue.indices.contains(playlistQueueIndex) else { return nil }
-        return playlistQueue[playlistQueueIndex].listLabel
-    }
-
     func reload() {
         do {
             imageResources = try resourceRepository.loadAll(kind: .image)
             videoResources = try resourceRepository.loadAll(kind: .video)
             widgetResources = try resourceRepository.loadAll(kind: .widget)
-            playlists = try playlistRepository.loadAll()
             rebuildWidgetConfigurationCache()
             invalidateFilteredResourcesCache()
             preloadImageThumbnails()
@@ -238,35 +227,11 @@ final class BroadcastMediaViewModel {
             return cached
         }
 
-        let playlistID = selectedPlaylistID(for: kind)
         let filtered = resources(for: kind).filter { resource in
-            let matchesSearch = BroadcastMediaSearch.matches(librarySearchText, in: resource.listLabel)
-            guard matchesSearch else { return false }
-            guard let playlistID,
-                  let playlist = playlists.first(where: { $0.id == playlistID }) else {
-                return true
-            }
-            return playlist.itemIDs.contains(resource.id)
+            BroadcastMediaSearch.matches(librarySearchText, in: resource.listLabel)
         }
         filteredResourcesCache[kind] = filtered
         return filtered
-    }
-
-    func selectedPlaylistID(for kind: BroadcastResourceKind) -> UUID? {
-        switch kind {
-        case .image: selectedImagePlaylistID
-        case .video: selectedVideoPlaylistID
-        case .widget: selectedWidgetPlaylistID
-        }
-    }
-
-    func setSelectedPlaylistID(_ id: UUID?, for kind: BroadcastResourceKind) {
-        switch kind {
-        case .image: selectedImagePlaylistID = id
-        case .video: selectedVideoPlaylistID = id
-        case .widget: selectedWidgetPlaylistID = id
-        }
-        invalidateFilteredResourcesCache()
     }
 
     func fileURL(for resource: BroadcastResource) -> URL {
@@ -510,8 +475,18 @@ final class BroadcastMediaViewModel {
     }
 
     func takeFullScreenLive(_ resource: BroadcastResource) {
+        guard resource.kind == .image || resource.kind == .video else { return }
         previewFullScreenGraphicID = nil
         liveFullScreenGraphicID = resource.id
+        refreshLiveAirBus()
+        DirectorWorkspaceSession.shared.sessionViewModel?.yieldProgramPictureToMedia()
+    }
+
+    /// A camera take owns the program picture again.
+    func releaseProgramMediaForCameraTake() {
+        guard liveFullScreenGraphicID != nil || previewFullScreenGraphicID != nil else { return }
+        liveFullScreenGraphicID = nil
+        previewFullScreenGraphicID = nil
         refreshLiveAirBus()
     }
 
@@ -607,75 +582,6 @@ final class BroadcastMediaViewModel {
         if !draftWidgetConfiguration.tickerText.isEmpty {
             draftWidgetConfiguration.tickerTexts = [draftWidgetConfiguration.tickerText]
         }
-    }
-
-    func createPlaylist(name: String, kind: BroadcastPlaylistKind, itemIDs: [UUID]) {
-        var playlist = BroadcastPlaylist(name: name, kind: kind, itemIDs: itemIDs)
-        playlist.updatedAt = .now
-        savePlaylist(playlist)
-    }
-
-    func savePlaylist(_ playlist: BroadcastPlaylist) {
-        do {
-            var updated = playlist
-            updated.updatedAt = .now
-            try playlistRepository.save(updated)
-            reload()
-        } catch {
-            lastError = error.localizedDescription
-        }
-    }
-
-    func deletePlaylist(_ playlist: BroadcastPlaylist) {
-        do {
-            try playlistRepository.delete(playlist)
-            if activePlaylistID == playlist.id {
-                stopPlaylistPlayback()
-            }
-            reload()
-        } catch {
-            lastError = error.localizedDescription
-        }
-    }
-
-    func playPlaylist(_ playlist: BroadcastPlaylist) {
-        let items = playlist.itemIDs.compactMap { id in allResources.first { $0.id == id } }
-        guard !items.isEmpty else {
-            lastError = "La playlist está vacía"
-            return
-        }
-        activePlaylistID = playlist.id
-        playlistQueue = items
-        playlistQueueIndex = 0
-        isPlaylistPlaying = true
-        applyPlaylistItem(items[0])
-    }
-
-    func playNextInQueue() {
-        guard isPlaylistPlaying else { return }
-        let nextIndex = playlistQueueIndex + 1
-        guard playlistQueue.indices.contains(nextIndex) else {
-            stopPlaylistPlayback()
-            return
-        }
-        playlistQueueIndex = nextIndex
-        applyPlaylistItem(playlistQueue[nextIndex])
-    }
-
-    func stopPlaylistPlayback() {
-        isPlaylistPlaying = false
-        activePlaylistID = nil
-        playlistQueue = []
-        playlistQueueIndex = 0
-    }
-
-    private func applyPlaylistItem(_ resource: BroadcastResource) {
-        if resource.kind == .widget {
-            liveWidgetIDs.insert(resource.id)
-        } else {
-            liveFullScreenGraphicID = resource.id
-        }
-        refreshLiveAirBus()
     }
 
     private func replaceResource(_ resource: BroadcastResource) {

@@ -12,17 +12,12 @@ struct DirectorLibraryRailView: View {
             DeferredBroadcastLibraryPanel(
                 selectedKind: $mediaViewModel.selectedLibraryKind,
                 resources: mediaViewModel.filteredResources(for: mediaViewModel.selectedLibraryKind),
-                playlists: mediaViewModel.playlists,
-                selectedPlaylistID: mediaViewModel.selectedPlaylistID(for: mediaViewModel.selectedLibraryKind),
                 activeResourceIDs: mediaViewModel.liveWidgetIDs.union(
                     mediaViewModel.liveFullScreenGraphicID.map { [$0] } ?? []
                 ),
                 editingResourceID: mediaViewModel.editingWidgetResource?.id,
                 searchText: mediaViewModel.librarySearchText,
                 onSearchChange: { mediaViewModel.librarySearchText = $0 },
-                onSelectPlaylist: {
-                    mediaViewModel.setSelectedPlaylistID($0, for: mediaViewModel.selectedLibraryKind)
-                },
                 onImport: { mediaViewModel.beginImport(kind: $0) },
                 onCreateWidget: onCreateWidget,
                 onEditWidget: { mediaViewModel.openWidgetStudio(for: $0) },
@@ -35,8 +30,6 @@ struct DirectorLibraryRailView: View {
                         mediaViewModel.removeFullScreenFromLive()
                     }
                 },
-                onDeleteResource: { mediaViewModel.deleteResource($0) },
-                onRenameResource: { mediaViewModel.renameResource($0, to: $1) },
                 fileURL: { mediaViewModel.fileURL(for: $0) }
             )
         }

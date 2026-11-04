@@ -1,4 +1,5 @@
 import SwiftUI
+import EasyStreamCore
 import EasyStreamUIComponents
 
 /// Live program monitor — switcher/video + committed air bus only (never draft/widget studio state).
@@ -15,5 +16,10 @@ struct DirectorProgramLiveMonitorView: View {
         .animation(nil, value: viewModel.isTransitioning)
         .animation(nil, value: viewModel.transitionProgress)
         .animation(nil, value: liveProgramAir.revision)
+        .overlay(alignment: .bottom) {
+            if liveProgramAir.fullScreenResource?.kind == .video {
+                DirectorProgramVideoTransportOverlay()
+            }
+        }
     }
 }

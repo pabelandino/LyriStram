@@ -54,10 +54,10 @@ final class LiveProgramAirStore {
             newFullScreenLive = false
         }
 
-        let graphicsChanged = newLayers != widgetLayers
-            || newFullScreen?.id != fullScreenResource?.id
+        let plateChanged = newFullScreen?.id != fullScreenResource?.id
             || newFullScreenURL != fullScreenFileURL
             || newFullScreenLive != fullScreenIsLive
+        let graphicsChanged = newLayers != widgetLayers || plateChanged
 
         guard graphicsChanged else { return }
 
@@ -67,6 +67,15 @@ final class LiveProgramAirStore {
         fullScreenIsLive = newFullScreenLive
         revision &+= 1
 
+        // Widgets must not reload the plate. Restarting present() seeks the video back to the start.
+        if plateChanged {
+            if let resource = fullScreenResource, let url = fullScreenFileURL,
+               resource.kind == .image || resource.kind == .video {
+                BroadcastProgramPlatePlayer.shared.present(url: url, kind: resource.kind)
+            } else {
+                BroadcastProgramPlatePlayer.shared.clear()
+            }
+        }
         BroadcastMetalSpriteBus.shared.publish(widgetLayers)
         scheduleLowerThirdExit(for: widgetLayers)
         DirectorProgramOutputStore.shared.syncAirGraphics(
