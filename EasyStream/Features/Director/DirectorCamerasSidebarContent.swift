@@ -5,6 +5,14 @@ import EasyStreamUIComponents
 struct DirectorCamerasSidebarContent: View {
     let viewModel: DirectorSessionViewModel
 
+    private var wifiSources: [ConnectedCameraSource] {
+        viewModel.sources.filter { $0.link != .atem }
+    }
+
+    private var atemSources: [ConnectedCameraSource] {
+        viewModel.sources.filter { $0.link == .atem }
+    }
+
     var body: some View {
         if viewModel.sources.isEmpty {
             Text("Esperando cámaras…")
@@ -12,37 +20,12 @@ struct DirectorCamerasSidebarContent: View {
                 .foregroundStyle(BroadcastTheme.subtleText)
                 .padding(.horizontal, 8)
         } else {
-            ForEach(viewModel.sources) { source in
-                DirectorSourceListRow(
-                    name: source.displayName,
-                    platform: source.platform,
-                    isPreview: source.id == viewModel.previewSourceID,
-                    isProgram: source.id == viewModel.programSourceID,
-                    isAudio: source.id == viewModel.programAudioSourceID,
-                    isConnected: source.connectionState == .connected,
-                    connectionState: source.connectionState,
-                    signalLevel: signalLevel(for: source),
-                    isSelected: source.id == viewModel.previewSourceID,
-                    onSelect: { viewModel.selectPreview(source.id) },
-                    onReconnect: source.connectionState != .connected
-                        ? { viewModel.reconnectCamera(source.id) }
-                        : nil
-                )
+            ForEach(wifiSources) { source in
+                DirectorCameraSidebarRow(viewModel: viewModel, source: source)
             }
-        }
-    }
-
-    private func signalLevel(for source: ConnectedCameraSource) -> Int {
-        switch source.connectionState {
-        case .connected:
-            return 4
-        case .connecting, .signaling:
-            return 2
-        default:
-            let onNetwork = viewModel.devices.contains { device in
-                device.id == source.id.rawValue && device.isProtocolCompatible
+            if !atemSources.isEmpty {
+                DirectorATEMCamerasAccordion(viewModel: viewModel, sources: atemSources)
             }
-            return onNetwork ? 1 : 0
         }
     }
 }
