@@ -19,6 +19,9 @@ struct ConnectedCameraSource: Identifiable, Equatable {
     var connectionState: StreamConnectionState
     var remoteSettings: RemoteCameraSettings
     var platform: DevicePlatform = .unknown
+    var link: CameraLinkKind = .wifi
+    var portLabel: String = ""
+    var isSimulated: Bool = false
     var connectionStateUpdatedAt: Date = Date()
 
     static func == (lhs: ConnectedCameraSource, rhs: ConnectedCameraSource) -> Bool {
@@ -27,6 +30,9 @@ struct ConnectedCameraSource: Identifiable, Equatable {
             && lhs.connectionState == rhs.connectionState
             && lhs.remoteSettings == rhs.remoteSettings
             && lhs.platform == rhs.platform
+            && lhs.link == rhs.link
+            && lhs.portLabel == rhs.portLabel
+            && lhs.isSimulated == rhs.isSimulated
             && lhs.videoTrack === rhs.videoTrack
             && lhs.audioTrack === rhs.audioTrack
     }
@@ -38,6 +44,7 @@ final class DirectorSessionViewModel {
     private(set) var devices: [DiscoveredDevice] = []
     private(set) var sources: [ConnectedCameraSource] = []
     private(set) var isRunning = false
+    private let atemSources = ATEMSourceCoordinator()
     private(set) var statusMessage = "Iniciando…"
     private(set) var listeningPort: UInt16?
     private(set) var localIPv4Addresses: [String] = []
@@ -318,6 +325,10 @@ final class DirectorSessionViewModel {
                 )
                 isRunning = true
                 statusMessage = "Esperando cámaras…"
+                atemSources.onInputs = { [weak self] inputs in
+                    self?.replaceATEMSources(inputs)
+                }
+                atemSources.start()
                 await refreshDevices()
                 await switcher.setPreferredTransition(selectedTransition)
                 scheduleMonitorQualityBroadcast(force: true)
@@ -350,6 +361,7 @@ final class DirectorSessionViewModel {
     }
 
     func stop() {
+        atemSources.stop()
         discoveryTask?.cancel()
         streamTask?.cancel()
         encoderTask?.cancel()
@@ -961,13 +973,41 @@ final class DirectorSessionViewModel {
                 connectionStateUpdatedAt: Date()
             ))
         }
-        sources.sort { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        sortSources()
         syncPreviewMonitor()
         broadcastSwitcherAssignments()
         if videoTrack != nil {
             scheduleMonitorQualityBroadcast()
         }
         syncRemoteVideoTrackPolicy()
+    }
+
+    private func replaceATEMSources(_ inputs: [ATEMListedInput]) {
+        let wifi = sources.filter { $0.link == .wifi }
+        let atem = inputs.map { input in
+            ConnectedCameraSource(
+                id: input.id,
+                displayName: input.displayName,
+                videoTrack: nil,
+                audioTrack: nil,
+                connectionState: .connected,
+                remoteSettings: RemoteCameraSettings(),
+                platform: .atem,
+                link: .atem,
+                portLabel: input.port.title,
+                isSimulated: input.isSimulated
+            )
+        }
+        sources = wifi + atem
+        sortSources()
+        syncPreviewMonitor()
+    }
+
+    private func sortSources() {
+        sources.sort { lhs, rhs in
+            if lhs.link != rhs.link { return lhs.link == .wifi }
+            return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+        }
     }
 
     private func syncPreviewMonitor() {
@@ -1020,7 +1060,7 @@ final class DirectorSessionViewModel {
     private func broadcastSwitcherAssignmentsNow() async {
         syncRemoteVideoTrackPolicy()
         var pending: [(CameraSourceID, CameraSwitcherAssignment)] = []
-        for source in sources {
+        for source in sources where source.link == .wifi {
             let assignment = switcherAssignment(for: source.id)
             if lastBroadcastAssignments[source.id] != assignment {
                 lastBroadcastAssignments[source.id] = assignment
@@ -1049,7 +1089,7 @@ final class DirectorSessionViewModel {
         let quality = effectiveMonitorQuality
         guard quality != lastBroadcastMonitorQuality else { return }
         lastBroadcastMonitorQuality = quality
-        for source in sources {
+        for source in sources where source.link == .wifi {
             Task {
                 try? await streamReceiver.sendControl(
                     to: source.id,

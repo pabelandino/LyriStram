@@ -12,6 +12,7 @@ public enum DevicePlatform: String, Sendable, Codable, CaseIterable {
     case iPad
     case mac
     case android
+    case atem
     case unknown
 
     public var displayName: String {
@@ -20,6 +21,7 @@ public enum DevicePlatform: String, Sendable, Codable, CaseIterable {
         case .iPad: "iPad"
         case .mac: "Mac"
         case .android: "Android"
+        case .atem: "ATEM"
         case .unknown: "Desconocido"
         }
     }
@@ -83,7 +85,7 @@ public struct DeviceIdentity: Sendable, Codable, Equatable {
         switch currentPlatform() {
         case .iPhone, .android: .camera
         case .iPad, .mac: .director
-        case .unknown: .camera
+        case .atem, .unknown: .camera
         }
     }
 }

@@ -40,7 +40,11 @@ final class DirectorPreviewMonitorStore {
                 track: source.videoTrack,
                 isConnected: source.connectionState == .connected,
                 isMuted: source.remoteSettings.isMuted,
-                sourceIndex: index
+                sourceIndex: index,
+                platform: source.platform,
+                link: source.link,
+                portLabel: source.portLabel,
+                isSimulated: source.isSimulated
             )
         }
         let camerasChanged = nextCameras != cameras
