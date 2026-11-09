@@ -3,8 +3,11 @@ import EasyStreamCore
 
 public struct BroadcastMediaLibraryPanel: View {
     @Binding var selectedKind: BroadcastResourceKind
-    let resources: [BroadcastResource]
+    let imageResources: [BroadcastResource]
+    let videoResources: [BroadcastResource]
+    let widgetResources: [BroadcastResource]
     let activeResourceIDs: Set<UUID>
+    let lyrioraResourceIDs: Set<UUID>
     let editingResourceID: UUID?
     let searchText: String
     let onSearchChange: (String) -> Void
@@ -18,8 +21,11 @@ public struct BroadcastMediaLibraryPanel: View {
 
     public init(
         selectedKind: Binding<BroadcastResourceKind>,
-        resources: [BroadcastResource],
+        imageResources: [BroadcastResource],
+        videoResources: [BroadcastResource],
+        widgetResources: [BroadcastResource],
         activeResourceIDs: Set<UUID>,
+        lyrioraResourceIDs: Set<UUID> = [],
         editingResourceID: UUID?,
         searchText: String,
         onSearchChange: @escaping (String) -> Void,
@@ -32,8 +38,11 @@ public struct BroadcastMediaLibraryPanel: View {
         fileURL: @escaping (BroadcastResource) -> URL
     ) {
         self._selectedKind = selectedKind
-        self.resources = resources
+        self.imageResources = imageResources
+        self.videoResources = videoResources
+        self.widgetResources = widgetResources
         self.activeResourceIDs = activeResourceIDs
+        self.lyrioraResourceIDs = lyrioraResourceIDs
         self.editingResourceID = editingResourceID
         self.searchText = searchText
         self.onSearchChange = onSearchChange
@@ -45,6 +54,8 @@ public struct BroadcastMediaLibraryPanel: View {
         self.onRemoveFromProgram = onRemoveFromProgram
         self.fileURL = fileURL
     }
+
+    @State private var warmedKinds: Set<BroadcastResourceKind> = []
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -86,26 +97,57 @@ public struct BroadcastMediaLibraryPanel: View {
                 }
             }
 
-            if resources.isEmpty {
-                BroadcastInspectorEmptyState("Sin recursos", systemImage: selectedKind.systemImage)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 24)
-            } else {
-                LazyVStack(spacing: 6) {
-                    ForEach(resources) { resource in
-                        BroadcastResourceRow(
-                            resource: resource,
-                            fileURL: fileURL(resource),
-                            isActive: activeResourceIDs.contains(resource.id) || editingResourceID == resource.id,
-                            isLiveOnAir: activeResourceIDs.contains(resource.id),
-                            onSelect: { onSelectResource(resource) },
-                            onEdit: resource.kind == .widget ? { onEditWidget(resource) } : nil,
-                            onTakeToProgram: { onTakeToProgram(resource) },
-                            onRemoveFromProgram: activeResourceIDs.contains(resource.id)
-                                ? { onRemoveFromProgram(resource) }
-                                : nil
-                        )
+            ZStack(alignment: .topLeading) {
+                ForEach(BroadcastResourceKind.allCases, id: \.self) { kind in
+                    if warmedKinds.contains(kind) {
+                        resourceList(for: kind)
+                            .opacity(selectedKind == kind ? 1 : 0)
+                            .allowsHitTesting(selectedKind == kind)
+                            .accessibilityHidden(selectedKind != kind)
                     }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .task {
+            for kind in BroadcastResourceKind.allCases {
+                warmedKinds.insert(kind)
+                await Task.yield()
+            }
+        }
+    }
+
+    private func resources(for kind: BroadcastResourceKind) -> [BroadcastResource] {
+        switch kind {
+        case .image: imageResources
+        case .video: videoResources
+        case .widget: widgetResources
+        }
+    }
+
+    @ViewBuilder
+    private func resourceList(for kind: BroadcastResourceKind) -> some View {
+        let resources = resources(for: kind)
+        if resources.isEmpty {
+            BroadcastInspectorEmptyState("Sin recursos", systemImage: kind.systemImage)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+        } else {
+            LazyVStack(spacing: 6) {
+                ForEach(resources) { resource in
+                    BroadcastResourceRow(
+                        resource: resource,
+                        fileURL: fileURL(resource),
+                        isActive: activeResourceIDs.contains(resource.id) || editingResourceID == resource.id,
+                        isLiveOnAir: activeResourceIDs.contains(resource.id),
+                        showsLyrioraActivity: lyrioraResourceIDs.contains(resource.id),
+                        onSelect: { onSelectResource(resource) },
+                        onEdit: resource.kind == .widget ? { onEditWidget(resource) } : nil,
+                        onTakeToProgram: { onTakeToProgram(resource) },
+                        onRemoveFromProgram: activeResourceIDs.contains(resource.id)
+                            ? { onRemoveFromProgram(resource) }
+                            : nil
+                    )
                 }
             }
         }

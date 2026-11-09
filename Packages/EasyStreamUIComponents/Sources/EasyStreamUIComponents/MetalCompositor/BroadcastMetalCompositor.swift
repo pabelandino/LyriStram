@@ -90,10 +90,12 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     private let presentLock = NSLock()
     private var presentQueued = false
     private var lastPresentedGeneration: UInt64 = 0
+    private var lastPresentedSpriteGeneration: UInt64 = 0
     private var lastPresentedPlateGeneration: UInt64 = 0
     private var lastMotionPresentTime: CFTimeInterval = 0
     private var isCompositorSuspended = false
     private var hasPresentedVideoFrame = false
+    private var textureFlushCounter = 0
     private var spriteGeneration: UInt64 = .max
     private var gpuSprites: [(texture: MTLTexture, bitmap: BroadcastMetalSpriteBus.Bitmap)] = []
     private var plateTexture: MTLTexture?
@@ -118,7 +120,8 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         super.init()
 
         var cache: CVMetalTextureCache?
-        let cacheAttributes = [kCVMetalTextureCacheMaximumTextureAgeKey: 1.0] as CFDictionary
+        // Keep this short. A one-second age pins a second of camera buffers and the decoder stalls.
+        let cacheAttributes = [kCVMetalTextureCacheMaximumTextureAgeKey: 0.05] as CFDictionary
         CVMetalTextureCacheCreate(kCFAllocatorDefault, cacheAttributes, device, nil, &cache)
         textureCache = cache
 
@@ -137,6 +140,10 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         BroadcastProgramPlateBus.shared.addListener { [weak self] in
             self?.setCompositorSuspended(false)
             self?.requestDraw()
+        }
+        BroadcastMetalSpriteBus.shared.addListener { [weak self] in
+            // Wake the vsync clock. An immediate draw() here stalls the camera for seconds.
+            self?.setCompositorSuspended(false)
         }
     }
 
@@ -258,14 +265,16 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         let timepieceChanged = BroadcastMetalSpriteBus.shared.refreshTimepieces()
         let generation = ProgramFrameDisplayBus.shared.currentDisplayGeneration()
         let plate = BroadcastProgramPlateBus.shared.status()
+        let spriteGeneration = BroadcastMetalSpriteBus.shared.currentGeneration()
         presentLock.lock()
         let generationChanged = generation != lastPresentedGeneration
         let plateChanged = plate.generation != lastPresentedPlateGeneration
+        let spriteChanged = spriteGeneration != lastPresentedSpriteGeneration
         let graphicsMoving = BroadcastMetalSpriteBus.shared.presentsMotion() || plate.animating
         let motionDue = !generationChanged
             && now - lastMotionPresentTime >= (1.0 / 30.0)
             && graphicsMoving
-        if (!generationChanged && !motionDue && !timepieceChanged && !plateChanged) || presentQueued {
+        if (!generationChanged && !motionDue && !timepieceChanged && !plateChanged && !spriteChanged) || presentQueued {
             presentLock.unlock()
             return
         }
@@ -290,6 +299,7 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         presentLock.lock()
         lastPresentedGeneration = generationAtStart
         lastPresentedPlateGeneration = BroadcastProgramPlateBus.shared.status().generation
+        lastPresentedSpriteGeneration = BroadcastMetalSpriteBus.shared.currentGeneration()
         if BroadcastMetalSpriteBus.shared.presentsMotion() || BroadcastProgramPlateBus.shared.status().animating {
             lastMotionPresentTime = CACurrentMediaTime()
         }
@@ -304,6 +314,7 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
             self.presentLock.lock()
             self.lastPresentedGeneration = ProgramFrameDisplayBus.shared.currentDisplayGeneration()
             self.lastPresentedPlateGeneration = BroadcastProgramPlateBus.shared.status().generation
+            self.lastPresentedSpriteGeneration = BroadcastMetalSpriteBus.shared.currentGeneration()
             self.presentLock.unlock()
         }
     }
@@ -563,6 +574,12 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
 
         commandBuffer.present(drawable)
         commandBuffer.commit()
+        // Flushing every frame stalls the camera. A short age still drops textures that the GPU has finished.
+        textureFlushCounter += 1
+        if textureFlushCounter >= 12 {
+            textureFlushCounter = 0
+            CVMetalTextureCacheFlush(textureCache, 0)
+        }
 
         if binding.hasOutgoingVideo {
             hasPresentedVideoFrame = true
@@ -760,8 +777,10 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
     }
 
     private func gpuSpritesForDraw() -> [(texture: MTLTexture, bitmap: BroadcastMetalSpriteBus.Bitmap)] {
-        let snapshot = BroadcastMetalSpriteBus.shared.current()
-        guard snapshot.generation != spriteGeneration else { return gpuSprites }
+        // Copy the lyric bitmap only when it actually changes. Doing it on every camera frame stalls the picture.
+        guard let snapshot = BroadcastMetalSpriteBus.shared.copyBitmapsIfGenerationChanged(from: spriteGeneration) else {
+            return gpuSprites
+        }
         spriteGeneration = snapshot.generation
         gpuSprites = snapshot.bitmaps.compactMap { bitmap in
             guard let texture = makeSpriteTexture(bitmap) else { return nil }
@@ -863,7 +882,7 @@ final class BroadcastMetalCompositor: NSObject, @unchecked Sendable {
         let sample = cue.sample(elapsed: time - bitmap.sequenceStart)
         let shift = Float(sample.offsetFraction)
         if bitmap.slidesVertically {
-            return (0, shift * pieceHeight, Float(sample.opacity), 1)
+            return (0, shift * pieceHeight, Float(sample.opacity), Float(sample.scale))
         }
         return (
             shift * pieceWidth,

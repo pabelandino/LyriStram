@@ -3,6 +3,7 @@ import Observation
 import QuartzCore
 import EasyStreamCore
 import EasyStreamUIComponents
+import EasyStreamVideoPipeline
 
 /// Frozen snapshot of graphics that are actually on air.
 /// Updated only when live state commits — never while editing drafts in the studio.
@@ -15,6 +16,8 @@ final class LiveProgramAirStore {
     private(set) var fullScreenResource: BroadcastResource?
     private(set) var fullScreenFileURL: URL?
     private(set) var fullScreenIsLive = false
+    /// Full-screen Lyriora owns the program picture, the same way an image resource does.
+    private(set) var lyrioraCoversProgram = false
     /// Bumps only when committed air graphics actually change (not on director UI edits).
     private(set) var revision: UInt64 = 0
 
@@ -30,11 +33,16 @@ final class LiveProgramAirStore {
     }
 
     func refresh(from media: BroadcastMediaViewModel) {
-        let newLayers = media.committedLiveAirWidgetLayers.map {
-            ProgramFeedWidgetLayer(
-                id: $0.id,
-                configuration: $0.configuration,
-                logoURL: $0.logoURL,
+        let lyrioraFrame = LyrioraAirFeed.shared.frame
+        let newLayers = media.committedLiveAirWidgetLayers.map { layer in
+            var configuration = layer.configuration
+            if configuration.resolvedTemplate == .lyriora {
+                configuration = configuration.applyingLyrioraAir(lyrioraFrame)
+            }
+            return ProgramFeedWidgetLayer(
+                id: layer.id,
+                configuration: configuration,
+                logoURL: layer.logoURL,
                 isLive: true,
                 isEditing: false
             )
@@ -54,13 +62,23 @@ final class LiveProgramAirStore {
             newFullScreenLive = false
         }
 
+        let lyrioraCovers = newLayers.contains {
+            $0.configuration.resolvedTemplate == .lyriora
+                && $0.configuration.resolvedLyrioraMode == .fullScreen
+        }
         let plateChanged = newFullScreen?.id != fullScreenResource?.id
             || newFullScreenURL != fullScreenFileURL
             || newFullScreenLive != fullScreenIsLive
-        let graphicsChanged = newLayers != widgetLayers || plateChanged
+        let graphicsChanged = newLayers != widgetLayers || plateChanged || lyrioraCovers != lyrioraCoversProgram
 
         guard graphicsChanged else { return }
 
+        let coverBegan = lyrioraCovers && !lyrioraCoversProgram
+        lyrioraCoversProgram = lyrioraCovers
+        // A verse change must not wipe the camera. Only the moment the plate covers the picture.
+        if coverBegan {
+            ProgramFrameDisplayBus.shared.clearOnAirLane()
+        }
         widgetLayers = newLayers
         fullScreenResource = newFullScreen
         fullScreenFileURL = newFullScreenURL

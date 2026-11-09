@@ -162,6 +162,8 @@ public struct BroadcastWidgetStudioPanel: View {
             BroadcastWidgetStudioClockFields(configuration: $configuration)
         case .countdown:
             BroadcastWidgetStudioCountdownFields(configuration: $configuration)
+        case .lyriora:
+            LyrioraWidgetStudioFields(configuration: $configuration)
         }
     }
 

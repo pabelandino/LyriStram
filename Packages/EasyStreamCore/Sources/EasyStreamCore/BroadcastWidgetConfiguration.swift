@@ -1,6 +1,7 @@
 import Foundation
 
 public enum BroadcastWidgetTemplate: String, Codable, Sendable, CaseIterable {
+    case lyriora
     case animatedLogo
     case ticker
     case lowerThirdPro
@@ -13,11 +14,12 @@ public enum BroadcastWidgetTemplate: String, Codable, Sendable, CaseIterable {
     case textBanner
 
     public static var mentoTemplates: [BroadcastWidgetTemplate] {
-        [.animatedLogo, .ticker, .lowerThirdPro, .clock, .countdown]
+        [.lyriora, .animatedLogo, .ticker, .lowerThirdPro, .clock, .countdown]
     }
 
     public var title: String {
         switch self {
+        case .lyriora: "Lyriora"
         case .animatedLogo, .logo: "Logo animado"
         case .ticker, .textBanner: "Ticker infinito"
         case .lowerThirdPro, .lowerThird: "Lower third pro"
@@ -28,6 +30,7 @@ public enum BroadcastWidgetTemplate: String, Codable, Sendable, CaseIterable {
 
     public var systemImage: String {
         switch self {
+        case .lyriora: "text.quote"
         case .animatedLogo, .logo: "sparkles.rectangle.stack"
         case .ticker, .textBanner: "text.append"
         case .lowerThirdPro, .lowerThird: "rectangle.bottomhalf.inset.filled"
@@ -147,6 +150,20 @@ public struct BroadcastWidgetPlacement: Codable, Equatable, Sendable {
         normalizedCenterY: 0.92,
         widthFraction: 1.0,
         heightFraction: 0.1
+    )
+
+    public static let lyrioraLower = BroadcastWidgetPlacement(
+        normalizedCenterX: 0.5,
+        normalizedCenterY: 0.88,
+        widthFraction: 0.96,
+        heightFraction: 0.22
+    )
+
+    public static let lyrioraFullScreen = BroadcastWidgetPlacement(
+        normalizedCenterX: 0.5,
+        normalizedCenterY: 0.5,
+        widthFraction: 1,
+        heightFraction: 1
     )
 
     public static let lowerThird = BroadcastWidgetPlacement(
@@ -292,6 +309,41 @@ public struct BroadcastWidgetConfiguration: Codable, Equatable, Sendable {
     public var countdownSeconds: Int
     public var countdownAnimation: BroadcastCountdownAnimation
 
+    /// Nil on widgets saved before Lyriora. Resolves to a lower-third plate.
+    public var lyrioraMode: LyrioraPresentationMode? = nil
+    /// Nil on widgets saved before Lyriora. Resolves to the classic plate.
+    public var lyrioraStyle: LyrioraVisualStyle? = nil
+
+    public var resolvedLyrioraMode: LyrioraPresentationMode {
+        lyrioraMode ?? .lower
+    }
+
+    public var resolvedLyrioraStyle: LyrioraVisualStyle {
+        lyrioraStyle ?? .classic
+    }
+
+    /// Copies the live Lyriora lines onto this widget without moving the plate.
+    public func applyingLyrioraAir(_ frame: LyrioraAirFrame) -> BroadcastWidgetConfiguration {
+        var copy = self
+        guard resolvedTemplate == .lyriora else { return copy }
+        if frame.hasText {
+            copy.title = frame.headline
+            copy.subtitle = frame.verseBody
+        } else {
+            copy.title = ""
+            copy.subtitle = ""
+        }
+        if copy.resolvedLyrioraMode == .fullScreen {
+            copy.placement = BroadcastWidgetPlacement(
+                normalizedCenterX: 0.5,
+                normalizedCenterY: 0.5,
+                widthFraction: 1,
+                heightFraction: 1
+            )
+        }
+        return copy
+    }
+
     public var resolvedTemplate: BroadcastWidgetTemplate {
         template.resolved
     }
@@ -337,6 +389,8 @@ public struct BroadcastWidgetConfiguration: Codable, Equatable, Sendable {
         self.countdownTargetDate = nil
         self.countdownSeconds = 60
         self.countdownAnimation = .fadeScale
+        self.lyrioraMode = template.resolved == .lyriora ? .lower : nil
+        self.lyrioraStyle = template.resolved == .lyriora ? .classic : nil
     }
 
     public static func defaultPlacement(for template: BroadcastWidgetTemplate) -> BroadcastWidgetPlacement {
@@ -351,6 +405,8 @@ public struct BroadcastWidgetConfiguration: Codable, Equatable, Sendable {
             BroadcastWidgetPlacement(normalizedCenterX: 0.84, normalizedCenterY: 0.1, widthFraction: 0.28, heightFraction: 0.12)
         case .countdown:
             BroadcastWidgetPlacement(normalizedCenterX: 0.5, normalizedCenterY: 0.5, widthFraction: 0.5, heightFraction: 0.35)
+        case .lyriora:
+            .lyrioraLower
         }
     }
 
@@ -377,6 +433,12 @@ public struct BroadcastWidgetConfiguration: Codable, Equatable, Sendable {
         case .countdown:
             titleFont = .rounded
             titleFontSize = 72
+        case .lyriora:
+            lyrioraMode = resolvedLyrioraMode
+            lyrioraStyle = resolvedLyrioraStyle
+            placement = resolvedLyrioraMode == .fullScreen ? .lyrioraFullScreen : .lyrioraLower
+            title = ""
+            subtitle = ""
         }
     }
 }

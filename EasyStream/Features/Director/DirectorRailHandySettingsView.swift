@@ -3,17 +3,12 @@ import EasyStreamCore
 import EasyStreamUIComponents
 import EasyStreamTransport
 
-/// Audio, intercom, and camera controls kept beside the library.
+/// Intercom and live graphics kept beside the library. Audio and the Android address live in general settings.
 struct DirectorRailHandySettingsView: View {
     let viewModel: DirectorSessionViewModel
     @Bindable var mediaViewModel: BroadcastMediaViewModel
     @Bindable var intercomService: TeamIntercomService
     @Environment(\.directorCompactChrome) private var compact
-
-    private var liveVideoAvailable: Bool {
-        mediaViewModel.liveFullScreenGraphicID != nil
-            && mediaViewModel.fullScreenGraphicResource?.kind == .video
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -49,21 +44,6 @@ struct DirectorRailHandySettingsView: View {
                             onTalkEnd: { intercomService.toggleTalking() }
                         )
                     }
-
-                    railBlock("Audio", systemImage: "waveform") {
-                        DirectorProgramAudioSettingsView(
-                            viewModel: viewModel,
-                            liveVideoAvailable: liveVideoAvailable,
-                            monitor: ProgramAudioMonitor.shared
-                        )
-                    }
-
-                    DirectorConnectAddressCard(
-                        addresses: viewModel.localIPv4Addresses,
-                        port: viewModel.listeningPort,
-                        activeHost: viewModel.advertisedConnectHost,
-                        onApply: { viewModel.applyAdvertisedConnectHost($0) }
-                    )
 
                     if !mediaViewModel.liveWidgets.isEmpty
                         || mediaViewModel.fullScreenGraphicResource != nil {

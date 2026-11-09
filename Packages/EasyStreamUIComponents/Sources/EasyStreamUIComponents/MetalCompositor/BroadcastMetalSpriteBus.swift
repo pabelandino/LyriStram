@@ -5,6 +5,11 @@ import Foundation
 import ImageIO
 import QuartzCore
 import EasyStreamCore
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 /// CPU bitmaps for on-air graphics. Decode and text layout run off the main thread.
 /// The Metal compositor turns these into GPU sprites; SwiftUI does not animate them.
@@ -35,6 +40,10 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
         var slidesVertically: Bool
         /// Point speed lives in `scrollUVPerSecond`. The compositor shows a 1:1 window of the strip.
         var matchesTextScale: Bool
+        /// When set, a new identity replays the entrance instead of keeping the old clock.
+        var motionIdentity: String
+        /// Holds at full opacity after the entrance. Motion runs only during enter and exit.
+        var settlesVisible: Bool
 
         init(
             rgba: Data,
@@ -58,7 +67,9 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
             enterScale: Float = 1,
             sourceID: UUID? = nil,
             slidesVertically: Bool = false,
-            matchesTextScale: Bool = false
+            matchesTextScale: Bool = false,
+            motionIdentity: String = "",
+            settlesVisible: Bool = false
         ) {
             self.rgba = rgba
             self.width = width
@@ -82,6 +93,8 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
             self.sourceID = sourceID
             self.slidesVertically = slidesVertically
             self.matchesTextScale = matchesTextScale
+            self.motionIdentity = motionIdentity
+            self.settlesVisible = settlesVisible
         }
     }
 
@@ -91,6 +104,7 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
         case text
         case clock
         case countdown
+        case lyriora
     }
 
     struct Request: Sendable {
@@ -134,6 +148,9 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
         var clockShowsBackground: Bool
         var countdownTarget: Date?
         var countdownSeconds: Int
+        var lyrioraStyle: LyrioraVisualStyle = .classic
+        var lyrioraFullScreen: Bool = false
+        var reduceMotion: Bool = false
     }
 
     private let lock = NSLock()
@@ -144,15 +161,31 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
     private var renderedTimepieceKey: [UUID: String] = [:]
     private var renderedTimepieceSecond: Int = -1
     private var countdownAnchors: [UUID: Date] = [:]
+    private var lyrioraResting: [UUID: Bitmap] = [:]
+    private var lyrioraEpoch: [UUID: UInt64] = [:]
+    private var listeners: [@Sendable () -> Void] = []
     private let imageContext = CIContext(options: [.cacheIntermediates: false])
 
     private init() {}
+
+    func currentGeneration() -> UInt64 {
+        lock.lock()
+        defer { lock.unlock() }
+        return generation
+    }
 
     func presentsMotion(at time: CFTimeInterval = CACurrentMediaTime()) -> Bool {
         lock.lock()
         defer { lock.unlock() }
         return bitmaps.contains { bitmap in
             if bitmap.spinDuration > 0 || bitmap.scrollUVPerSecond > 0 { return true }
+            if bitmap.settlesVisible {
+                let elapsed = time - bitmap.sequenceStart
+                let enterEnd = Double(bitmap.enterDelay + bitmap.enterDuration) + 0.08
+                let exitStart = Double(bitmap.exitDelay)
+                let exitEnd = exitStart + Double(bitmap.exitDuration) + 0.08
+                return elapsed < enterEnd || (elapsed >= exitStart && elapsed < exitEnd)
+            }
             guard bitmap.playsSequence else { return false }
             let end = bitmap.sequenceStart + Double(bitmap.exitDelay + bitmap.exitDuration) + 0.08
             return time < end
@@ -178,6 +211,13 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
         return changed
     }
 
+    func copyBitmapsIfGenerationChanged(from known: UInt64) -> (generation: UInt64, bitmaps: [Bitmap])? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard generation != known else { return nil }
+        return (generation, bitmaps)
+    }
+
     func current() -> (generation: UInt64, bitmaps: [Bitmap]) {
         lock.lock()
         defer { lock.unlock() }
@@ -190,13 +230,23 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
         requestSerial &+= 1
         let token = requestSerial
         if requests.isEmpty {
+            let absorbed = absorbLyrioraExits(requests: [], settled: [], now: CACurrentMediaTime())
             generation &+= 1
-            bitmaps = []
+            bitmaps = absorbed.bitmaps
             timepieceRequests = []
             renderedTimepieceKey = [:]
             renderedTimepieceSecond = -1
             countdownAnchors = [:]
+            if absorbed.bitmaps.isEmpty {
+                lyrioraResting = [:]
+                lyrioraEpoch = [:]
+            }
+            let removals = absorbed.removals
             lock.unlock()
+            for removal in removals {
+                scheduleLyrioraRemoval(removal)
+            }
+            notifyListeners()
             return
         }
         let anchors = countdownAnchors
@@ -217,8 +267,10 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
                 }
             }
             self.lock.lock()
-            defer { self.lock.unlock() }
-            guard token == self.requestSerial else { return }
+            guard token == self.requestSerial else {
+                self.lock.unlock()
+                return
+            }
             let timepieces = requests.filter { $0.kind == .clock || $0.kind == .countdown }
             self.timepieceRequests = timepieces
             self.countdownAnchors = countdownStarts
@@ -226,9 +278,143 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
                 (request.sourceID, self.timepieceLabel(request, now: now, countdownStart: countdownStarts[request.sourceID]))
             })
             self.renderedTimepieceSecond = Int(now.timeIntervalSince1970)
+            let settled = Self.keepingMotion(Self.motionClocks(from: self.bitmaps), in: built)
+            let absorbed = self.absorbLyrioraExits(requests: requests, settled: settled, now: sequenceStart)
             self.generation &+= 1
-            self.bitmaps = Self.keepingMotion(Self.motionClocks(from: self.bitmaps), in: built)
+            self.bitmaps = absorbed.bitmaps
+            let removals = absorbed.removals
+            self.lock.unlock()
+            for removal in removals {
+                self.scheduleLyrioraRemoval(removal)
+            }
+            self.notifyListeners()
         }
+    }
+
+    func addListener(_ listener: @escaping @Sendable () -> Void) {
+        lock.lock()
+        listeners.append(listener)
+        lock.unlock()
+    }
+
+    private struct LyrioraRemoval {
+        var id: UUID
+        var epoch: UInt64
+        var delay: Double
+    }
+
+    /// Lower thirds swap lyrics in place. The exit plays only when that widget leaves the air.
+    /// Full-screen still fades when Lyriora clears the verse.
+    private func absorbLyrioraExits(
+        requests: [Request],
+        settled: [Bitmap],
+        now: CFTimeInterval
+    ) -> (bitmaps: [Bitmap], removals: [LyrioraRemoval]) {
+        let liveIDs = Set(requests.map(\.sourceID))
+        var output = settled
+        var removals: [LyrioraRemoval] = []
+        for request in requests where request.kind == .lyriora {
+            if !request.lyrioraFullScreen {
+                if let fresh = output.last(where: { $0.sourceID == request.sourceID }) {
+                    lyrioraResting[request.sourceID] = fresh
+                }
+                lyrioraEpoch[request.sourceID, default: 0] &+= 1
+                continue
+            }
+            let headline = request.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            let body = request.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !headline.isEmpty || !body.isEmpty {
+                if let fresh = output.last(where: { $0.sourceID == request.sourceID }) {
+                    lyrioraResting[request.sourceID] = fresh
+                }
+                lyrioraEpoch[request.sourceID, default: 0] &+= 1
+                continue
+            }
+            guard var fading = lyrioraResting[request.sourceID] else { continue }
+            if fading.exitDelay > 100_000 {
+                fading.exitDelay = Float(max(0, now - fading.sequenceStart))
+                lyrioraResting[request.sourceID] = fading
+                lyrioraEpoch[request.sourceID, default: 0] &+= 1
+                removals.append(
+                    LyrioraRemoval(
+                        id: request.sourceID,
+                        epoch: lyrioraEpoch[request.sourceID] ?? 0,
+                        delay: Double(fading.exitDuration) + 0.08
+                    )
+                )
+            }
+            output.removeAll { $0.sourceID == request.sourceID }
+            output.append(fading)
+        }
+
+        for bitmap in bitmaps {
+            guard let id = bitmap.sourceID,
+                  bitmap.motionIdentity.hasPrefix("lower\u{1}"),
+                  !liveIDs.contains(id),
+                  !output.contains(where: { $0.sourceID == id }) else { continue }
+            var fading = bitmap
+            if fading.exitDelay > 100_000 {
+                fading.exitDelay = Float(max(0, now - fading.sequenceStart))
+                lyrioraEpoch[id, default: 0] &+= 1
+                removals.append(
+                    LyrioraRemoval(
+                        id: id,
+                        epoch: lyrioraEpoch[id] ?? 0,
+                        delay: Double(fading.exitDuration) + 0.08
+                    )
+                )
+            }
+            lyrioraResting[id] = fading
+            output.append(fading)
+        }
+
+        let retained = liveIDs.union(removals.map(\.id))
+        lyrioraResting = lyrioraResting.filter { retained.contains($0.key) }
+        return (output, removals)
+    }
+
+    private func scheduleLyrioraRemoval(_ removal: LyrioraRemoval) {
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + removal.delay) { [weak self] in
+            self?.removeLyrioraSprite(id: removal.id, epoch: removal.epoch)
+        }
+    }
+
+    private func removeLyrioraSprite(id: UUID, epoch: UInt64) {
+        lock.lock()
+        guard lyrioraEpoch[id] == epoch else {
+            lock.unlock()
+            return
+        }
+        let before = bitmaps.count
+        bitmaps.removeAll { $0.sourceID == id }
+        lyrioraResting[id] = nil
+        let changed = bitmaps.count != before
+        if changed {
+            generation &+= 1
+        }
+        lock.unlock()
+        if changed {
+            notifyListeners()
+        }
+    }
+
+    private func notifyListeners() {
+        lock.lock()
+        let callbacks = listeners
+        lock.unlock()
+        DispatchQueue.main.async {
+            callbacks.forEach { $0() }
+        }
+    }
+
+    private static var prefersReducedMotion: Bool {
+        #if os(iOS)
+        UIAccessibility.isReduceMotionEnabled
+        #elseif os(macOS)
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        #else
+        false
+        #endif
     }
 
     /// Redraws clock and countdown sprites when the shown second changes. Other widgets stay put.
@@ -289,15 +475,21 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
     private struct KeptMotion {
         var sequenceStart: Double
         var exitDelays: [Float]
+        var motionIdentity: String
     }
 
     private static func motionClocks(from bitmaps: [Bitmap]) -> [UUID: KeptMotion] {
         var clocks: [UUID: KeptMotion] = [:]
         for bitmap in bitmaps {
             guard let id = bitmap.sourceID, bitmap.playsSequence else { continue }
-            var clock = clocks[id] ?? KeptMotion(sequenceStart: bitmap.sequenceStart, exitDelays: [])
+            var clock = clocks[id] ?? KeptMotion(
+                sequenceStart: bitmap.sequenceStart,
+                exitDelays: [],
+                motionIdentity: bitmap.motionIdentity
+            )
             clock.sequenceStart = min(clock.sequenceStart, bitmap.sequenceStart)
             clock.exitDelays.append(bitmap.exitDelay)
+            clock.motionIdentity = bitmap.motionIdentity
             clocks[id] = clock
         }
         return clocks
@@ -307,6 +499,9 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
         var pieceIndex: [UUID: Int] = [:]
         return bitmaps.map { bitmap in
             guard let id = bitmap.sourceID, bitmap.playsSequence, let clock = clocks[id] else { return bitmap }
+            if !bitmap.motionIdentity.isEmpty, bitmap.motionIdentity != clock.motionIdentity {
+                return bitmap
+            }
             let piece = pieceIndex[id, default: 0]
             pieceIndex[id] = piece + 1
             var copy = bitmap
@@ -328,6 +523,7 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
         case .lowerThird, .lowerThirdPro: .lowerThird
         case .clock: .clock
         case .countdown: .countdown
+        case .lyriora: .lyriora
         default: .text
         }
         let speed = min(max(configuration.animationSpeed, 0.25), 3)
@@ -380,13 +576,19 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
             clockUse24Hour: configuration.clockUse24Hour,
             clockShowsBackground: configuration.resolvedClockShowsBackground,
             countdownTarget: configuration.countdownTargetDate,
-            countdownSeconds: configuration.countdownSeconds
+            countdownSeconds: configuration.countdownSeconds,
+            lyrioraStyle: configuration.resolvedLyrioraStyle,
+            lyrioraFullScreen: configuration.resolvedLyrioraMode == .fullScreen,
+            reduceMotion: Self.prefersReducedMotion
         )
     }
 
     private func rasterize(_ request: Request, now: Date, countdownStart: Date?) -> [Bitmap] {
         if request.kind == .clock || request.kind == .countdown {
             return timepieceBitmap(request, now: now, countdownStart: countdownStart).map { [$0] } ?? []
+        }
+        if request.kind == .lyriora {
+            return lyrioraBitmap(for: request).map { [$0] } ?? []
         }
         if request.kind == .lowerThird {
             return lowerThirdPieces(request)
@@ -632,7 +834,8 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
         fontName: String,
         in context: CGContext,
         rect: CGRect,
-        center: Bool
+        center: Bool,
+        clips: Bool = true
     ) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -651,7 +854,9 @@ public final class BroadcastMetalSpriteBus: @unchecked Sendable {
         // Glyphs rise toward smaller y. Keep the whole cap height inside the rect.
         let baseline = rect.midY + (ascent - descent) / 2
         context.saveGState()
-        context.clip(to: rect.insetBy(dx: -6, dy: -1))
+        if clips {
+            context.clip(to: rect.insetBy(dx: -6, dy: -1))
+        }
         context.textPosition = CGPoint(x: x, y: baseline)
         CTLineDraw(line, context)
         context.restoreGState()

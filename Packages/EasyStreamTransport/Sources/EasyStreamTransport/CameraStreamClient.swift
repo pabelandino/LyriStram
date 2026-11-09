@@ -214,9 +214,10 @@ public actor CameraStreamClient {
         encoding.scaleResolutionDownBy = NSNumber(value: 1.0)
 
         params.encodings = [encoding]
-        // Keep the configured size. The default preference scales the picture down (352×198) and ramps later.
+        // Keep the frame size when several cameras share the link. Frame rate can yield;
+        // scaling the picture down is what turns a third (or eighth) camera into blocks.
         params.degradationPreference = NSNumber(
-            value: RTCDegradationPreference.maintainFramerateAndResolution.rawValue
+            value: RTCDegradationPreference.maintainResolution.rawValue
         )
         sender.parameters = params
     }

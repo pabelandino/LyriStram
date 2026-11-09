@@ -39,7 +39,7 @@ struct RootView: View {
     @State private var coordinator = AppCoordinator()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    /// Folded iPhone Duo and a regular iPhone are compact. The inner Duo display and iPad are regular.
+    /// iPad, Mac, and the unfolded iPhone Duo inner display. A regular iPhone stays on the camera.
     private var offersDirector: Bool {
         AppRoleAvailability.current(horizontalSizeClass: horizontalSizeClass).offersDirector
     }

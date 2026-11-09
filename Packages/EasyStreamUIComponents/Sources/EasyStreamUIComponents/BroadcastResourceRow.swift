@@ -6,6 +6,7 @@ public struct BroadcastResourceRow: View {
     let fileURL: URL
     let isActive: Bool
     let isLiveOnAir: Bool
+    let showsLyrioraActivity: Bool
     let onSelect: () -> Void
     let onEdit: (() -> Void)?
     let onTakeToProgram: () -> Void
@@ -16,6 +17,7 @@ public struct BroadcastResourceRow: View {
         fileURL: URL,
         isActive: Bool,
         isLiveOnAir: Bool = false,
+        showsLyrioraActivity: Bool = false,
         onSelect: @escaping () -> Void,
         onEdit: (() -> Void)?,
         onTakeToProgram: @escaping () -> Void,
@@ -25,6 +27,7 @@ public struct BroadcastResourceRow: View {
         self.fileURL = fileURL
         self.isActive = isActive
         self.isLiveOnAir = isLiveOnAir
+        self.showsLyrioraActivity = showsLyrioraActivity
         self.onSelect = onSelect
         self.onEdit = onEdit
         self.onTakeToProgram = onTakeToProgram
@@ -44,6 +47,10 @@ public struct BroadcastResourceRow: View {
                             .font(.subheadline.weight(.medium))
                             .lineLimit(1)
                             .truncationMode(.tail)
+
+                        if showsLyrioraActivity, LyrioraAirFeed.shared.link == .connected {
+                            LyrioraWidgetLiveNeon()
+                        }
 
                         if isLiveOnAir {
                             BroadcastCompactLiveBadge()
@@ -126,8 +133,7 @@ fileprivate struct BroadcastResourceThumbnail: View {
             case .image:
                 BroadcastAsyncThumbnailImage(url: fileURL)
             case .video:
-                Image(systemName: "film")
-                    .foregroundStyle(BroadcastTheme.subtleText)
+                BroadcastAsyncThumbnailImage(url: fileURL, isVideo: true, fallbackSystemImage: "film")
             case .widget:
                 Image(systemName: "rectangle.3.group")
                     .foregroundStyle(BroadcastTheme.audioGold)
@@ -140,7 +146,10 @@ fileprivate struct BroadcastResourceThumbnail: View {
 /// Loads library thumbnails off the main thread with downscaled ImageIO decode + cache.
 fileprivate struct BroadcastAsyncThumbnailImage: View {
     let url: URL
+    var isVideo = false
+    var fallbackSystemImage: String?
     @State private var image: Image?
+    @State private var finished = false
 
     var body: some View {
         Group {
@@ -148,17 +157,27 @@ fileprivate struct BroadcastAsyncThumbnailImage: View {
                 image
                     .resizable()
                     .scaledToFill()
+            } else if finished, let fallbackSystemImage {
+                Image(systemName: fallbackSystemImage)
+                    .foregroundStyle(BroadcastTheme.subtleText)
             } else {
                 ProgressView()
                     .controlSize(.small)
             }
         }
         .task(id: url) {
-            if let cached = BroadcastMediaThumbnailLoader.cachedImage(for: url) {
+            finished = false
+            if let cached = BroadcastMediaThumbnailLoader.cachedImage(for: url, video: isVideo) {
                 image = cached
+                finished = true
                 return
             }
-            image = await BroadcastMediaThumbnailLoader.loadThumbnail(from: url)
+            if isVideo {
+                image = await BroadcastMediaThumbnailLoader.loadVideoThumbnail(from: url)
+            } else {
+                image = await BroadcastMediaThumbnailLoader.loadThumbnail(from: url)
+            }
+            finished = true
         }
     }
 }

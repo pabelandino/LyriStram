@@ -124,24 +124,43 @@ final class SignalSink: NSObject, RTCVideoRenderer, @unchecked Sendable {
     let sourceID: CameraSourceID
     private weak var cache: DirectorDecodedSignalCache?
     private let lock = NSLock()
+    private let publishQueue: DispatchQueue
     private var latest: CVPixelBuffer?
+    private var pendingPublish: CVPixelBuffer?
+    private var publishing = false
 
     init(sourceID: CameraSourceID, cache: DirectorDecodedSignalCache) {
         self.sourceID = sourceID
         self.cache = cache
+        publishQueue = DispatchQueue(
+            label: "com.easystream.camera.latest.\(sourceID.rawValue.uuidString)",
+            qos: .userInteractive
+        )
     }
 
     func setSize(_ size: CGSize) {}
 
+    /// Copies on this callback thread before WebRTC reuses the decoder buffer.
+    /// Off-air cameras skip the copy: their tile already has a live view, and a full-frame
+    /// copy on every camera is what stalls the second decoder.
     func renderFrame(_ frame: RTCVideoFrame?) {
-        guard let frame,
-              let pixelBuffer = WebRTCVideoFramePixelBuffer.extract(from: frame) else {
+        guard let frame else { return }
+        guard cache?.lanes(for: sourceID).isEmpty == false else { return }
+        guard let pixelBuffer = WebRTCVideoFramePixelBuffer.extract(from: frame) else {
             return
         }
         lock.lock()
         latest = pixelBuffer
+        pendingPublish = pixelBuffer
+        let start = !publishing
+        if start {
+            publishing = true
+        }
         lock.unlock()
-        publish(pixelBuffer)
+        guard start else { return }
+        publishQueue.async { [weak self] in
+            self?.drainPublishes()
+        }
     }
 
     func replayAssignedLanes() {
@@ -150,6 +169,20 @@ final class SignalSink: NSObject, RTCVideoRenderer, @unchecked Sendable {
         lock.unlock()
         guard let frame else { return }
         publish(frame)
+    }
+
+    private func drainPublishes() {
+        while true {
+            lock.lock()
+            guard let pixelBuffer = pendingPublish else {
+                publishing = false
+                lock.unlock()
+                return
+            }
+            pendingPublish = nil
+            lock.unlock()
+            publish(pixelBuffer)
+        }
     }
 
     private func publish(_ pixelBuffer: CVPixelBuffer) {

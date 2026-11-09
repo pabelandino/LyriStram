@@ -36,19 +36,19 @@ public final class BroadcastTileThumbnailSink: NSObject, RTCVideoRenderer, @unch
         lastPublishUptime = now
         publishLock.unlock()
 
+        guard let pixelBuffer = WebRTCVideoFramePixelBuffer.extract(from: frame) else { return }
         processingQueue.async { [weak self] in
-            self?.process(frame)
+            self?.process(pixelBuffer)
         }
     }
 
-    private func process(_ frame: RTCVideoFrame) {
+    private func process(_ pixelBuffer: CVPixelBuffer) {
         publishLock.lock()
         sequence &+= 1
         let seq = sequence
         publishLock.unlock()
 
-        guard let pixelBuffer = WebRTCVideoFramePixelBuffer.extract(from: frame),
-              let thumbnail = Self.downscale(pixelBuffer, maxWidth: maxThumbnailWidth, context: ciContext) else {
+        guard let thumbnail = Self.downscale(pixelBuffer, maxWidth: maxThumbnailWidth, context: ciContext) else {
             return
         }
 

@@ -60,6 +60,7 @@ struct DirectorSessionView: View {
                 onConfigurePreviewMonitor: { openStudioSettings(tab: .monitor) }
             )
             viewModel.start(identity: identity)
+            LyrioraAirClient.shared.start()
             previewMonitor.bind { viewModel.selectPreview($0) }
             mediaViewModel.reload()
             mediaViewModel.refreshLiveAirBus()
@@ -75,7 +76,11 @@ struct DirectorSessionView: View {
             DirectorWorkspaceSession.shared.unbind()
             previewMonitor.unbind()
             viewModel.stop()
+            LyrioraAirClient.shared.stop()
             intercomService.stop()
+        }
+        .onChange(of: LyrioraAirFeed.shared.frame) { _, _ in
+            mediaViewModel.refreshLiveAirBus()
         }
         .onChange(of: programPlateVideoID) { _, videoID in
             viewModel.syncAudioWithProgramPlate(videoID: videoID)

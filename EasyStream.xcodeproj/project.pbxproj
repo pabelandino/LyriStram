@@ -454,7 +454,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "EasyStream necesita acceso a la cámara para enviar video al Director.";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "EasyStream usa la red local para descubrir cámaras y directores en tu Wi‑Fi, transmitir video con baja latencia y usar el intercom del equipo.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "EasyStream usa la red local para descubrir cámaras, directores y Lyriora en tu Wi‑Fi, transmitir video con baja latencia y usar el intercom del equipo.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "EasyStream usa el micrófono para el intercom del equipo y el audio en vivo hacia el Director.";
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "EasyStream usa esto para iniciar sesión con Facebook y acceder a tus Páginas para transmitir en vivo.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -503,7 +503,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "EasyStream necesita acceso a la cámara para enviar video al Director.";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "EasyStream usa la red local para descubrir cámaras y directores en tu Wi‑Fi, transmitir video con baja latencia y usar el intercom del equipo.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "EasyStream usa la red local para descubrir cámaras, directores y Lyriora en tu Wi‑Fi, transmitir video con baja latencia y usar el intercom del equipo.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "EasyStream usa el micrófono para el intercom del equipo y el audio en vivo hacia el Director.";
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "EasyStream usa esto para iniciar sesión con Facebook y acceder a tus Páginas para transmitir en vivo.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

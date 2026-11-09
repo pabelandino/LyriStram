@@ -14,39 +14,24 @@ struct DirectorProgramAudioSettingsView: View {
         VStack(alignment: .leading, spacing: compact ? 8 : 10) {
             signalMeter
 
-            Text("Fuente")
+            Text("Entrada")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(BroadcastTheme.subtleText)
 
-            if liveVideoAvailable {
-                sourceButton(
-                    title: "Video al aire",
-                    subtitle: "Su audio sale por la salida y por la transmisión",
-                    selected: viewModel.selectedProgramAudioInput == .liveVideo
-                ) {
-                    viewModel.selectProgramAudio(.liveVideo)
+            Picker("Entrada", selection: sourceSelection) {
+                Text("Sin fuente").tag("")
+                if liveVideoAvailable {
+                    Text("Video al aire").tag("video")
+                }
+                ForEach(viewModel.sources) { source in
+                    Text(source.displayName).tag("camera:\(source.id.rawValue.uuidString)")
+                }
+                ForEach(monitor.localInputs) { input in
+                    Text(input.name).tag("device:\(input.id)")
                 }
             }
-
-            ForEach(viewModel.sources) { source in
-                sourceButton(
-                    title: source.displayName,
-                    subtitle: source.connectionState == .connected ? "Cámara" : "Desconectada",
-                    selected: viewModel.selectedProgramAudioInput == .camera(source.id)
-                ) {
-                    viewModel.selectProgramAudio(.camera(source.id))
-                }
-            }
-
-            ForEach(monitor.localInputs) { input in
-                sourceButton(
-                    title: input.name,
-                    subtitle: "Interfaz de audio",
-                    selected: viewModel.selectedProgramAudioInput == .localDevice(input.id)
-                ) {
-                    viewModel.selectProgramAudio(.localDevice(input.id))
-                }
-            }
+            .pickerStyle(.menu)
+            .labelsHidden()
 
             if viewModel.sources.isEmpty, monitor.localInputs.isEmpty, !liveVideoAvailable {
                 Text("Conecta una cámara o una interfaz para elegir el audio.")
@@ -118,34 +103,78 @@ struct DirectorProgramAudioSettingsView: View {
 
     private var outputSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Salida de monitoreo")
+            Text("Salida")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(BroadcastTheme.subtleText)
 
+#if os(macOS)
+            Picker("Salida", selection: outputSelection) {
+                Text("Sistema").tag("")
+                ForEach(monitor.outputDevices) { device in
+                    Text(device.name).tag(device.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+#else
             Picker("Salida", selection: $monitor.outputChoice) {
                 Text("Sistema").tag(ProgramAudioOutputChoice.system)
                 Text("Altavoz").tag(ProgramAudioOutputChoice.speaker)
             }
-            .pickerStyle(.segmented)
-            .controlSize(.small)
+            .pickerStyle(.menu)
             .labelsHidden()
 
-            HStack(spacing: 8) {
-                Text(monitor.outputRouteName)
-                    .font(.caption2)
-                    .foregroundStyle(BroadcastTheme.subtleText)
-                    .lineLimit(2)
-                Spacer(minLength: 0)
-                ProgramAudioRoutePickerButton()
-                    .frame(width: 32, height: 32)
-            }
+            ProgramAudioRoutePickerButton()
+                .frame(width: 32, height: 32)
+#endif
 
-            Text("Los audífonos monitorean este audio. La transmisión recibe la misma señal.")
+            Text(monitor.outputRouteName)
+                .font(.caption2)
+                .foregroundStyle(BroadcastTheme.subtleText)
+                .lineLimit(2)
+
+            Text("Los audífonos o la interfaz monitorean este audio. La transmisión recibe la misma señal.")
                 .font(.caption2)
                 .foregroundStyle(BroadcastTheme.subtleText)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
+
+    private var sourceSelection: Binding<String> {
+        Binding(
+            get: {
+                switch viewModel.selectedProgramAudioInput {
+                case .liveVideo:
+                    return "video"
+                case .camera(let id):
+                    return "camera:\(id.rawValue.uuidString)"
+                case .localDevice(let uid):
+                    return "device:\(uid)"
+                case nil:
+                    return ""
+                }
+            },
+            set: { value in
+                if value == "video" {
+                    viewModel.selectProgramAudio(.liveVideo)
+                } else if value.hasPrefix("camera:"),
+                          let uuid = UUID(uuidString: String(value.dropFirst("camera:".count))) {
+                    viewModel.selectProgramAudio(.camera(CameraSourceID(uuid)))
+                } else if value.hasPrefix("device:") {
+                    viewModel.selectProgramAudio(.localDevice(String(value.dropFirst("device:".count))))
+                }
+            }
+        )
+    }
+
+#if os(macOS)
+    private var outputSelection: Binding<String> {
+        Binding(
+            get: { monitor.selectedOutputUID },
+            set: { monitor.selectedOutputUID = $0 }
+        )
+    }
+#endif
 
     private var latencyCaption: String {
         let picture = Int(monitor.pictureLatencyMs.rounded())
@@ -158,32 +187,5 @@ struct DirectorProgramAudioSettingsView: View {
         case .manual:
             return "Suma milisegundos a una interfaz o a la cámara si la voz se adelanta a la imagen."
         }
-    }
-
-    private func sourceButton(title: String, subtitle: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(selected ? BroadcastTheme.audioGold : BroadcastTheme.subtleText)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                        .font(.caption.weight(.medium))
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(subtitle)
-                        .font(.caption2)
-                        .foregroundStyle(BroadcastTheme.subtleText)
-                        .lineLimit(2)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(
-                selected ? BroadcastTheme.audioGold.opacity(0.12) : Color.clear,
-                in: RoundedRectangle(cornerRadius: 8)
-            )
-        }
-        .buttonStyle(.plain)
     }
 }

@@ -14,4 +14,5 @@ public enum EasyStreamLog {
     public static let app = Logger(subsystem: subsystem, category: "app")
     /// PROG frame bus: Take cuts, lane holds, compositor, camera transport ramps.
     public static let programBus = Logger(subsystem: subsystem, category: "ProgramBus")
+    public static let lyriora = Logger(subsystem: subsystem, category: "lyriora")
 }

@@ -335,7 +335,7 @@ export class CameraStreamSession {
     encoding.maxBitrate = profile.maxBitrateKbps * 1000;
     encoding.maxFramerate = profile.frameRate;
     encoding.scaleResolutionDownBy = 1;
-    params.degradationPreference = 'disabled';
+    params.degradationPreference = 'maintain-resolution';
     try {
       await sender.setParameters(params);
     } catch {

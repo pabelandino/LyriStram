@@ -12,6 +12,7 @@ import CoreVideo
 final class BroadcastMetalDisplayLinkDriver: @unchecked Sendable {
     var preferredFramesPerSecond: Int = 60
     var onFrame: (() -> Void)?
+    private var isRunning = false
 
 #if canImport(UIKit)
     private var displayLink: CADisplayLink?
@@ -20,7 +21,8 @@ final class BroadcastMetalDisplayLinkDriver: @unchecked Sendable {
 #endif
 
     func start() {
-        stop()
+        // Restarting the clock drops camera frames for seconds. Keep the one that is already ticking.
+        if isRunning { return }
 
 #if canImport(UIKit)
         let link = CADisplayLink(target: self, selector: #selector(tickUIKit))
@@ -35,6 +37,7 @@ final class BroadcastMetalDisplayLinkDriver: @unchecked Sendable {
         }
         link.add(to: .main, forMode: .common)
         displayLink = link
+        isRunning = true
 #elseif canImport(AppKit)
         var link: CVDisplayLink?
         guard CVDisplayLinkCreateWithActiveCGDisplays(&link) == kCVReturnSuccess,
@@ -54,10 +57,12 @@ final class BroadcastMetalDisplayLinkDriver: @unchecked Sendable {
             Unmanaged.passUnretained(self).toOpaque()
         )
         CVDisplayLinkStart(link)
+        isRunning = true
 #endif
     }
 
     func stop() {
+        isRunning = false
 #if canImport(UIKit)
         displayLink?.invalidate()
         displayLink = nil

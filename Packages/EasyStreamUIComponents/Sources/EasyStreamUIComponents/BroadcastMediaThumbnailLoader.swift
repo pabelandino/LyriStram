@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import ImageIO
+import AVFoundation
 import EasyStreamCore
 #if os(macOS)
 import AppKit
@@ -13,16 +14,45 @@ public enum BroadcastMediaThumbnailLoader {
     private nonisolated(unsafe) static let cache = NSCache<NSString, ThumbnailBox>()
     private static let maxPixelSize: CGFloat = 128
 
-    public static func cachedImage(for url: URL) -> Image? {
-        let key = url.path as NSString
-        if let boxed = cache.object(forKey: key) {
-            return boxed.image
-        }
-        return nil
+    public static func cachedImage(for url: URL, video: Bool = false) -> Image? {
+        cache.object(forKey: cacheKey(for: url, maxPixelSize: maxPixelSize, video: video) as NSString)?.image
     }
 
     public static func loadThumbnail(from url: URL) async -> Image? {
         await loadImage(from: url, maxPixelSize: maxPixelSize)
+    }
+
+    public static func loadVideoThumbnail(from url: URL) async -> Image? {
+        let key = cacheKey(for: url, maxPixelSize: maxPixelSize, video: true) as NSString
+        if let boxed = cache.object(forKey: key) {
+            return boxed.image
+        }
+
+        let image: Image? = await Task.detached(priority: .utility) {
+            let asset = AVURLAsset(url: url)
+            let generator = AVAssetImageGenerator(asset: asset)
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = CGSize(width: maxPixelSize, height: maxPixelSize)
+            let time = CMTime(seconds: 0.1, preferredTimescale: 600)
+            guard let cgImage = try? await generator.image(at: time).image else {
+                return nil as Image?
+            }
+            #if os(macOS)
+            return Image(nsImage: NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height)))
+            #else
+            return Image(uiImage: UIImage(cgImage: cgImage))
+            #endif
+        }.value
+
+        if let image {
+            cache.setObject(ThumbnailBox(image: image), forKey: key)
+        }
+        return image
+    }
+
+    private static func cacheKey(for url: URL, maxPixelSize: CGFloat, video: Bool) -> String {
+        let kind = video ? "video" : "image"
+        return "\(url.path)|\(kind)|\(Int(maxPixelSize))"
     }
 
     /// Program-preview image decode (downsampled, off main thread).
@@ -31,7 +61,7 @@ public enum BroadcastMediaThumbnailLoader {
     }
 
     private static func loadImage(from url: URL, maxPixelSize: CGFloat) async -> Image? {
-        let key = "\(url.path)|\(Int(maxPixelSize))" as NSString
+        let key = cacheKey(for: url, maxPixelSize: maxPixelSize, video: false) as NSString
         if let boxed = cache.object(forKey: key) {
             return boxed.image
         }
@@ -93,8 +123,11 @@ public enum BroadcastMediaThumbnailLoader {
 /// Defers heavy library list construction by one run-loop turn so live video keeps priority.
 public struct DeferredBroadcastLibraryPanel: View {
     @Binding var selectedKind: BroadcastResourceKind
-    let resources: [BroadcastResource]
+    let imageResources: [BroadcastResource]
+    let videoResources: [BroadcastResource]
+    let widgetResources: [BroadcastResource]
     let activeResourceIDs: Set<UUID>
+    let lyrioraResourceIDs: Set<UUID>
     let editingResourceID: UUID?
     let searchText: String
     let onSearchChange: (String) -> Void
@@ -108,14 +141,13 @@ public struct DeferredBroadcastLibraryPanel: View {
 
     @State private var isPanelReady = false
 
-    private var loadToken: String {
-        "\(selectedKind.rawValue)|\(resources.count)|\(searchText)"
-    }
-
     public init(
         selectedKind: Binding<BroadcastResourceKind>,
-        resources: [BroadcastResource],
+        imageResources: [BroadcastResource],
+        videoResources: [BroadcastResource],
+        widgetResources: [BroadcastResource],
         activeResourceIDs: Set<UUID>,
+        lyrioraResourceIDs: Set<UUID> = [],
         editingResourceID: UUID?,
         searchText: String,
         onSearchChange: @escaping (String) -> Void,
@@ -128,8 +160,11 @@ public struct DeferredBroadcastLibraryPanel: View {
         fileURL: @escaping (BroadcastResource) -> URL
     ) {
         self._selectedKind = selectedKind
-        self.resources = resources
+        self.imageResources = imageResources
+        self.videoResources = videoResources
+        self.widgetResources = widgetResources
         self.activeResourceIDs = activeResourceIDs
+        self.lyrioraResourceIDs = lyrioraResourceIDs
         self.editingResourceID = editingResourceID
         self.searchText = searchText
         self.onSearchChange = onSearchChange
@@ -147,8 +182,11 @@ public struct DeferredBroadcastLibraryPanel: View {
             if isPanelReady {
                 BroadcastMediaLibraryPanel(
                     selectedKind: $selectedKind,
-                    resources: resources,
+                    imageResources: imageResources,
+                    videoResources: videoResources,
+                    widgetResources: widgetResources,
                     activeResourceIDs: activeResourceIDs,
+                    lyrioraResourceIDs: lyrioraResourceIDs,
                     editingResourceID: editingResourceID,
                     searchText: searchText,
                     onSearchChange: onSearchChange,
@@ -173,8 +211,8 @@ public struct DeferredBroadcastLibraryPanel: View {
             }
         }
         .animation(.easeOut(duration: 0.15), value: isPanelReady)
-        .task(id: loadToken) {
-            isPanelReady = false
+        .task {
+            guard !isPanelReady else { return }
             await Task.yield()
             isPanelReady = true
         }

@@ -47,6 +47,11 @@ public enum ProgramPreviewVisibilityPolicy: Sendable {
     ) -> Bool {
         _ = previewEqualsProgram
         if sourceIsPreview || sourceIsProgram { return false }
-        return true
+        switch self {
+        case .allConnectedSources:
+            return false
+        case .previewSourceOnly:
+            return true
+        }
     }
 }

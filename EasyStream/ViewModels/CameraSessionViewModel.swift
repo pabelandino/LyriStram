@@ -630,7 +630,7 @@ final class CameraSessionViewModel {
         lastAppliedCaptureStreamSpec = captureStreamSpec
 
         ProgramBusTrace.event(
-            "camera transport apply assignment=\(assignment.rawValue) webrtc=\(webRTCProfile.width)x\(webRTCProfile.height)@\(webRTCProfile.frameRate) capture=\(captureStreamSpec.width)x\(captureStreamSpec.height)@\(captureStreamSpec.frameRate) tier=\(captureTierLabel(for: assignment)) pauseIdle=\(pauseIdle)"
+            "camera transport apply role=\(assignment.rawValue) webrtc=\(webRTCProfile.width)x\(webRTCProfile.height)@\(webRTCProfile.frameRate) capture=\(captureStreamSpec.width)x\(captureStreamSpec.height)@\(captureStreamSpec.frameRate) captureTier=program pauseIdle=\(pauseIdle)"
         )
 
         // Idle, preview, and program share one size. A new size is applied only when the director quality preset changes.
@@ -697,14 +697,6 @@ final class CameraSessionViewModel {
             && quality.pauseIdleCameraStreams
             && streamState == .connected
             && signalingChannel != nil
-    }
-
-    private func captureTierLabel(for assignment: CameraSwitcherAssignment) -> String {
-        switch assignment {
-        case .idle: "idle"
-        case .preview: "preview"
-        case .program, .previewAndProgram: "program"
-        }
     }
 
     private func observeStreamClient() {

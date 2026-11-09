@@ -30,6 +30,8 @@
 		<string>_easystream-camera._tcp</string>
 		<string>_easystream-director._tcp</string>
 		<string>_easystream-intercom._udp</string>
+		<string>_lyriora-sync._tcp</string>
+		<string>_lyriora-sync._tcp.</string>
 	</array>
 </dict>
 </plist>

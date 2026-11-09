@@ -44,6 +44,8 @@ public struct BroadcastWidgetContentView: View {
             ClockWidgetView(configuration: configuration)
         case .countdown:
             CountdownWidgetView(configuration: configuration, isLive: isLive)
+        case .lyriora:
+            LyrioraWidgetView(configuration: configuration)
         }
     }
 }

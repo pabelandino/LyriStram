@@ -155,6 +155,25 @@ final class BroadcastMediaViewModel {
 
     func refreshLiveAirBus() {
         LiveProgramAirStore.shared.refresh(from: self)
+        syncLyrioraProgramCover()
+    }
+
+    /// Full-screen Lyriora replaces the program picture. Taking it off the air brings the selected signal back.
+    private func syncLyrioraProgramCover() {
+        if lyrioraFullScreenIsLive {
+            DirectorWorkspaceSession.shared.sessionViewModel?.coverProgramWithLyrioraFullScreen()
+        } else {
+            DirectorWorkspaceSession.shared.sessionViewModel?.restoreProgramAfterLyrioraFullScreen()
+        }
+    }
+
+    private var lyrioraFullScreenIsLive: Bool {
+        liveWidgetIDs.contains { id in
+            guard let resource = widgetResources.first(where: { $0.id == id }),
+                  let configuration = loadedConfiguration(for: resource) else { return false }
+            return configuration.resolvedTemplate == .lyriora
+                && configuration.resolvedLyrioraMode == .fullScreen
+        }
     }
 
     var fullScreenGraphicResource: BroadcastResource? {
@@ -186,13 +205,17 @@ final class BroadcastMediaViewModel {
         }
     }
 
-    /// Warms thumbnail cache off the main thread so opening Imágenes feels instant.
-    func preloadImageThumbnails(limit: Int = 20) {
-        let urls = imageResources.prefix(limit).map { fileURL(for: $0) }
-        guard !urls.isEmpty else { return }
+    /// Warms image and video thumbnails off the main thread so the library tabs open without hitching live cameras.
+    func preloadImageThumbnails() {
+        let images = imageResources.map { fileURL(for: $0) }
+        let videos = videoResources.map { fileURL(for: $0) }
+        guard !images.isEmpty || !videos.isEmpty else { return }
         Task(priority: .utility) {
-            for url in urls {
+            for url in images {
                 _ = await BroadcastMediaThumbnailLoader.loadThumbnail(from: url)
+            }
+            for url in videos {
+                _ = await BroadcastMediaThumbnailLoader.loadVideoThumbnail(from: url)
             }
         }
     }
@@ -484,9 +507,17 @@ final class BroadcastMediaViewModel {
 
     /// A camera take owns the program picture again.
     func releaseProgramMediaForCameraTake() {
-        guard liveFullScreenGraphicID != nil || previewFullScreenGraphicID != nil else { return }
+        let droppingLyriora = liveWidgetIDs.filter { id in
+            guard let resource = widgetResources.first(where: { $0.id == id }),
+                  let configuration = loadedConfiguration(for: resource) else { return false }
+            return configuration.resolvedTemplate == .lyriora
+                && configuration.resolvedLyrioraMode == .fullScreen
+        }
+        let hadMedia = liveFullScreenGraphicID != nil || previewFullScreenGraphicID != nil
+        guard hadMedia || !droppingLyriora.isEmpty else { return }
         liveFullScreenGraphicID = nil
         previewFullScreenGraphicID = nil
+        liveWidgetIDs.subtract(droppingLyriora)
         refreshLiveAirBus()
     }
 

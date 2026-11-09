@@ -46,8 +46,10 @@ void ProgramFrameNativeBus::publishHold(LaneState &lane, CVPixelBufferRef buffer
     const std::uint32_t height = static_cast<std::uint32_t>(CVPixelBufferGetHeight(buffer));
     lane.sequence += 1;
 
-    assignFrame(lane.ring[lane.writeIndex], buffer, width, height, isNV12, lane.sequence);
-    lane.writeIndex = (lane.writeIndex + 1) % kRingCapacity;
+    // The ring is never displayed. Holding those buffers starves the camera decoder.
+    for (std::size_t r = 0; r < kRingCapacity; ++r) {
+        releaseFrame(lane.ring[r]);
+    }
 
     assignFrame(lane.hold, buffer, width, height, isNV12, lane.sequence);
     lane.holdValid = true;
@@ -101,10 +103,9 @@ void ProgramFrameNativeBus::promoteIncomingToOnAir() {
     assignFrame(program.hold, incoming.hold.pixelBuffer, incoming.hold.width, incoming.hold.height,
                 incoming.hold.isNV12, program.sequence);
     program.holdValid = true;
-
-    assignFrame(program.ring[program.writeIndex], incoming.hold.pixelBuffer, incoming.hold.width,
-                incoming.hold.height, incoming.hold.isNV12, program.sequence);
-    program.writeIndex = (program.writeIndex + 1) % kRingCapacity;
+    for (std::size_t r = 0; r < kRingCapacity; ++r) {
+        releaseFrame(program.ring[r]);
+    }
 }
 
 void ProgramFrameNativeBus::clearTransitionLanes() {

@@ -292,6 +292,13 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         let clamped = Self.clampedFrameRate(Double(max(1, frameRate)), for: device)
         let timescale = CMTimeScale(max(1, min(120, Int32(clamped.rounded()))))
         let duration = CMTime(value: 1, timescale: timescale)
+        let currentMin = CMTimeGetSeconds(device.activeVideoMinFrameDuration)
+        let currentMax = CMTimeGetSeconds(device.activeVideoMaxFrameDuration)
+        let wanted = 1.0 / clamped
+        if currentMin.isFinite, currentMax.isFinite,
+           abs(currentMin - wanted) < 0.02, abs(currentMax - wanted) < 0.02 {
+            return
+        }
 
         do {
             try device.lockForConfiguration()
@@ -441,15 +448,11 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         videoInput = input
         activeLens = lens
 
-#if os(iOS)
-        applyTargetFrameRate(CameraStreamConfiguration.targetFrameRate, to: device)
-#endif
-
         if session.outputs.isEmpty {
             videoOutput.videoSettings = [
                 kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
             ]
-            videoOutput.alwaysDiscardsLateVideoFrames = false
+            videoOutput.alwaysDiscardsLateVideoFrames = true
             guard session.canAddOutput(videoOutput) else {
                 session.commitConfiguration()
                 throw CameraCaptureError.configurationFailed
@@ -467,6 +470,11 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
 #endif
 
         session.commitConfiguration()
+#if os(iOS)
+        // Frame duration must be set after the session commits. Inside beginConfiguration,
+        // FigCaptureSourceRemote fails (-17281) and the picture stalls until the sensor recovers.
+        applyTargetFrameRate(CameraTransportProfile.program.frameRate, to: device)
+#endif
         isConfigured = true
         refreshImagingState(from: device)
     }
@@ -504,11 +512,13 @@ public final class CameraCaptureService: NSObject, @unchecked Sendable {
         videoInput = newInput
         activeLens = lens
 #if os(iOS)
-        applyTargetFrameRate(CameraStreamConfiguration.targetFrameRate, to: device)
         videoOutput.connection(with: .video)?
             .applyVideoOrientation(CaptureVideoOrientation.resolvedOnMainThread())
 #endif
         session.commitConfiguration()
+#if os(iOS)
+        applyTargetFrameRate(CameraTransportProfile.program.frameRate, to: device)
+#endif
         refreshImagingState(from: device)
     }
 

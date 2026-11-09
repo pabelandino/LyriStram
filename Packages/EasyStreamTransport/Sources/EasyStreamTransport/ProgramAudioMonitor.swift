@@ -27,6 +27,14 @@ public final class ProgramAudioMonitor {
     public private(set) var pictureLatencyMs: Double = 0
     public private(set) var outputRouteName = "Salida del sistema"
     public private(set) var localInputs: [ProgramAudioLocalInput] = []
+    public private(set) var outputDevices: [ProgramAudioLocalInput] = []
+    public var selectedOutputUID: String {
+        didSet {
+            guard selectedOutputUID != oldValue else { return }
+            persist()
+            applySelectedOutputDevice()
+        }
+    }
     public var level: Float = 0
 
     public var feedsLiveVideo = false
@@ -35,14 +43,17 @@ public final class ProgramAudioMonitor {
     private let modeKey = "com.easystream.audioLatencyMode"
     private let manualKey = "com.easystream.audioManualLatencyMs"
     private let outputKey = "com.easystream.audioOutputChoice"
+    private let outputDeviceKey = "com.easystream.audioOutputDeviceUID"
 
     private init() {
         let defaults = UserDefaults.standard
         latencyMode = ProgramAudioLatencyMode(rawValue: defaults.string(forKey: modeKey) ?? "") ?? .picture
         manualLatencyMs = min(800, max(0, defaults.double(forKey: manualKey)))
         outputChoice = ProgramAudioOutputChoice(rawValue: defaults.string(forKey: outputKey) ?? "") ?? .system
+        selectedOutputUID = defaults.string(forKey: outputDeviceKey) ?? ""
         refreshDevices()
         applyOutput()
+        applySelectedOutputDevice()
         pushRoute()
         observeRouteChanges()
     }
@@ -75,6 +86,8 @@ public final class ProgramAudioMonitor {
 #if os(iOS)
         ProgramAudioDeviceRegistry.sharedDevice.selectLocalInput(uid: uid)
         ProgramAudioDeviceRegistry.sharedDevice.setLocalCaptureEnabled(uses)
+#elseif os(macOS)
+        MacProgramAudioCapture.shared.setInput(uid: uses ? uid : nil)
 #endif
         pushRoute()
     }
@@ -85,10 +98,17 @@ public final class ProgramAudioMonitor {
         localInputs = (session.availableInputs ?? []).map {
             ProgramAudioLocalInput(id: $0.uid, name: $0.portName)
         }
+        outputDevices = []
         outputRouteName = session.currentRoute.outputs.first?.portName ?? "Salida del sistema"
 #else
-        localInputs = []
-        outputRouteName = "Salida del sistema"
+        let hardware = MacAudioDeviceCatalog.devices()
+        localInputs = hardware.filter { $0.inputChannels > 0 }.map {
+            ProgramAudioLocalInput(id: $0.uid, name: $0.name)
+        }
+        outputDevices = hardware.filter { $0.outputChannels > 0 }.map {
+            ProgramAudioLocalInput(id: $0.uid, name: $0.name)
+        }
+        outputRouteName = MacAudioDeviceCatalog.currentOutputName()
 #endif
     }
 
@@ -117,6 +137,18 @@ public final class ProgramAudioMonitor {
         defaults.set(latencyMode.rawValue, forKey: modeKey)
         defaults.set(manualLatencyMs, forKey: manualKey)
         defaults.set(outputChoice.rawValue, forKey: outputKey)
+        defaults.set(selectedOutputUID, forKey: outputDeviceKey)
+    }
+
+    private func applySelectedOutputDevice() {
+#if os(macOS)
+        if selectedOutputUID.isEmpty {
+            MacAudioDeviceCatalog.restoreDefaultOutput()
+        } else {
+            MacAudioDeviceCatalog.setDefaultOutput(uid: selectedOutputUID)
+        }
+        outputRouteName = MacAudioDeviceCatalog.currentOutputName()
+#endif
     }
 
     private func observeRouteChanges() {

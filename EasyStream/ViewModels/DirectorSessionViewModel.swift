@@ -45,6 +45,8 @@ final class DirectorSessionViewModel {
     private(set) var needsLocalNetworkPermission = false
     private(set) var previewSourceID: CameraSourceID?
     private(set) var programSourceID: CameraSourceID?
+    /// True after the first camera tap has been placed on PROG. Later taps follow the normal cut rules.
+    private var didPlaceOpeningProgram = false
     /// Camera the program monitor is reading. Independent from the next-preview tally, so a cut cannot snap the picture back.
     private(set) var monitorSourceID: CameraSourceID?
     private(set) var programAudioSourceID: CameraSourceID?
@@ -213,9 +215,46 @@ final class DirectorSessionViewModel {
         return programSourceID == nil && previewVideoTrack != nil
     }
 
-    /// An image or video on air owns the program picture. Preview must not bleed through.
+    /// An image, video, or full-screen Lyriora plate owns the program picture.
     private var fullScreenMediaCoversProgram: Bool {
-        LiveProgramAirStore.shared.fullScreenIsLive
+        LiveProgramAirStore.shared.fullScreenIsLive || LiveProgramAirStore.shared.lyrioraCoversProgram
+    }
+
+    /// Camera that was on air before a full-screen Lyriora plate took the picture.
+    private var programSourceBeforeLyrioraFullScreen: CameraSourceID?
+    private var suppressLyrioraRestore = false
+
+    /// Clears the live picture the way a full-screen resource does, and remembers what to bring back.
+    func coverProgramWithLyrioraFullScreen() {
+        if programSourceBeforeLyrioraFullScreen == nil {
+            programSourceBeforeLyrioraFullScreen = programSourceID ?? previewSourceID
+        }
+        if LiveProgramAirStore.shared.fullScreenIsLive {
+            DirectorWorkspaceSession.shared.mediaViewModel?.removeFullScreenFromLive()
+        }
+        if programSourceID != nil {
+            leaveAir()
+        }
+    }
+
+    /// Puts the remembered signal back when the full-screen plate leaves the air.
+    func restoreProgramAfterLyrioraFullScreen() {
+        if suppressLyrioraRestore {
+            suppressLyrioraRestore = false
+            programSourceBeforeLyrioraFullScreen = nil
+            return
+        }
+        guard let source = programSourceBeforeLyrioraFullScreen else { return }
+        programSourceBeforeLyrioraFullScreen = nil
+        guard programSourceID == nil, track(for: source) != nil else { return }
+        takeToProgram(target: source)
+    }
+
+    /// A manual camera take owns the picture. Do not put the previous signal back on top of it.
+    func cancelLyrioraProgramRestore() {
+        guard programSourceBeforeLyrioraFullScreen != nil else { return }
+        suppressLyrioraRestore = true
+        programSourceBeforeLyrioraFullScreen = nil
     }
 
     /// Drops the live camera so a full-screen image or video is what the program transmits.
@@ -330,6 +369,7 @@ final class DirectorSessionViewModel {
         previewSourceID = nil
         monitorSourceID = nil
         programSourceID = nil
+        didPlaceOpeningProgram = false
         programAudioSourceID = nil
         selectedProgramAudioInput = nil
         ProgramAudioMonitor.shared.setFeedsLiveVideo(false)
@@ -354,6 +394,24 @@ final class DirectorSessionViewModel {
     }
 
     func selectPreview(_ sourceID: CameraSourceID) {
+        // The camera list and the remote controls (lens, zoom, exposure) follow the same tap.
+        inspectorSourceID = sourceID
+        // The first camera with a picture goes to PROG so a later full-screen image can replace a real source.
+        if !didPlaceOpeningProgram, programSourceID == nil {
+            if previewSourceID != sourceID {
+                previewSourceID = sourceID
+                monitorSourceID = sourceID
+                incomingWarmPreviewSourceID = sourceID
+                syncRemoteVideoTrackPolicy()
+                syncPreviewMonitor()
+                schedulePreviewAssignmentBroadcast(to: sourceID)
+            }
+            guard track(for: sourceID) != nil else { return }
+            didPlaceOpeningProgram = true
+            takeToProgram(target: sourceID)
+            return
+        }
+
         // Already live: the camera the operator picks replaces program immediately.
         if programSourceID != nil, sourceID != programSourceID {
             previewSourceID = sourceID
@@ -373,7 +431,7 @@ final class DirectorSessionViewModel {
             return
         }
 
-        // Optimistic UI — transport/network debounced; inspector stays independent (settings scroll).
+        // Optimistic UI — transport and network stay debounced.
         previewSourceID = sourceID
         monitorSourceID = sourceID
         if programSourceID == nil {
@@ -545,11 +603,15 @@ final class DirectorSessionViewModel {
     }
 
     private func performTakeToProgram(generation: UInt, target: CameraSourceID) async {
+        cancelLyrioraProgramRestore()
         DirectorWorkspaceSession.shared.mediaViewModel?.releaseProgramMediaForCameraTake()
         let previousProgram = await switcher.state.programSourceID
         guard generation == takeGeneration else { return }
         guard previousProgram != target else { return }
         guard track(for: target) != nil else {
+            if programSourceID == nil {
+                didPlaceOpeningProgram = false
+            }
             lastError = "La cámara en preview aún no tiene señal de video."
             statusMessage = "Espera a que la cámara conecte antes de llevarla al aire."
             return
@@ -570,7 +632,6 @@ final class DirectorSessionViewModel {
         takeHandoffSourceID = nil
         applySwitcherEvents(events)
         DirectorDecodedSignalCache.shared.setLiveSelection(target)
-        ProgramFrameDisplayBus.shared.beginSubHDOnAirGracePeriod(milliseconds: 1_200)
         Task { await broadcastSwitcherAssignmentsNow() }
     }
 

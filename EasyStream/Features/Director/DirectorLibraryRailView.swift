@@ -32,10 +32,13 @@ struct DirectorLibraryRailView: View {
         DirectorLibraryRailPanel {
             DeferredBroadcastLibraryPanel(
                 selectedKind: $mediaViewModel.selectedLibraryKind,
-                resources: mediaViewModel.filteredResources(for: mediaViewModel.selectedLibraryKind),
+                imageResources: mediaViewModel.filteredResources(for: .image),
+                videoResources: mediaViewModel.filteredResources(for: .video),
+                widgetResources: mediaViewModel.filteredResources(for: .widget),
                 activeResourceIDs: mediaViewModel.liveWidgetIDs.union(
                     mediaViewModel.liveFullScreenGraphicID.map { [$0] } ?? []
                 ),
+                lyrioraResourceIDs: lyrioraResourceIDs,
                 editingResourceID: mediaViewModel.editingWidgetResource?.id,
                 searchText: mediaViewModel.librarySearchText,
                 onSearchChange: { mediaViewModel.librarySearchText = $0 },
@@ -55,5 +58,11 @@ struct DirectorLibraryRailView: View {
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var lyrioraResourceIDs: Set<UUID> {
+        Set(mediaViewModel.widgetResources.compactMap { resource in
+            mediaViewModel.loadedConfiguration(for: resource)?.resolvedTemplate == .lyriora ? resource.id : nil
+        })
     }
 }
