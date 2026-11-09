@@ -60,6 +60,12 @@ public struct PreviewMonitorCellView: View {
             }
             if !camera.isConnected {
                 disconnectedLayer
+            } else if liveTrack == nil, camera.link == .atem {
+                ATEMSimulatedSignalView(
+                    name: camera.displayName,
+                    portTitle: camera.portLabel,
+                    isSimulated: camera.isSimulated
+                )
             } else if liveTrack == nil {
                 if showsTileSnapshot {
                     DirectorTileThumbnailView(sourceID: camera.id)
@@ -126,6 +132,7 @@ public struct PreviewMonitorCellView: View {
                     .padding(.vertical, 2)
                     .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 4))
             }
+            MonitorSourceLinkBadge(link: camera.link, platform: camera.platform)
             if settings.overlays.showCameraName {
                 Text(camera.displayName)
                     .font(.caption.weight(.semibold))

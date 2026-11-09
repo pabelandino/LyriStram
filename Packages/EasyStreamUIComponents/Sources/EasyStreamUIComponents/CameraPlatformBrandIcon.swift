@@ -22,6 +22,13 @@ public struct CameraPlatformBrandIcon: View {
                 .scaledToFit()
                 .frame(width: size, height: size)
                 .accessibilityHidden(true)
+        } else if platform == .atem {
+            Text("ATEM")
+                .font(.system(size: max(8, size * 0.45), weight: .heavy))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(height: size)
+                .accessibilityHidden(true)
         }
     }
 
@@ -31,7 +38,7 @@ public struct CameraPlatformBrandIcon: View {
             return "PlatformApple"
         case .android:
             return "PlatformAndroid"
-        case .unknown:
+        case .atem, .unknown:
             return nil
         }
     }
