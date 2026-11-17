@@ -1,0 +1,125 @@
+import SwiftUI
+import LvoqStreamCore
+import LvoqStreamUIComponents
+import LvoqStreamTransport
+
+/// iPhone compact director layout — List-based fallback when workspace columns do not fit.
+struct DirectorSessionCompactView: View {
+    @Bindable var viewModel: DirectorSessionViewModel
+    @Bindable var mediaViewModel: BroadcastMediaViewModel
+    @Bindable var intercomService: TeamIntercomService
+    @Bindable var liveProgramAir: LiveProgramAirStore
+    let onOpenSettings: () -> Void
+    let onCreateWidget: () -> Void
+
+    var body: some View {
+        List {
+            Section {
+                Label(viewModel.statusMessage, systemImage: "antenna.radiowaves.left.and.right")
+            }
+
+            Section(BundleLocalization.string("Programa")) {
+                DirectorProgramLiveMonitorView(viewModel: viewModel, liveProgramAir: liveProgramAir)
+                    .aspectRatio(16 / 9, contentMode: .fit)
+                    .listRowInsets(EdgeInsets())
+            }
+
+            Section(BundleLocalization.string("Preview")) {
+                ForEach(viewModel.sources) { source in
+                    CameraSourceTile(
+                        name: source.displayName,
+                        sourceID: source.id,
+                        track: source.connectionState == .connected
+                            ? DirectorPreviewTileTrackPolicy.liveTileTrack(
+                                for: source.id,
+                                track: source.videoTrack,
+                                previewSourceID: viewModel.previewSourceID,
+                                programSourceID: viewModel.programSourceID
+                            )
+                            : nil,
+                        hasVideoSignal: source.connectionState == .connected && source.videoTrack != nil,
+                        connectionState: source.connectionState,
+                        isPreview: source.id == viewModel.previewSourceID,
+                        isProgram: source.id == viewModel.programSourceID,
+                        onSelect: { viewModel.selectPreview(source.id) }
+                    )
+                    .listRowInsets(EdgeInsets())
+                }
+            }
+
+            Section {
+                TakeToProgramButton(isEnabled: canTake && !viewModel.isTransitioning) {
+                    viewModel.takeToProgram()
+                }
+                if viewModel.programSourceID != nil {
+                    Button {
+                        viewModel.leaveAir()
+                    } label: {
+                        Label(BroadcastTerminology.leaveAirAction, systemImage: "stop.circle.fill")
+                    }
+                    .accessibilityHint(BroadcastTerminology.leaveAirDescription)
+                }
+            }
+
+            DirectorSessionCompactDestinationSections(viewModel: viewModel)
+
+            Section(L10n.Common.library) {
+                DirectorLibraryRailView(
+                    viewModel: viewModel,
+                    mediaViewModel: mediaViewModel,
+                    intercomService: intercomService,
+                    onCreateWidget: onCreateWidget
+                )
+                .frame(minHeight: 560)
+                .listRowInsets(EdgeInsets())
+            }
+
+            Section {
+                Button(action: onOpenSettings) {
+                    Label(L10n.Director.directorSettings, systemImage: "gearshape")
+                }
+            }
+
+        }
+#if os(macOS)
+        .listStyle(.inset)
+#endif
+    }
+
+    private var canTake: Bool {
+        guard let preview = viewModel.previewSourceID else { return false }
+        if let program = viewModel.programSourceID, preview == program { return false }
+        return viewModel.connectionState(for: preview) == .connected
+    }
+}
+
+struct DirectorSessionCompactDestinationSections: View {
+    @Bindable var viewModel: DirectorSessionViewModel
+
+    var body: some View {
+        Section(BundleLocalization.string("Facebook Live")) {
+            FacebookLivePanel(
+                isConfigured: viewModel.isFacebookConfigured,
+                session: viewModel.facebookSession,
+                pages: viewModel.facebookPages,
+                selectedPageID: viewModel.selectedFacebookPageID,
+                isLoading: viewModel.isFacebookLoading,
+                statusMessage: viewModel.facebookStatusMessage,
+                onSignIn: { viewModel.signInWithFacebook() },
+                onAuthorizePages: { viewModel.authorizeFacebookPages() },
+                onSignOut: { viewModel.signOutFromFacebook() },
+                onSelectPage: { viewModel.selectFacebookPage($0) },
+                onPrepareLive: { viewModel.prepareFacebookLive() }
+            )
+        }
+        Section(BundleLocalization.string("Destino RTMPS")) {
+            StreamDestinationPanel(
+                destination: $viewModel.streamDestination,
+                publisherStats: viewModel.publisherStats,
+                isPublishing: viewModel.isPublishing,
+                onStart: { viewModel.startPublishing() },
+                onStop: { viewModel.stopPublishing() }
+            )
+        }
+    }
+}

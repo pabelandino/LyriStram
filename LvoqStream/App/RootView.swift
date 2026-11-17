@@ -1,0 +1,94 @@
+import SwiftUI
+import LvoqStreamCore
+import LvoqStreamUIComponents
+
+enum AppRoute: Hashable {
+    case roleSelection
+    case session(AppRole)
+}
+
+@MainActor
+@Observable
+final class AppCoordinator {
+    var selectedRole: AppRole? {
+        didSet { persistRole() }
+    }
+
+    private let roleStorageKey = "com.lvoqstream.selectedRole"
+
+    init() {
+        if let raw = UserDefaults.standard.string(forKey: roleStorageKey),
+           let role = AppRole(rawValue: raw) {
+            selectedRole = role
+        }
+    }
+
+    func resetRole() {
+        selectedRole = nil
+        UserDefaults.standard.removeObject(forKey: roleStorageKey)
+    }
+
+    private func persistRole() {
+        if let selectedRole {
+            UserDefaults.standard.set(selectedRole.rawValue, forKey: roleStorageKey)
+        }
+    }
+}
+
+struct RootView: View {
+    @State private var coordinator = AppCoordinator()
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    /// iPad, Mac, and the unfolded iPhone Duo inner display. A regular iPhone stays on the camera.
+    private var offersDirector: Bool {
+        AppRoleAvailability.current(horizontalSizeClass: horizontalSizeClass).offersDirector
+    }
+
+    var body: some View {
+        NavigationStack {
+            if !offersDirector {
+                CameraSessionView()
+            } else if let role = coordinator.selectedRole {
+                sessionView(for: role)
+                    .toolbar {
+                        if role == .camera {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button {
+                                    coordinator.resetRole()
+                                } label: {
+                                    Image(systemName: "chevron.backward")
+                                }
+                                .accessibilityLabel(L10n.Role.changeRole)
+                            }
+                        }
+                    }
+            } else {
+                RoleSelectionScreen(
+                    selectedRole: $coordinator.selectedRole,
+                    suggestedRole: .director
+                )
+                .lvoqRefreshOnLanguageChange()
+            }
+        }
+        .background(BroadcastTheme.panelBackground)
+#if os(macOS)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .broadcastHiddenWindowToolbar()
+        .broadcastTitlebarSafeArea()
+#endif
+    }
+
+    @ViewBuilder
+    private func sessionView(for role: AppRole) -> some View {
+        switch role {
+        case .director:
+            DirectorSessionView(onLeaveRole: { coordinator.resetRole() })
+        case .camera:
+            CameraSessionView()
+        }
+    }
+}
+
+#Preview {
+    RootView()
+}

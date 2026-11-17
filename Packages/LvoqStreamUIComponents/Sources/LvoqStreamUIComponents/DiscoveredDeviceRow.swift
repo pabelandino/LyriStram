@@ -1,0 +1,43 @@
+import SwiftUI
+import LvoqStreamCore
+
+public struct DiscoveredDeviceRow: View {
+    let device: DiscoveredDevice
+
+    public init(device: DiscoveredDevice) {
+        self.device = device
+    }
+
+    public var body: some View {
+        HStack(spacing: 12) {
+            Group {
+                if device.role == .camera {
+                    CameraPlatformBrandIcon(platform: device.platform, size: 22, tint: .white)
+                } else {
+                    Image(systemName: "rectangle.inset.filled.and.person.filled")
+                        .foregroundStyle(BroadcastTheme.studioAccent)
+                }
+            }
+            .frame(width: 28, height: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(device.displayName)
+                    .font(.headline)
+                Text("\(device.platform.displayName) · v\(device.protocolVersion)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if device.isProtocolCompatible {
+                SignalStrengthView(level: 4)
+            } else {
+                Text(BundleLocalization.string("common.incompatible"))
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}

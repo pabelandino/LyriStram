@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIconFile</key>
-	<string>LyrioraStreamIcon</string>
+	<string>LvoqStreamIcon</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -18,7 +18,7 @@
 	<key>FacebookClientToken</key>
 	<string>50e0fe714e0b9d20a8e407ea2ab8f136</string>
 	<key>FacebookDisplayName</key>
-	<string>EasyStream</string>
+	<string>Lvoq Stream</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>fbapi</string>
@@ -27,11 +27,11 @@
 	</array>
 	<key>NSBonjourServices</key>
 	<array>
-		<string>_easystream-camera._tcp</string>
-		<string>_easystream-director._tcp</string>
-		<string>_easystream-intercom._udp</string>
-		<string>_lyriora-sync._tcp</string>
-		<string>_lyriora-sync._tcp.</string>
+		<string>_lvoqstream-camera._tcp</string>
+		<string>_lvoqstream-director._tcp</string>
+		<string>_lvoqstream-intercom._udp</string>
+		<string>_lvoqshow-sync._tcp</string>
+		<string>_lvoqshow-sync._tcp.</string>
 	</array>
 </dict>
 </plist>

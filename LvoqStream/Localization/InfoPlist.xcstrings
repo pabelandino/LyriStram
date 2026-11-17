@@ -1,0 +1,55 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "App name on the Home Screen.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream" } }
+      }
+    },
+    "CFBundleName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream" } }
+      }
+    },
+    "NSCameraUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream needs the camera to send video to the director." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream necesita la cámara para enviar video al director." } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "O Lvoq Stream precisa da câmera para enviar vídeo ao diretor." } }
+      }
+    },
+    "NSLocalNetworkUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream uses the local network to find cameras, directors, and Lvoq Show, to send low-latency video, and to run the team intercom." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream usa la red local para encontrar cámaras, directores y Lvoq Show, transmitir video con baja latencia y usar el intercom del equipo." } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "O Lvoq Stream usa a rede local para encontrar câmeras, diretores e o Lvoq Show, transmitir vídeo com baixa latência e usar o intercom da equipe." } }
+      }
+    },
+    "NSMicrophoneUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream uses the microphone for the team intercom and the live audio sent to the director." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream usa el micrófono para el intercom del equipo y el audio en vivo hacia el director." } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "O Lvoq Stream usa o microfone para o intercom da equipe e o áudio ao vivo enviado ao diretor." } }
+      }
+    },
+    "NSUserTrackingUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream uses this to sign in with Facebook and reach your Pages for a live broadcast." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lvoq Stream usa esto para iniciar sesión con Facebook y acceder a tus Páginas para transmitir en vivo." } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "O Lvoq Stream usa isto para entrar com o Facebook e acessar suas Páginas para transmitir ao vivo." } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

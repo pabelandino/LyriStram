@@ -1,0 +1,465 @@
+import Foundation
+import LvoqStreamCore
+
+public enum BroadcastWidgetTemplate: String, Codable, Sendable, CaseIterable {
+    case lvoqshow
+    case animatedLogo
+    case ticker
+    case lowerThirdPro
+    case clock
+    case countdown
+
+    // Legacy templates (decoded from older saves)
+    case lowerThird
+    case logo
+    case textBanner
+
+    public static var mentoTemplates: [BroadcastWidgetTemplate] {
+        [.lvoqshow, .animatedLogo, .ticker, .lowerThirdPro, .clock, .countdown]
+    }
+
+    public var title: String {
+        switch self {
+        case .lvoqshow:
+            String(
+                localized: String.LocalizationValue("lvoqShow.widget.title"),
+                locale: AppLocalization.resolvedLocale
+            )
+        case .animatedLogo, .logo: BundleLocalization.string("widget.template.animated_logo")
+        case .ticker, .textBanner: BundleLocalization.string("widget.template.ticker")
+        case .lowerThirdPro, .lowerThird: BundleLocalization.string("widget.template.lower_third_pro")
+        case .clock: BundleLocalization.string("widget.template.clock")
+        case .countdown: BundleLocalization.string("widget.template.countdown")
+        }
+    }
+
+    public var systemImage: String {
+        switch self {
+        case .lvoqshow: "text.quote"
+        case .animatedLogo, .logo: "sparkles.rectangle.stack"
+        case .ticker, .textBanner: "text.append"
+        case .lowerThirdPro, .lowerThird: "rectangle.bottomhalf.inset.filled"
+        case .clock: "clock.fill"
+        case .countdown: "timer"
+        }
+    }
+
+    public var resolved: BroadcastWidgetTemplate {
+        switch self {
+        case .lowerThird: .lowerThirdPro
+        case .logo: .animatedLogo
+        case .textBanner: .ticker
+        default: self
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        // Widgets saved before the rename used the previous product key.
+        let migrated = raw == "lyriora" ? Self.lvoqshow.rawValue : raw
+        guard let value = Self(rawValue: migrated) else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unknown widget template \(raw)"
+            )
+        }
+        self = value
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}
+
+public enum BroadcastFontPreset: String, Codable, CaseIterable, Sendable {
+    case system
+    case rounded
+    case serif
+    case monospaced
+    case condensed
+    case boldDisplay
+
+    public var displayName: String {
+        switch self {
+        case .system: "Sistema"
+        case .rounded: "Redondeada"
+        case .serif: "Serif"
+        case .monospaced: "Monoespaciada"
+        case .condensed: "Condensada"
+        case .boldDisplay: "Display bold"
+        }
+    }
+
+    /// Default system and display faces read as a news crawl. An explicit family stays.
+    public var newsCrawlFace: BroadcastFontPreset {
+        switch self {
+        case .serif, .monospaced, .rounded, .condensed:
+            self
+        case .system, .boldDisplay:
+            .condensed
+        }
+    }
+}
+
+public enum BroadcastLogoAnimation: String, CaseIterable, Sendable {
+    case none
+    case rotate
+    case sphere3D
+    case pulse
+    case float
+    case flip
+
+    public var displayName: String {
+        switch self {
+        case .none: BundleLocalization.string("widget.logo.animation.none")
+        case .rotate, .sphere3D, .pulse, .float, .flip:
+            BundleLocalization.string("widget.logo.animation.horizontal_spin")
+        }
+    }
+}
+
+extension BroadcastLogoAnimation: Codable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        if raw == "cube3D" {
+            self = .sphere3D
+        } else {
+            self = BroadcastLogoAnimation(rawValue: raw) ?? .none
+        }
+    }
+}
+
+public enum BroadcastCountdownAnimation: String, Codable, CaseIterable, Sendable {
+    case fadeScale
+    case flipClock
+    case slideUp
+    case bounce
+
+    public var displayName: String {
+        switch self {
+        case .fadeScale: "Fade + escala"
+        case .flipClock: "Flip reloj"
+        case .slideUp: "Deslizar arriba"
+        case .bounce: "Rebote"
+        }
+    }
+}
+
+public struct BroadcastWidgetPlacement: Codable, Equatable, Sendable {
+    public var normalizedCenterX: Double
+    public var normalizedCenterY: Double
+    public var widthFraction: Double
+    public var heightFraction: Double
+
+    public init(
+        normalizedCenterX: Double = 0.5,
+        normalizedCenterY: Double = 0.5,
+        widthFraction: Double = 0.22,
+        heightFraction: Double = 0.22
+    ) {
+        self.normalizedCenterX = normalizedCenterX
+        self.normalizedCenterY = normalizedCenterY
+        self.widthFraction = widthFraction
+        self.heightFraction = heightFraction
+    }
+
+    public static let bottomTicker = BroadcastWidgetPlacement(
+        normalizedCenterX: 0.5,
+        normalizedCenterY: 0.92,
+        widthFraction: 1.0,
+        heightFraction: 0.1
+    )
+
+    public static let lvoqshowLower = BroadcastWidgetPlacement(
+        normalizedCenterX: 0.5,
+        normalizedCenterY: 0.88,
+        widthFraction: 0.96,
+        heightFraction: 0.22
+    )
+
+    public static let lvoqshowFullScreen = BroadcastWidgetPlacement(
+        normalizedCenterX: 0.5,
+        normalizedCenterY: 0.5,
+        widthFraction: 1,
+        heightFraction: 1
+    )
+
+    public static let lowerThird = BroadcastWidgetPlacement(
+        normalizedCenterX: 0.40,
+        normalizedCenterY: 0.78,
+        widthFraction: 0.62,
+        heightFraction: 0.26
+    )
+}
+
+public struct BroadcastGradientStyle: Codable, Equatable, Sendable {
+    public var startColorHex: String
+    public var endColorHex: String
+    public var angleDegrees: Double
+
+    public init(
+        startColorHex: String = "007AFF",
+        endColorHex: String = "5856D6",
+        angleDegrees: Double = 0
+    ) {
+        self.startColorHex = startColorHex
+        self.endColorHex = endColorHex
+        self.angleDegrees = angleDegrees
+    }
+}
+
+public struct BroadcastWidgetConfiguration: Codable, Equatable, Sendable {
+    public var template: BroadcastWidgetTemplate
+    public var title: String
+    public var subtitle: String?
+    public var accentColorHex: String?
+
+    public var titleFont: BroadcastFontPreset
+    public var subtitleFont: BroadcastFontPreset
+    public var titleFontSize: Double
+    public var subtitleFontSize: Double
+
+    public var placement: BroadcastWidgetPlacement
+
+    public var logoFileName: String?
+    public var logoAnimation: BroadcastLogoAnimation
+    public var animationSpeed: Double
+
+    public var tickerText: String
+    public var tickerTexts: [String]
+    public var tickerGradient: BroadcastGradientStyle
+    public var tickerBackgroundHex: String?
+    public var tickerTextColorHex: String?
+    public var tickerSpeed: Double
+
+    public var resolvedTickerTextColorHex: String {
+        tickerTextColorHex ?? "FFFFFF"
+    }
+
+    public var resolvedTickerBackgroundHex: String {
+        tickerBackgroundHex ?? "CC000000"
+    }
+
+    public var titleColorHex: String?
+    public var subtitleColorHex: String?
+    public var lowerThirdGradient: BroadcastGradientStyle?
+    public var useTickerGradient: Bool?
+    public var useLowerThirdGradient: Bool?
+
+    public var resolvedTitleColorHex: String {
+        titleColorHex ?? "FFFFFF"
+    }
+
+    public var resolvedSubtitleColorHex: String {
+        subtitleColorHex ?? "FFFFFFE6"
+    }
+
+    public var resolvedUseTickerGradient: Bool {
+        useTickerGradient ?? true
+    }
+
+    public var resolvedUseLowerThirdGradient: Bool {
+        useLowerThirdGradient ?? false
+    }
+
+    public func resolvedLowerThirdGradient(fallbackAccent: String?) -> BroadcastGradientStyle {
+        if let lowerThirdGradient { return lowerThirdGradient }
+        let start = fallbackAccent ?? accentColorHex ?? "007AFF"
+        return BroadcastGradientStyle(startColorHex: start, endColorHex: "5856D6", angleDegrees: 12)
+    }
+
+    public var holdDurationSeconds: Double
+    public var animateInSeconds: Double
+    public var animateOutSeconds: Double
+    public var autoPlaySequence: Bool
+    /// Absent on widgets saved before the lower-third variants. Nil resolves to angular bars.
+    public var lowerThirdStyle: BroadcastLowerThirdStyle?
+
+    public var resolvedLowerThirdStyle: BroadcastLowerThirdStyle {
+        lowerThirdStyle ?? .angular
+    }
+
+    /// Gold line on the angular plate. Legacy saves stored the title in `tickerText`; that duplicate stays hidden until a style is chosen.
+    public var lowerThirdThirdLine: String {
+        let line = tickerText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !line.isEmpty else { return "" }
+        if lowerThirdStyle == nil,
+           line == title.trimmingCharacters(in: .whitespacesAndNewlines) {
+            return ""
+        }
+        return line
+    }
+
+    public mutating func applyLowerThirdStyleColors() {
+        switch resolvedLowerThirdStyle {
+        case .angular:
+            accentColorHex = "E6A817"
+            titleColorHex = "1C1C1C"
+            subtitleColorHex = "FFFFFF"
+            if tickerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                tickerText = "Línea inferior"
+            }
+        case .titlePlate:
+            accentColorHex = "F5C400"
+            titleColorHex = "FFFFFF"
+            subtitleColorHex = "1C1C1C"
+        case .guest, .guestPlain:
+            accentColorHex = "3DFF8A"
+            titleColorHex = "111111"
+            subtitleColorHex = "FFFFFF"
+            if (subtitle ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                subtitle = "Próximo invitado"
+            }
+        }
+    }
+
+    public var clockShowsSeconds: Bool
+    public var clockShowsDate: Bool
+    public var clockUse24Hour: Bool
+    /// Nil keeps the plate for clocks saved before the toggle existed.
+    public var clockShowsBackground: Bool?
+
+    public var resolvedClockShowsBackground: Bool {
+        clockShowsBackground ?? true
+    }
+
+    public var countdownTargetDate: Date?
+    public var countdownSeconds: Int
+    public var countdownAnimation: BroadcastCountdownAnimation
+
+    /// Nil on widgets saved before LvoqShow. Resolves to a lower-third plate.
+    public var lvoqshowMode: LvoqShowPresentationMode? = nil
+    /// Nil on widgets saved before LvoqShow. Resolves to the classic plate.
+    public var lvoqshowStyle: LvoqShowVisualStyle? = nil
+
+    public var resolvedLvoqShowMode: LvoqShowPresentationMode {
+        lvoqshowMode ?? .lower
+    }
+
+    public var resolvedLvoqShowStyle: LvoqShowVisualStyle {
+        lvoqshowStyle ?? .classic
+    }
+
+    /// Copies the live LvoqShow lines onto this widget without moving the plate.
+    public func applyingLvoqShowAir(_ frame: LvoqShowAirFrame) -> BroadcastWidgetConfiguration {
+        var copy = self
+        guard resolvedTemplate == .lvoqshow else { return copy }
+        if frame.hasText {
+            copy.title = frame.headline
+            copy.subtitle = frame.verseBody
+        } else {
+            copy.title = ""
+            copy.subtitle = ""
+        }
+        if copy.resolvedLvoqShowMode == .fullScreen {
+            copy.placement = BroadcastWidgetPlacement(
+                normalizedCenterX: 0.5,
+                normalizedCenterY: 0.5,
+                widthFraction: 1,
+                heightFraction: 1
+            )
+        }
+        return copy
+    }
+
+    public var resolvedTemplate: BroadcastWidgetTemplate {
+        template.resolved
+    }
+
+    public init(
+        template: BroadcastWidgetTemplate = .animatedLogo,
+        title: String = BundleLocalization.string("Título"),
+        subtitle: String? = nil,
+        accentColorHex: String? = "007AFF"
+    ) {
+        self.template = template
+        self.title = title
+        self.subtitle = subtitle
+        self.accentColorHex = accentColorHex
+        self.titleFont = .boldDisplay
+        self.subtitleFont = .system
+        self.titleFontSize = 28
+        self.subtitleFontSize = 16
+        self.placement = Self.defaultPlacement(for: template.resolved)
+        self.logoFileName = nil
+        self.logoAnimation = .sphere3D
+        self.animationSpeed = 1.0
+        self.tickerText = title
+        self.tickerTexts = [title]
+        self.tickerGradient = BroadcastGradientStyle(startColorHex: accentColorHex ?? "007AFF", endColorHex: "5856D6")
+        self.tickerBackgroundHex = "CC000000"
+        self.tickerTextColorHex = "FFFFFF"
+        self.tickerSpeed = 80
+        self.titleColorHex = "FFFFFF"
+        self.subtitleColorHex = "FFFFFFE6"
+        self.lowerThirdGradient = nil
+        self.useTickerGradient = true
+        self.useLowerThirdGradient = false
+        self.holdDurationSeconds = 5
+        self.animateInSeconds = 0.65
+        self.animateOutSeconds = 0.55
+        self.autoPlaySequence = true
+        self.lowerThirdStyle = .angular
+        self.clockShowsSeconds = true
+        self.clockShowsDate = false
+        self.clockUse24Hour = true
+        self.clockShowsBackground = true
+        self.countdownTargetDate = nil
+        self.countdownSeconds = 60
+        self.countdownAnimation = .fadeScale
+        self.lvoqshowMode = template.resolved == .lvoqshow ? .lower : nil
+        self.lvoqshowStyle = template.resolved == .lvoqshow ? .classic : nil
+    }
+
+    public static func defaultPlacement(for template: BroadcastWidgetTemplate) -> BroadcastWidgetPlacement {
+        switch template {
+        case .animatedLogo, .logo:
+            BroadcastWidgetPlacement(normalizedCenterX: 0.12, normalizedCenterY: 0.12, widthFraction: 0.18, heightFraction: 0.18)
+        case .ticker, .textBanner:
+            .bottomTicker
+        case .lowerThirdPro, .lowerThird:
+            .lowerThird
+        case .clock:
+            BroadcastWidgetPlacement(normalizedCenterX: 0.84, normalizedCenterY: 0.1, widthFraction: 0.28, heightFraction: 0.12)
+        case .countdown:
+            BroadcastWidgetPlacement(normalizedCenterX: 0.5, normalizedCenterY: 0.5, widthFraction: 0.5, heightFraction: 0.35)
+        case .lvoqshow:
+            .lvoqshowLower
+        }
+    }
+
+    public mutating func applyTemplateDefaults() {
+        placement = Self.defaultPlacement(for: template.resolved)
+        switch template.resolved {
+        case .animatedLogo, .logo:
+            logoAnimation = .sphere3D
+        case .ticker, .textBanner:
+            titleFont = titleFont.newsCrawlFace
+            if tickerText.isEmpty { tickerText = title }
+            tickerTexts = [tickerText]
+            if tickerBackgroundHex == nil { tickerBackgroundHex = "CC000000" }
+            if tickerTextColorHex == nil { tickerTextColorHex = "FFFFFF" }
+        case .lowerThirdPro, .lowerThird:
+            autoPlaySequence = true
+            if lowerThirdStyle == nil { lowerThirdStyle = .angular }
+            if tickerText.trimmingCharacters(in: .whitespacesAndNewlines) == title.trimmingCharacters(in: .whitespacesAndNewlines) {
+                tickerText = ""
+            }
+            applyLowerThirdStyleColors()
+        case .clock:
+            titleFont = .monospaced
+        case .countdown:
+            titleFont = .rounded
+            titleFontSize = 72
+        case .lvoqshow:
+            lvoqshowMode = resolvedLvoqShowMode
+            lvoqshowStyle = resolvedLvoqShowStyle
+            placement = resolvedLvoqShowMode == .fullScreen ? .lvoqshowFullScreen : .lvoqshowLower
+            title = ""
+            subtitle = ""
+        }
+    }
+}

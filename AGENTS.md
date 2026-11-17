@@ -1,4 +1,4 @@
-# EasyStream — Agent context
+# LvoqStream — Agent context
 
 ## Skills (project-local)
 

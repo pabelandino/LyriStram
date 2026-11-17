@@ -1,0 +1,257 @@
+import SwiftUI
+import LvoqStreamCore
+
+public struct BroadcastWidgetStudioPanel: View {
+    @Binding var configuration: BroadcastWidgetConfiguration
+    @Binding var displayName: String
+    let templateTitle: String
+    let logoURL: URL?
+    let isEditingExisting: Bool
+    let isLiveOnAir: Bool
+    let isEditingPlacement: Bool
+    let onEnterPlayMode: () -> Void
+    let onEnterLayoutMode: () -> Void
+    let onImportLogo: () -> Void
+    let onImportLogoFromPhotoLibrary: () -> Void
+    let onSave: () -> Void
+    let onGoLive: () -> Void
+    let onApplyToLive: () -> Void
+    let onRemoveFromLive: () -> Void
+    let onDelete: () -> Void
+    let onClose: () -> Void
+
+    public init(
+        configuration: Binding<BroadcastWidgetConfiguration>,
+        displayName: Binding<String>,
+        templateTitle: String,
+        logoURL: URL?,
+        isEditingExisting: Bool,
+        isLiveOnAir: Bool = false,
+        isEditingPlacement: Bool,
+        onEnterPlayMode: @escaping () -> Void,
+        onEnterLayoutMode: @escaping () -> Void,
+        onImportLogo: @escaping () -> Void,
+        onImportLogoFromPhotoLibrary: @escaping () -> Void = {},
+        onSave: @escaping () -> Void,
+        onGoLive: @escaping () -> Void,
+        onApplyToLive: @escaping () -> Void = {},
+        onRemoveFromLive: @escaping () -> Void = {},
+        onDelete: @escaping () -> Void = {},
+        onClose: @escaping () -> Void
+    ) {
+        self._configuration = configuration
+        self._displayName = displayName
+        self.templateTitle = templateTitle
+        self.logoURL = logoURL
+        self.isEditingExisting = isEditingExisting
+        self.isLiveOnAir = isLiveOnAir
+        self.isEditingPlacement = isEditingPlacement
+        self.onEnterPlayMode = onEnterPlayMode
+        self.onEnterLayoutMode = onEnterLayoutMode
+        self.onImportLogo = onImportLogo
+        self.onImportLogoFromPhotoLibrary = onImportLogoFromPhotoLibrary
+        self.onSave = onSave
+        self.onGoLive = onGoLive
+        self.onApplyToLive = onApplyToLive
+        self.onRemoveFromLive = onRemoveFromLive
+        self.onDelete = onDelete
+        self.onClose = onClose
+    }
+
+    @State private var confirmsDelete = false
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            header
+            if !isEditingExisting { templatePicker }
+            templateBadge
+            nameField
+            templateSpecificFields
+            if showsFontSection { fontSection }
+            previewModeSection
+            actionButtons
+        }
+        .padding(4)
+    }
+
+    private var templateBadge: some View {
+        Label(templateTitle, systemImage: configuration.resolvedTemplate.systemImage)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .broadcastGlassPanel(cornerRadius: 10)
+    }
+
+    private var templatePicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(BundleLocalization.string("widget.studio.template_section"))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(BroadcastTheme.subtleText)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
+                ForEach(BroadcastWidgetTemplate.mentoTemplates, id: \.self) { template in
+                    Button {
+                        configuration.template = template
+                        configuration.applyTemplateDefaults()
+                    } label: {
+                        VStack(spacing: 6) {
+                            Image(systemName: template.systemImage)
+                            Text(template.title)
+                                .font(.caption2)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.plain)
+                    .broadcastGlassPanel(cornerRadius: 10)
+                    .overlay {
+                        if configuration.resolvedTemplate == template {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(BroadcastTheme.studioAccent.opacity(0.85), lineWidth: 1.5)
+                                .shadow(color: BroadcastTheme.studioAccent.opacity(0.35), radius: 6)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(BundleLocalization.string("widget.studio.title"))
+                    .font(.headline)
+                Text(isEditingExisting
+                     ? "\(BundleLocalization.string("widget.studio.editing_prefix")) \(templateTitle)"
+                     : BundleLocalization.string("widget.studio.new_choose_template"))
+                    .font(.caption)
+                    .foregroundStyle(BroadcastTheme.subtleText)
+            }
+            Spacer()
+            Button(action: onClose) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(BroadcastTheme.subtleText)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var nameField: some View {
+        TextField(BundleLocalization.string("widget.studio.library_name"), text: $displayName)
+            .textFieldStyle(.roundedBorder)
+    }
+
+    @ViewBuilder
+    private var templateSpecificFields: some View {
+        switch configuration.resolvedTemplate {
+        case .animatedLogo, .logo:
+            BroadcastWidgetStudioLogoFields(
+                configuration: $configuration,
+                logoURL: logoURL,
+                onImportLogo: onImportLogo,
+                onImportLogoFromPhotoLibrary: onImportLogoFromPhotoLibrary
+            )
+        case .ticker, .textBanner:
+            BroadcastWidgetStudioTickerFields(configuration: $configuration)
+        case .lowerThirdPro, .lowerThird:
+            BroadcastWidgetStudioLowerThirdFields(
+                configuration: $configuration,
+                onImportLogo: onImportLogo,
+                onImportLogoFromPhotoLibrary: onImportLogoFromPhotoLibrary
+            )
+        case .clock:
+            BroadcastWidgetStudioClockFields(configuration: $configuration)
+        case .countdown:
+            BroadcastWidgetStudioCountdownFields(configuration: $configuration)
+        case .lvoqshow:
+            LvoqShowWidgetStudioFields(configuration: $configuration)
+        }
+    }
+
+    private var showsFontSection: Bool {
+        switch configuration.resolvedTemplate {
+        case .animatedLogo, .logo:
+            false
+        default:
+            false
+        }
+    }
+
+    private var fontSection: some View {
+        EmptyView()
+    }
+
+    private var previewModeSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(BundleLocalization.string("widget.studio.preview_section"))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(BroadcastTheme.subtleText)
+
+            HStack(spacing: 8) {
+                Button(action: onEnterPlayMode) {
+                    Label(BundleLocalization.string("common.play"), systemImage: "play.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(BroadcastGlowButtonStyle(
+                    tint: BroadcastTheme.previewGreen,
+                    isProminent: !isEditingPlacement
+                ))
+
+                Button(action: onEnterLayoutMode) {
+                    Label(BundleLocalization.string("widget.studio.position"), systemImage: "arrow.up.left.and.arrow.down.right")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(BroadcastGlowButtonStyle(
+                    tint: BroadcastTheme.liveAmber,
+                    isProminent: isEditingPlacement
+                ))
+            }
+
+            Text(isEditingPlacement
+                 ? "Modo posicionar: arrastra y redimensiona. La animación está detenida."
+                 : "Modo play: la animación corre en esta vista, sin agarraderos.")
+                .font(.caption2)
+                .foregroundStyle(BroadcastTheme.subtleText)
+        }
+    }
+
+    private var actionButtons: some View {
+        VStack(spacing: 8) {
+            Button(BundleLocalization.string("common.save"), action: onSave)
+                .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: false))
+
+            if isLiveOnAir {
+                Button(action: onApplyToLive) {
+                    Label(BundleLocalization.string("widget.studio.apply_on_air"), systemImage: "arrow.triangle.2.circlepath")
+                }
+                .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.studioAccent, isProminent: true))
+
+                Button(role: .destructive, action: onRemoveFromLive) {
+                    Label(BundleLocalization.string("widget.studio.remove_from_air"), systemImage: "minus.circle.fill")
+                }
+                .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.programRed, isProminent: true))
+            } else {
+                Button(action: onGoLive) {
+                    Label(BundleLocalization.string("widget.studio.add_on_air"), systemImage: "plus.circle.fill")
+                }
+                .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.liveAmber, isProminent: true))
+            }
+
+            if isEditingExisting {
+                Button(role: .destructive) {
+                    confirmsDelete = true
+                } label: {
+                    Label(BundleLocalization.string("common.delete"), systemImage: "trash")
+                }
+                .buttonStyle(BroadcastGlowButtonStyle(tint: BroadcastTheme.programRed, isProminent: false))
+            }
+        }
+        .alert(BundleLocalization.string("widget.delete.title"), isPresented: $confirmsDelete) {
+            Button(BundleLocalization.string("common.cancel"), role: .cancel) {}
+            Button(BundleLocalization.string("common.delete"), role: .destructive, action: onDelete)
+        } message: {
+            Text(BundleLocalization.string("widget.delete.message"))
+        }
+    }
+}
