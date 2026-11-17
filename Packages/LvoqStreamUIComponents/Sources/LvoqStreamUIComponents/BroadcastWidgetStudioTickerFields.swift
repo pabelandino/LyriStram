@@ -1,0 +1,63 @@
+import SwiftUI
+import LvoqStreamCore
+
+struct BroadcastWidgetStudioTickerFields: View {
+    @Binding var configuration: BroadcastWidgetConfiguration
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField(BundleLocalization.string("Texto del ticker"), text: $configuration.tickerText, prompt: Text("Escribe el texto con espacios"))
+                .textFieldStyle(.roundedBorder)
+#if os(macOS)
+                .disableAutocorrection(true)
+#endif
+
+            HStack {
+                Text(BundleLocalization.string("widget.studio.ticker_text_color"))
+                    .font(.caption)
+                Spacer()
+                BroadcastHexColorWell(
+                    optionalHex: $configuration.tickerTextColorHex,
+                    supportsOpacity: false,
+                    fallback: "FFFFFF"
+                )
+            }
+
+            Toggle(
+                "Fondo con gradiente",
+                isOn: BroadcastWidgetStudioGradientBindings.useTickerGradient($configuration)
+            )
+
+            if configuration.resolvedUseTickerGradient {
+                BroadcastWidgetStudioSharedControls.gradientColorRow(
+                    "Inicio",
+                    hex: BroadcastWidgetStudioGradientBindings.tickerGradientStart($configuration)
+                )
+                BroadcastWidgetStudioSharedControls.gradientColorRow(
+                    "Fin",
+                    hex: BroadcastWidgetStudioGradientBindings.tickerGradientEnd($configuration)
+                )
+            } else {
+                HStack {
+                    Text(BundleLocalization.string("widget.studio.ticker_background_color"))
+                        .font(.caption)
+                    Spacer()
+                    BroadcastHexColorWell(
+                        optionalHex: $configuration.tickerBackgroundHex,
+                        supportsOpacity: true,
+                        fallback: "CC000000"
+                    )
+                }
+            }
+
+            BroadcastWidgetStudioTickerPlacementControls(configuration: $configuration)
+
+            Stepper(
+                "Velocidad: \(Int(configuration.tickerSpeed)) pt/s",
+                value: $configuration.tickerSpeed,
+                in: 30...200,
+                step: 5
+            )
+        }
+    }
+}

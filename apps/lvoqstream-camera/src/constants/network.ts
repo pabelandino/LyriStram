@@ -1,0 +1,27 @@
+/** Matches `LvoqStreamCore.NetworkConstants` on iOS/macOS. */
+export const PROTOCOL_VERSION = '1';
+
+export const BONJOUR_DOMAIN = 'local.';
+
+export const SERVICE_TYPES = {
+  camera: '_lvoqstream-camera._tcp',
+  director: '_lvoqstream-director._tcp',
+} as const;
+
+export const TXT_KEYS = {
+  deviceID: 'deviceID',
+  displayName: 'displayName',
+  protocolVersion: 'protocolVersion',
+  platform: 'platform',
+  role: 'role',
+  connectHost: 'connectHost',
+} as const;
+
+export const APP_ROLE = {
+  camera: 'camera',
+  director: 'director',
+} as const;
+
+export const PLATFORM = {
+  android: 'android',
+} as const;
